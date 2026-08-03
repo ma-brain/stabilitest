@@ -1,7 +1,7 @@
 ---
 title: "How Easily Could This Conclusion Be Overturned? A Framework for Robustness and Fragility Analysis of Statistical Tests in Clinical Trials"
 short-title: "Robustness and fragility analysis of clinical trial tests"
-subtitle: "Version 2.0 — July 2026. Major revision following methodological review. Software: stabilitest R package v0.4.2 (Ally, 2026)."
+subtitle: "Version 2.0 — July 2026. Major revision following methodological review. Software: stabilitest R package v0.5.0 (Ally, 2026)."
 author:
   - name: Marius Ally
     email: marally@gmail.com
@@ -20,7 +20,7 @@ abstract: |
 
   **Objective:** To develop, validate, and calibrate a framework for assessing the robustness of statistical test conclusions through combined jackknife, worst-case observation removal, and bootstrap resampling.
 
-  **Methods:** The framework comprises: (1) jackknife leave-one-out analysis identifying influential observations; (2) a *worst-case removal analysis* — greedy adversarial deletion in the spirit of the maximum influence perturbation (Broderick, Giordano & Meager, 2023) — yielding a *removal fragility index*, a greedy upper bound on the size of a minimal overturning subset; (3) bootstrap resampling estimating the *reproducibility probability* (Goodman, 1992). A composite 0–100 score combines the components with pre-specifiable weights (default 0.4/0.4/0.2). A simulation study (12 scenarios: effect size d ∈ {0, 0.5, 0.8}; n ∈ {25, 50} per group; 0 or 2 injected outliers; 500 replications each) calibrated the interpretation bands. The framework extends to linear-model (ANCOVA), GLM, and Cox terms via a common case-deletion engine; the accompanying software (v0.4.2) also supports proportion tests, Brunner–Munzel, and TOST equivalence/non-inferiority.
+  **Methods:** The framework comprises: (1) jackknife leave-one-out analysis identifying influential observations; (2) a *worst-case removal analysis* — greedy adversarial deletion in the spirit of the maximum influence perturbation (Broderick, Giordano & Meager, 2023) — yielding a *removal fragility index*, a greedy upper bound on the size of a minimal overturning subset; (3) bootstrap resampling estimating the *reproducibility probability* (Goodman, 1992). A composite 0–100 score combines the components with pre-specifiable weights (default 0.4/0.4/0.2). A simulation study (12 scenarios: effect size d ∈ {0, 0.5, 0.8}; n ∈ {25, 50} per group; 0 or 2 injected outliers; 500 replications each) calibrated the interpretation bands. The framework extends to linear-model (ANCOVA), GLM, and Cox terms via a common case-deletion engine; the accompanying software (v0.5.0) also supports proportion tests, Brunner–Munzel, and TOST equivalence/non-inferiority.
 
   **Results:** Type I error was preserved in clean data (0.046–0.052) and inflated by contamination (up to 0.092), which the framework correctly flagged. Conditional on statistical significance, chance findings under the null averaged a robustness score of 52 with a median worst-case fragility of 1–2 observations (2% of the sample), whereas true large effects (d = 0.8, n = 50) averaged 75 with median fragility of 12–14 observations. Grand-mean-ranked removal — the usual "remove the outliers" heuristic — overstated robustness dramatically (median flipping set 13–31 observations vs 2–6 under adversarial removal in the same data). Calibrated bands: score > 70 robust; (55, 70] moderately robust; ≤ 55 fragile.
 
@@ -78,7 +78,7 @@ Bands were calibrated by the simulation in Section 3, using the score distributi
 
 ### 2.4 Statistical implementation
 
-Implemented in the `stabilitest` R package (v0.4.2; this repository). `robustness_analysis()` covers two-sample location tests (Welch and paired t; Wilcoxon rank-sum/signed-rank; Brunner–Munzel) and two-group binary proportion tests (`fisher`, `chisq`, `prop`). Rank-based location analyses report the Hodges–Lehmann shift as the effect summary. Model engines: `robustness_lm()` (linear/ANCOVA), `robustness_glm()` (binomial logit / Poisson log), and `robustness_surv()` (Cox); each accepts a single coefficient or a multi-df factor term tested jointly (F for lm; LRT for glm/surv). Equivalence and non-inferiority use `robustness_tost()` (TOST / one-sided margin tests) for mean, risk-difference, and odds-ratio endpoints; score bands for TOST are not separately calibrated. Computational cost is dominated by the greedy search: O(n·k_max) test evaluations, about 3,400 tests for n = 55 — under a second for closed-form tests, minutes for model refits at n of a few hundred.
+Implemented in the `stabilitest` R package (v0.5.0; this repository). `robustness_analysis()` covers two-sample location tests (Welch and paired t; Wilcoxon rank-sum/signed-rank; Brunner–Munzel) and two-group binary proportion tests (`fisher`, `chisq`, `prop`). Rank-based location analyses report the Hodges–Lehmann shift as the effect summary. Model engines: `robustness_lm()` (linear/ANCOVA), `robustness_glm()` (binomial logit / Poisson log), and `robustness_surv()` (Cox); each accepts a single coefficient or a multi-df factor term tested jointly (F for lm; LRT for glm/surv). Equivalence and non-inferiority use `robustness_tost()` (TOST / one-sided margin tests) for mean, risk-difference, and odds-ratio endpoints; score bands for TOST are not separately calibrated. Computational cost is dominated by the greedy search: O(n·k_max) test evaluations, about 3,400 tests for n = 55 — under a second for closed-form tests, minutes for model refits at n of a few hundred.
 
 ### 2.5 Application context
 
@@ -164,7 +164,7 @@ Treatment: mean change −19.80 (SD 13.80). Placebo: −8.40 (SD 11.88). Welch t
 
 The result is classified robust: strong primary evidence (p = 0.0018), perfect leave-one-out stability, worst-case fragility comparable to simulated true large effects, and high reproducibility. Two actions are still warranted for the CSR: clinical review of subject 14 (protocol adherence, concomitant medication) since this patient heads the worst-case removal set; and a supplementary rank-based analysis, which is less leveraged by extreme responders.
 
-Suggested reporting text (Results): "Robustness analysis (stabilitest v0.4.2; B = 2000, seed = 14) yielded an overall score of 72.5/100 (robust; calibrated bands from simulation). All 55 leave-one-out analyses preserved statistical significance (p ≤ 0.0034). Worst-case removal analysis identified a set of 6 patients (10.9% of the sample) whose exclusion would raise the p-value to 0.060; the corresponding median for chance-significant findings in simulation is 1–2 patients. Bootstrap reproducibility probability was 92%."
+Suggested reporting text (Results): "Robustness analysis (stabilitest v0.5.0; B = 2000, seed = 14) yielded an overall score of 72.5/100 (robust; calibrated bands from simulation). All 55 leave-one-out analyses preserved statistical significance (p ≤ 0.0034). Worst-case removal analysis identified a set of 6 patients (10.9% of the sample) whose exclusion would raise the p-value to 0.060; the corresponding median for chance-significant findings in simulation is 1–2 patients. Bootstrap reproducibility probability was 92%."
 
 ---
 
@@ -200,7 +200,7 @@ Statistical significance answers "is there an effect?" Robustness analysis answe
 
 ## References
 
-Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.4.2; 2026. Available from: https://github.com/ma-brain/stabilitest
+Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.5.0; 2026. Available from: https://github.com/ma-brain/stabilitest
 
 Belsley DA, Kuh E, Welsch RE. *Regression Diagnostics: Identifying Influential Data and Sources of Collinearity*. John Wiley & Sons; 1980.
 
@@ -232,7 +232,7 @@ Walsh M, Srinathan SK, McAuley DF, et al. The statistical significance of random
 
 ## Appendix A: Software
 
-Complete implementation in this repository (package v0.4.2): `robustness_analysis.R` (two-sample framework — including proportion tests, Brunner–Munzel, and Hodges–Lehmann reporting — and case-study data), `robustness_models.R` (lm/ANCOVA, GLM, Cox; multi-df joint tests), `robustness_tost.R` (equivalence / non-inferiority for mean, prop, and OR endpoints), `simulation_study.R` (Section 3 design), and the `stabilitest/` R package (functions, bundled case-study data, unit tests). The Section 4 case-study numbers (overall score ≈ 72.5; bootstrap reproducibility ≈ 92%) use `n_boot = 2000` and `seed = 14` (the package default seed is 123 and yields a slightly different bootstrap component). Reproduce the analysis by:
+Complete implementation in this repository (package v0.5.0): `robustness_analysis.R` (two-sample framework — including proportion tests, Brunner–Munzel, and Hodges–Lehmann reporting — and case-study data), `robustness_models.R` (lm/ANCOVA, GLM, Cox; multi-df joint tests), `robustness_tost.R` (equivalence / non-inferiority for mean, prop, and OR endpoints), `simulation_study.R` (Section 3 design), and the `stabilitest/` R package (functions, bundled case-study data, unit tests). The Section 4 case-study numbers (overall score ≈ 72.5; bootstrap reproducibility ≈ 92%) use `n_boot = 2000` and `seed = 14` (the package default seed is 123 and yields a slightly different bootstrap component). Reproduce the analysis by:
 
 ```r
 library(stabilitest)

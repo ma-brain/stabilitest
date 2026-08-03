@@ -33,18 +33,6 @@ coerce_binary <- function(x, name) {
   as.numeric(x)
 }
 
-# Shared bootstrap / removal argument checks (two-sample + model engines).
-validate_n_boot_max_removal <- function(n_boot, max_removal_pct) {
-  if (!is.numeric(n_boot) || length(n_boot) != 1L || is.na(n_boot) ||
-      n_boot < 1 || floor(n_boot) != n_boot) {
-    stop("n_boot must be a single positive integer", call. = FALSE)
-  }
-  if (!is.numeric(max_removal_pct) || length(max_removal_pct) != 1L ||
-      is.na(max_removal_pct) || max_removal_pct <= 0 || max_removal_pct > 1) {
-    stop("max_removal_pct must be a single number in (0, 1]", call. = FALSE)
-  }
-}
-
 # 2x2 contingency table: rows = outcome (success, failure), cols = group
 prop_table_2x2 <- function(g1, g2) {
   matrix(
@@ -170,13 +158,15 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'     difference depending on `test_type`).}
 #'   \item{robustness_metrics}{Component scores (jackknife conclusion
 #'     stability, worst-case fragility, bootstrap reproducibility, overall
-#'     composite) and related diagnostics.}
+#'     composite) and related diagnostics. Alias: `metrics` (same tibble).}
 #'   \item{robustness_interpretation}{Label: `"Robust"`,
-#'     `"Moderately Robust"`, or `"Fragile"`.}
+#'     `"Moderately Robust"`, or `"Fragile"`. Alias: `interpretation_label`.}
+#'   \item{original_mean_diff}{Effect summary (mean / HL / proportion
+#'     difference). Alias: `original_estimate`.}
 #'   \item{jackknife, worstcase, extreme, bootstrap}{Component analysis
-#'     results (tibbles plus summary scalars).}
-#'   \item{sample_info, weights, alpha, max_removal_pct, max_k}{Analysis
-#'     metadata.}
+#'     results (nested lists with tibbles plus summary scalars).}
+#'   \item{sample_info, weights, alpha, max_removal_pct, max_k, n}{Analysis
+#'     metadata (`n` is total sample size / pairs as appropriate).}
 #'   \item{interpretation}{Optional text blocks when `interpret = TRUE`;
 #'     otherwise `NULL`.}
 #' }
@@ -231,10 +221,7 @@ robustness_analysis <- function(group1, group2,
   } else {
     if (length(group1) < 4 || length(group2) < 4) stop("Each group must have at least 4 observations")
   }
-  if (alpha <= 0 || alpha >= 1) stop("alpha must be in (0, 1)")
-  if (abs(sum(weights) - 1) > 1e-8 || length(weights) != 3 || any(weights < 0)) {
-    stop("weights must be 3 non-negative values summing to 1")
-  }
+  validate_alpha_weights(alpha, weights)
   validate_n_boot_max_removal(n_boot, max_removal_pct)
 
   # --- test wrapper -----------------------------------------------------------
@@ -332,13 +319,10 @@ robustness_analysis <- function(group1, group2,
     )
   }
 
-  jackknife <- jackknife |>
-    mutate(
-      significant       = p_value < alpha,
-      conclusion_match  = significant == original_significant,
-      influential_delta = abs(p_value - original$p.value) > influential_threshold,
-      influential       = influential_delta | !conclusion_match
-    )
+  jackknife <- annotate_loo_results(
+    jackknife, original$p.value, original_significant, alpha,
+    influential_threshold = influential_threshold
+  )
 
   # ============================================================================
   # 2. EXTREME-VALUE REMOVAL (descriptive; grand-mean / abs-difference ranked)
@@ -368,7 +352,7 @@ robustness_analysis <- function(group1, group2,
                                    statistic = test$statistic,
                                    significant = test$p.value < alpha))
     }
-    out |> mutate(conclusion_match = significant == original_significant)
+    annotate_removal_results(out, original_significant)
   }
 
   if (paired) {
@@ -419,15 +403,9 @@ robustness_analysis <- function(group1, group2,
   }
   worstcase <- run_removal(worst_next)
 
-  fragility_index <- function(removal_tbl) {
-    flipped <- removal_tbl |> filter(!conclusion_match)
-    if (nrow(flipped) == 0) max_k + 1L else min(flipped$k_removed)
-  }
-  k_frag_extreme <- fragility_index(extreme)
-  k_frag_worst   <- fragility_index(worstcase)
-  p_at_k_frag <- if (k_frag_worst <= max_k) {
-    worstcase$p_value[worstcase$k_removed == k_frag_worst]
-  } else NA_real_
+  k_frag_extreme <- fragility_index_from_removal(extreme, max_k)
+  k_frag_worst   <- fragility_index_from_removal(worstcase, max_k)
+  p_at_k_frag    <- p_at_fragility_from_removal(worstcase, k_frag_worst, max_k)
 
   # ============================================================================
   # 4. BOOTSTRAP (reproducibility probability)
@@ -448,48 +426,32 @@ robustness_analysis <- function(group1, group2,
     tibble(iteration = i, p_value = test$p.value,
            statistic = test$statistic, significant = test$p.value < alpha)
   }) |>
-    mutate(conclusion_match = significant == original_significant)
+    annotate_bootstrap_results(original_significant, alpha)
 
   # ============================================================================
   # COMPOSITE SCORE
   #   fragility component uses the WORST-CASE index, rescaled to [0, 100]
   #   (v1's `100 - fragility%` could not fall below ~70; see review, 1.4)
   # ============================================================================
-  s_jack    <- mean(jackknife$conclusion_match) * 100
-  s_boot    <- mean(bootstrap$conclusion_match) * 100
-  frag_comp <- 100 * min(k_frag_worst / (max_k + 1), 1)
+  s_jack <- mean(jackknife$conclusion_match) * 100
+  s_boot <- mean(bootstrap$conclusion_match) * 100
 
-  robustness_score <- tibble(
-    jackknife_conclusion_stability = s_jack,
-    jackknife_pct_influential      = mean(jackknife$influential) * 100,
-    jackknife_p_range_lo           = min(jackknife$p_value),
-    jackknife_p_range_hi           = max(jackknife$p_value),
-
-    worstcase_fragility_k          = k_frag_worst,
-    worstcase_fragility_pct        = 100 * k_frag_worst / n_total,
-    worstcase_fragility_component  = frag_comp,
-    p_at_fragility                 = p_at_k_frag,
-
-    extreme_fragility_k            = k_frag_extreme,
-    extreme_fragility_pct          = 100 * k_frag_extreme / n_total,
-
-    bootstrap_reproducibility      = s_boot,
-    bootstrap_p_mean               = mean(bootstrap$p_value),
-    bootstrap_p_sd                 = sd(bootstrap$p_value),
-
-    overall_robustness = weights[["jackknife"]] * s_jack +
-                         weights[["fragility"]] * frag_comp +
-                         weights[["bootstrap"]] * s_boot
+  # Shared metrics constructor (bands calibrated by simulation; see manuscript
+  # Section 3). Boundaries: > 70 Robust; (55, 70] Moderately Robust; ≤ 55 Fragile.
+  robustness_score <- build_robustness_metrics(
+    s_jack = s_jack,
+    jackknife = jackknife,
+    k_frag_worst = k_frag_worst,
+    p_at_k_frag = p_at_k_frag,
+    s_boot = s_boot,
+    bootstrap = bootstrap,
+    weights = weights,
+    n_total = n_total,
+    max_k = max_k,
+    k_frag_extreme = k_frag_extreme
   )
-
-  # Bands calibrated by simulation (see manuscript Section 3): with default
-  # weights, chance-significant findings under H0 average ~52 while true
-  # large effects average ~75. Calibration applies to SIGNIFICANT results.
-  # Boundaries: > 70 Robust; (55, 70] Moderately Robust; ≤ 55 Fragile.
-  robustness_interpretation <- case_when(
-    robustness_score$overall_robustness > 70 ~ "Robust",
-    robustness_score$overall_robustness > 55 ~ "Moderately Robust",
-    TRUE ~ "Fragile"
+  robustness_interpretation <- robustness_band_label(
+    robustness_score$overall_robustness
   )
 
   # --- sample info ------------------------------------------------------------
@@ -531,6 +493,7 @@ robustness_analysis <- function(group1, group2,
     original_statistic   = original$statistic,
     original_mean_diff   = original$mean_diff,
     original_ci          = original$conf.int,
+    n                    = n_total,
 
     robustness_metrics        = robustness_score,
     robustness_interpretation = robustness_interpretation,
@@ -566,7 +529,14 @@ robustness_analysis <- function(group1, group2,
     sample_info = sample_info
   )
 
-  out$interpretation <- if (interpret) generate_interpretation(out) else NULL
+  out <- align_robustness_result_aliases(out, style = "analysis")
+  # Keep an explicit NULL slot when interpret = FALSE so `$interpretation`
+  # does not partial-match the `interpretation_label` alias.
+  if (interpret) {
+    out[["interpretation"]] <- generate_interpretation(out)
+  } else {
+    out["interpretation"] <- list(NULL)
+  }
   class(out) <- c("robustness_analysis", "list")
   out
 }
@@ -739,8 +709,8 @@ print.robustness_analysis <- function(x, show_interpretation = TRUE, ...) {
             select(label, p_value, significant))
     cat("\n")
   }
-  if (!is.null(x$interpretation) && show_interpretation) {
-    cat(x$interpretation$report, "\n")
+  if (!is.null(x[["interpretation"]]) && show_interpretation) {
+    cat(x[["interpretation"]]$report, "\n")
   }
   invisible(x)
 }

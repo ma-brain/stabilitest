@@ -1,3 +1,16 @@
+# stabilitest 0.5.0
+
+## Internal
+
+* Shared helpers in `R/robustness_shared.R` for validation, composite
+  scoring, score bands, jackknife/bootstrap annotation, and fragility
+  summaries across the two-sample and model/TOST engines.
+* Result objects keep historical field names and add cross-class aliases
+  (`metrics` / `robustness_metrics`, `interpretation_label` /
+  `robustness_interpretation`, `original_estimate` /
+  `original_mean_diff`) plus aligned shared metric columns.
+* Related test and documentation updates for schema alignment.
+
 # stabilitest 0.4.2
 
 ## CRAN check cleanup

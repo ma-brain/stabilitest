@@ -38,13 +38,18 @@ An object of class \code{"robustness_model"} (a named list) with:
 \item{original_p, original_estimate, original_significant}{Full-data
 term test (\code{estimate} is \code{NA} for multi-df joint tests).}
 \item{metrics}{Tibble of jackknife / worst-case fragility / bootstrap
-component scores and the overall composite.}
+component scores and the overall composite. Alias:
+\code{robustness_metrics} (same tibble). Shared metric columns match
+\code{\link[=robustness_analysis]{robustness_analysis()}} where meanings align.}
 \item{interpretation_label}{\code{"Robust"}, \code{"Moderately Robust"}, or
-\code{"Fragile"}.}
+\code{"Fragile"}. Alias: \code{robustness_interpretation}.}
+\item{original_estimate}{Term estimate (\code{NA} for multi-df joint tests).
+Alias: \code{original_mean_diff}.}
 \item{jackknife, worstcase, bootstrap, removed_rows}{Component analysis
-tibbles and the greedy-removal path.}
+tibbles and the greedy-removal path (flat tibbles; nesting differs
+from \code{\link[=robustness_analysis]{robustness_analysis()}}).}
 \item{term, term_info, sample_info, model, type, n, max_k, alpha,
-weights}{Model and analysis metadata.}
+max_removal_pct, weights}{Model and analysis metadata.}
 }
 }
 \description{

@@ -67,9 +67,11 @@ exclusive with \code{margin}. Not used for non-inferiority.}
 \value{
 An object of class \code{"robustness_tost"} (also \code{"robustness_model"}),
 a named list with the shared model-engine fields
-(\code{original_p} / effective p-value, \code{original_estimate},
-\code{original_significant}, \code{metrics}, \code{interpretation_label}, jackknife /
-worst-case / bootstrap tibbles, \code{n}, \code{max_k}, \code{alpha}, \code{weights}) plus
+(\code{original_p} / effective p-value, \code{original_estimate} /
+\code{original_mean_diff}, \code{original_significant}, \code{metrics} /
+\code{robustness_metrics}, \code{interpretation_label} /
+\code{robustness_interpretation}, jackknife / worst-case / bootstrap tibbles,
+\code{n}, \code{max_k}, \code{max_removal_pct}, \code{alpha}, \code{weights}) plus
 TOST/NI metadata (\code{tost_type}, \code{endpoint}, \code{margin} / \code{delta_L} /
 \code{delta_U}, one-sided p-values, \code{(1 - 2 * alpha)} CI, \code{method}).
 }

@@ -243,14 +243,12 @@ surv_term_test <- function(fit, term_spec) {
 # disappears after case deletion); such candidates are skipped.
 # ------------------------------------------------------------------------------
 robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
-                              weights, seed, min_n = 10) {
+                              weights, seed, min_n = 10,
+                              influential_threshold = 0.05) {
 
   n <- nrow(data)
   if (n < min_n) stop(sprintf("Need at least %d rows", min_n))
-  if (alpha <= 0 || alpha >= 1) stop("alpha must be in (0, 1)")
-  if (abs(sum(weights) - 1) > 1e-8 || length(weights) != 3 || any(weights < 0)) {
-    stop("weights must be 3 non-negative values summing to 1")
-  }
+  validate_alpha_weights(alpha, weights)
   validate_n_boot_max_removal(n_boot, max_removal_pct)
   original <- fit_fun(data)
   if (is.null(original) || is.na(original$p)) {
@@ -270,10 +268,8 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
            estimate = if (is.null(f)) NA_real_ else f$estimate)
   }) |>
     filter(!is.na(p_value)) |>
-    mutate(significant      = p_value < alpha,
-           conclusion_match = significant == original_significant,
-           influential      = !conclusion_match |
-                              abs(p_value - original$p) > 0.05)
+    annotate_loo_results(original$p, original_significant, alpha,
+                         influential_threshold = influential_threshold)
 
   # --- worst-case greedy removal ----------------------------------------------
   keep <- seq_len(n)
@@ -300,12 +296,10 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
              significant = best$p < alpha))
     if ((best$p < alpha) != original_significant) break
   }
-  worstcase <- worstcase |>
-    mutate(conclusion_match = significant == original_significant)
+  worstcase <- annotate_removal_results(worstcase, original_significant)
 
-  flipped <- worstcase |> filter(!conclusion_match)
-  k_frag  <- if (nrow(flipped) == 0) max_k + 1L else min(flipped$k_removed)
-  p_at_k  <- if (k_frag <= max_k) worstcase$p_value[worstcase$k_removed == k_frag] else NA_real_
+  k_frag <- fragility_index_from_removal(worstcase, max_k)
+  p_at_k <- p_at_fragility_from_removal(worstcase, k_frag, max_k)
 
   # --- case-resampling bootstrap ------------------------------------------------
   set.seed(seed)
@@ -316,49 +310,39 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
            estimate = if (is.null(f)) NA_real_ else f$estimate)
   }) |>
     filter(!is.na(p_value)) |>
-    mutate(significant      = p_value < alpha,
-           conclusion_match = significant == original_significant)
+    annotate_bootstrap_results(original_significant, alpha)
 
   # --- composite ----------------------------------------------------------------
-  s_jack    <- mean(jackknife$conclusion_match) * 100
-  s_boot    <- mean(bootstrap$conclusion_match) * 100
-  frag_comp <- 100 * min(k_frag / (max_k + 1), 1)
-  score     <- weights[["jackknife"]] * s_jack +
-               weights[["fragility"]] * frag_comp +
-               weights[["bootstrap"]] * s_boot
+  s_jack <- mean(jackknife$conclusion_match) * 100
+  s_boot <- mean(bootstrap$conclusion_match) * 100
+  est_rng <- jackknife_estimate_range(jackknife$estimate)
+  metrics <- build_robustness_metrics(
+    s_jack = s_jack,
+    jackknife = jackknife,
+    k_frag_worst = k_frag,
+    p_at_k_frag = p_at_k,
+    s_boot = s_boot,
+    bootstrap = bootstrap,
+    weights = weights,
+    n_total = n,
+    max_k = max_k,
+    estimate_lo = est_rng$lo,
+    estimate_hi = est_rng$hi
+  )
 
-  list(
+  out <- list(
     original_p = original$p, original_estimate = original$estimate,
     original_significant = original_significant,
-    n = n, max_k = max_k, alpha = alpha, weights = weights,
+    n = n, max_k = max_k, max_removal_pct = max_removal_pct,
+    alpha = alpha, weights = weights,
     jackknife = jackknife,
     worstcase = worstcase,
     bootstrap = bootstrap,
     removed_rows = removed_rows,
-    metrics = tibble(
-      jackknife_conclusion_stability = s_jack,
-      jackknife_n_influential        = sum(jackknife$influential),
-      worstcase_fragility_k          = k_frag,
-      worstcase_fragility_pct        = 100 * k_frag / n,
-      p_at_fragility                 = p_at_k,
-      bootstrap_reproducibility      = s_boot,
-      bootstrap_p_mean               = mean(bootstrap$p_value),
-      estimate_range_jackknife_lo    = if (all(is.na(jackknife$estimate))) {
-        NA_real_
-      } else {
-        min(jackknife$estimate, na.rm = TRUE)
-      },
-      estimate_range_jackknife_hi    = if (all(is.na(jackknife$estimate))) {
-        NA_real_
-      } else {
-        max(jackknife$estimate, na.rm = TRUE)
-      },
-      overall_robustness             = score),
-    interpretation_label = dplyr::case_when(
-      score > 70 ~ "Robust",          # > 70; bands calibrated by simulation
-      score > 55 ~ "Moderately Robust",  # (55, 70]
-      TRUE ~ "Fragile")                  # ≤ 55
+    metrics = metrics,
+    interpretation_label = robustness_band_label(metrics$overall_robustness)
   )
+  align_robustness_result_aliases(out, style = "model")
 }
 
 # ------------------------------------------------------------------------------
@@ -386,13 +370,18 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 #'   \item{original_p, original_estimate, original_significant}{Full-data
 #'     term test (`estimate` is `NA` for multi-df joint tests).}
 #'   \item{metrics}{Tibble of jackknife / worst-case fragility / bootstrap
-#'     component scores and the overall composite.}
+#'     component scores and the overall composite. Alias:
+#'     `robustness_metrics` (same tibble). Shared metric columns match
+#'     [robustness_analysis()] where meanings align.}
 #'   \item{interpretation_label}{`"Robust"`, `"Moderately Robust"`, or
-#'     `"Fragile"`.}
+#'     `"Fragile"`. Alias: `robustness_interpretation`.}
+#'   \item{original_estimate}{Term estimate (`NA` for multi-df joint tests).
+#'     Alias: `original_mean_diff`.}
 #'   \item{jackknife, worstcase, bootstrap, removed_rows}{Component analysis
-#'     tibbles and the greedy-removal path.}
+#'     tibbles and the greedy-removal path (flat tibbles; nesting differs
+#'     from [robustness_analysis()]).}
 #'   \item{term, term_info, sample_info, model, type, n, max_k, alpha,
-#'     weights}{Model and analysis metadata.}
+#'     max_removal_pct, weights}{Model and analysis metadata.}
 #' }
 #'
 #' @examples
@@ -777,23 +766,8 @@ print.robustness_model <- function(x, ...) {
   }
   cat(sprintf("\nOVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
               m$overall_robustness, x$interpretation_label))
-  cat("COMPONENTS:\n")
-  cat(sprintf("  Jackknife stability:       %5.1f%%  (influential: %d)\n",
-              m$jackknife_conclusion_stability, m$jackknife_n_influential))
-  cat(sprintf("  Worst-case fragility:      k = %s (%.1f%% of sample)%s\n",
-              ifelse(m$worstcase_fragility_k > x$max_k,
-                     paste0("> ", x$max_k), m$worstcase_fragility_k),
-              min(m$worstcase_fragility_pct, 100 * x$max_k / x$n),
-              ifelse(is.na(m$p_at_fragility), "",
-                     sprintf("  [p at flip: %.4f]", m$p_at_fragility))))
-  cat(sprintf("  Bootstrap reproducibility: %5.1f%%  (mean p = %.4f)\n",
-              m$bootstrap_reproducibility, m$bootstrap_p_mean))
-  if (is.na(m$estimate_range_jackknife_lo) || is.na(m$estimate_range_jackknife_hi)) {
-    cat("  Jackknife estimate range:  NA (joint multi-df term or all fits failed)\n\n")
-  } else {
-    cat(sprintf("  Jackknife estimate range:  [%.4f, %.4f]\n\n",
-                m$estimate_range_jackknife_lo, m$estimate_range_jackknife_hi))
-  }
+  print_robustness_components(x, m, p_label = "p")
+  cat("\n")
   if (length(x$removed_rows) > 0 && m$worstcase_fragility_k <= x$max_k) {
     cat("Rows removed by worst-case analysis (in order):\n  ")
     cat(x$removed_rows[seq_len(m$worstcase_fragility_k)], sep = ", ")

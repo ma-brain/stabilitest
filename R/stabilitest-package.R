@@ -13,7 +13,7 @@ NULL
 # dplyr NSE column names referenced in mutate/filter/aes/select;
 # .__obs_w__ is a temporary column used by robustness_glm weights NSE.
 utils::globalVariables(c(
-  "conclusion_match", "influential", "influential_delta",
+  "conclusion_match", "estimate", "influential", "influential_delta",
   "k_removed", "label", "method", "p_value", "significant",
   ".__obs_w__"
 ))

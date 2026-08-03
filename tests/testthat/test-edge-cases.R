@@ -695,3 +695,80 @@ test_that("continuous NA is rejected with a clear message (paired + unpaired)", 
     "must not contain missing values"
   )
 })
+
+# --- cross-class schema aliases / shared metric columns -----------------------
+
+.test_shared_metric_cols <- function(metrics) {
+  shared <- c(
+    "jackknife_conclusion_stability", "jackknife_n_influential",
+    "jackknife_pct_influential", "jackknife_p_range_lo", "jackknife_p_range_hi",
+    "worstcase_fragility_k", "worstcase_fragility_pct",
+    "worstcase_fragility_component", "p_at_fragility",
+    "extreme_fragility_k", "extreme_fragility_pct",
+    "bootstrap_reproducibility", "bootstrap_p_mean", "bootstrap_p_sd",
+    "estimate_range_jackknife_lo", "estimate_range_jackknife_hi",
+    "overall_robustness"
+  )
+  expect_true(all(shared %in% names(metrics)))
+}
+
+test_that("result schemas expose shared aliases and metric columns", {
+  res_a <- robustness_analysis(pain_treatment, pain_placebo,
+                               n_boot = 20, seed = 1)
+  expect_identical(res_a$metrics, res_a$robustness_metrics)
+  expect_identical(res_a$interpretation_label, res_a$robustness_interpretation)
+  expect_identical(res_a$original_estimate, res_a$original_mean_diff)
+  expect_null(res_a[["interpretation"]])
+  expect_null(res_a$interpretation) # must not partial-match interpretation_label
+  expect_true(is.numeric(res_a$n))
+  expect_silent(capture.output(print(res_a, show_interpretation = TRUE)))
+  .test_shared_metric_cols(res_a$robustness_metrics)
+  expect_false(is.na(res_a$robustness_metrics$extreme_fragility_k))
+  expect_true(is.na(res_a$robustness_metrics$estimate_range_jackknife_lo))
+
+  set.seed(11)
+  dat <- data.frame(
+    y = rnorm(30),
+    arm = factor(rep(c("P", "A"), each = 15), levels = c("P", "A")),
+    x = rnorm(30)
+  )
+  res_m <- robustness_lm(y ~ arm + x, dat, term = "armA",
+                         n_boot = 15, seed = 11)
+  expect_identical(res_m$robustness_metrics, res_m$metrics)
+  expect_identical(res_m$robustness_interpretation, res_m$interpretation_label)
+  expect_identical(res_m$original_mean_diff, res_m$original_estimate)
+  expect_true(is.numeric(res_m$max_removal_pct))
+  .test_shared_metric_cols(res_m$metrics)
+  expect_true(is.na(res_m$metrics$extreme_fragility_k))
+  expect_false(is.na(res_m$metrics$worstcase_fragility_component))
+  expect_false(is.na(res_m$metrics$bootstrap_p_sd))
+
+  set.seed(12)
+  g1 <- rnorm(20)
+  g2 <- rnorm(20, 0.05)
+  res_t <- robustness_tost(g1, g2, type = "equivalence", margin = 1,
+                           n_boot = 15, seed = 12)
+  expect_identical(res_t$robustness_metrics, res_t$metrics)
+  expect_identical(res_t$robustness_interpretation, res_t$interpretation_label)
+  expect_identical(res_t$original_mean_diff, res_t$original_estimate)
+  .test_shared_metric_cols(res_t$metrics)
+})
+
+test_that("shared scoring helpers match historical band boundaries", {
+  expect_identical(stabilitest:::robustness_band_label(55), "Fragile")
+  expect_identical(stabilitest:::robustness_band_label(55.0001),
+                   "Moderately Robust")
+  expect_identical(stabilitest:::robustness_band_label(70),
+                   "Moderately Robust")
+  expect_identical(stabilitest:::robustness_band_label(70.0001), "Robust")
+  expect_equal(
+    stabilitest:::fragility_component_score(3L, 10L),
+    100 * 3 / 11
+  )
+  expect_equal(
+    stabilitest:::overall_robustness_score(
+      100, 50, 80, c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+    ),
+    0.4 * 100 + 0.4 * 50 + 0.2 * 80
+  )
+})

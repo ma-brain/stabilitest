@@ -77,13 +77,15 @@ field is a mean difference, Hodges–Lehmann shift, or proportion
 difference depending on \code{test_type}).}
 \item{robustness_metrics}{Component scores (jackknife conclusion
 stability, worst-case fragility, bootstrap reproducibility, overall
-composite) and related diagnostics.}
+composite) and related diagnostics. Alias: \code{metrics} (same tibble).}
 \item{robustness_interpretation}{Label: \code{"Robust"},
-\code{"Moderately Robust"}, or \code{"Fragile"}.}
+\code{"Moderately Robust"}, or \code{"Fragile"}. Alias: \code{interpretation_label}.}
+\item{original_mean_diff}{Effect summary (mean / HL / proportion
+difference). Alias: \code{original_estimate}.}
 \item{jackknife, worstcase, extreme, bootstrap}{Component analysis
-results (tibbles plus summary scalars).}
-\item{sample_info, weights, alpha, max_removal_pct, max_k}{Analysis
-metadata.}
+results (nested lists with tibbles plus summary scalars).}
+\item{sample_info, weights, alpha, max_removal_pct, max_k, n}{Analysis
+metadata (\code{n} is total sample size / pairs as appropriate).}
 \item{interpretation}{Optional text blocks when \code{interpret = TRUE};
 otherwise \code{NULL}.}
 }

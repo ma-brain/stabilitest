@@ -559,12 +559,14 @@ tost_or_test <- function(group1, group2, type,
 #'
 #' @return An object of class `"robustness_tost"` (also `"robustness_model"`),
 #'   a named list with the shared model-engine fields
-#'   (`original_p` / effective p-value, `original_estimate`,
-#'   `original_significant`, `metrics`, `interpretation_label`, jackknife /
-#'   worst-case / bootstrap tibbles, `n`, `max_k`, `alpha`, `weights`) plus
+#'   (`original_p` / effective p-value, `original_estimate` /
+#'   `original_mean_diff`, `original_significant`, `metrics` /
+#'   `robustness_metrics`, `interpretation_label` /
+#'   `robustness_interpretation`, jackknife / worst-case / bootstrap tibbles,
+#'   `n`, `max_k`, `max_removal_pct`, `alpha`, `weights`) plus
 #'   TOST/NI metadata (`tost_type`, `endpoint`, `margin` / `delta_L` /
 #'   `delta_U`, one-sided p-values, `(1 - 2 * alpha)` CI, `method`).
-#'
+#' 
 #' @section Limitations:
 #' Binary methods use **Wald** normal approximations (RD or log OR), which can
 #' be anticonservative with sparse tables; Farrington–Manning score and exact
@@ -786,19 +788,8 @@ print.robustness_tost <- function(x, ...) {
 
   cat(sprintf("\nOVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
               m$overall_robustness, x$interpretation_label))
-  cat("COMPONENTS:\n")
-  cat(sprintf("  Jackknife stability:       %5.1f%%  (influential: %d)\n",
-              m$jackknife_conclusion_stability, m$jackknife_n_influential))
-  cat(sprintf("  Worst-case fragility:      k = %s (%.1f%% of sample)%s\n",
-              ifelse(m$worstcase_fragility_k > x$max_k,
-                     paste0("> ", x$max_k), m$worstcase_fragility_k),
-              min(m$worstcase_fragility_pct, 100 * x$max_k / x$n),
-              ifelse(is.na(m$p_at_fragility), "",
-                     sprintf("  [p_eff at flip: %.4f]", m$p_at_fragility))))
-  cat(sprintf("  Bootstrap reproducibility: %5.1f%%  (mean p_eff = %.4f)\n",
-              m$bootstrap_reproducibility, m$bootstrap_p_mean))
-  cat(sprintf("  Jackknife estimate range:  [%.4f, %.4f]\n\n",
-              m$estimate_range_jackknife_lo, m$estimate_range_jackknife_hi))
+  print_robustness_components(x, m, p_label = "p_eff")
+  cat("\n")
   if (length(x$removed_rows) > 0 && m$worstcase_fragility_k <= x$max_k) {
     cat("Rows removed by worst-case analysis (in order):\n  ")
     cat(x$removed_rows[seq_len(m$worstcase_fragility_k)], sep = ", ")
