@@ -54,8 +54,10 @@ g2 <- c(1, 1, 0, 0, 0, 0, 0, 0, 0, 0)   # 2/10 responders
 res_prop <- robustness_analysis(g1, g2, test_type = "fisher", n_boot = 500)
 # Also: test_type = "chisq" or "prop"; correct = TRUE/FALSE for chisq/prop
 
-# ANCOVA term
+# ANCOVA term (single coefficient or multi-df factor term label)
 res_lm <- robustness_lm(change ~ arm + baseline, dat, term = "armActive")
+# 3-level factor: joint F via drop1(..., test = "F")
+# res_lm_joint <- robustness_lm(change ~ arm + baseline, dat, term = "arm")
 
 # Binomial logistic GLM term
 res_glm <- robustness_glm(y ~ arm + x, dat, term = "armActive",

@@ -2,6 +2,13 @@
 
 ## Features
 
+* `robustness_lm()` now supports **multi-df terms** (e.g. a 3-level factor
+  ANCOVA term): pass the term label (`"arm"`) for a joint `drop1(..., test =
+  "F")` test, or a single coefficient row name (`"armActive"`) for the
+  previous Wald/t behaviour. Multi-df fits store `estimate = NA` and
+  `term_info` / `sample_info` with joint F, ndf, and ddf; print reports
+  "joint F" rather than a single beta.
+
 * Added `robustness_tost()` for **equivalence (Schuirmann TOST)** and
   **non-inferiority** on continuous mean differences (Welch or paired t).
   Equivalence concludes when both one-sided tests reject at `alpha`

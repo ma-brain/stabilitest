@@ -89,6 +89,76 @@ test_that("robustness_lm works on an ANCOVA term", {
                        n_boot = 50)
   expect_s3_class(res, "robustness_model")
   expect_true(res$metrics$worstcase_fragility_k >= 1)
+  expect_identical(res$term_info$type, "single")
+  expect_identical(res$term_info$test, "wald_t")
+  expect_false(is.na(res$original_estimate))
+})
+
+test_that("robustness_lm supports multi-df factor terms via joint F", {
+  set.seed(2026)
+  n <- 60
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A", "B"), each = n / 3), levels = c("P", "A", "B")),
+    baseline = rnorm(n, 60, 12)
+  )
+  dat$change <- -5 - 8 * (dat$arm == "A") - 4 * (dat$arm == "B") -
+    0.3 * (dat$baseline - 60) + rnorm(n, 0, 8)
+
+  res <- robustness_lm(change ~ arm + baseline, dat, term = "arm",
+                       n_boot = 40, seed = 11)
+  expect_s3_class(res, "robustness_model")
+  expect_identical(res$term_info$type, "joint")
+  expect_identical(res$term_info$test, "joint_F")
+  expect_identical(res$term_info$ndf, 2L)
+  expect_true(is.na(res$original_estimate))
+  expect_true(is.finite(res$original_p))
+  expect_true(res$original_significant)
+  expect_equal(res$original_p < 0.05, res$original_significant)
+  expect_gte(res$metrics$overall_robustness, 0)
+  expect_lte(res$metrics$overall_robustness, 100)
+  expect_true(is.na(res$metrics$estimate_range_jackknife_lo))
+
+  # Matches drop1 on the full-data fit
+  fit <- lm(change ~ arm + baseline, dat)
+  d1 <- drop1(fit, scope = ~ arm, test = "F")
+  expect_equal(res$original_p, unname(d1["arm", "Pr(>F)"]), tolerance = 1e-10)
+  expect_equal(res$term_info$statistic, unname(d1["arm", "F value"]),
+               tolerance = 1e-10)
+
+  # Single-coef string still works on the same 3-level factor
+  res1 <- robustness_lm(change ~ arm + baseline, dat, term = "armA",
+                        n_boot = 30, seed = 11)
+  expect_identical(res1$term_info$type, "single")
+  expect_false(is.na(res1$original_estimate))
+  ct <- summary(fit)$coefficients
+  expect_equal(res1$original_p, unname(ct["armA", "Pr(>|t|)"]),
+               tolerance = 1e-10)
+
+  # Seed reproducibility for joint
+  a <- robustness_lm(change ~ arm + baseline, dat, term = "arm",
+                     n_boot = 25, seed = 99)
+  b <- robustness_lm(change ~ arm + baseline, dat, term = "arm",
+                     n_boot = 25, seed = 99)
+  expect_equal(a$metrics$overall_robustness, b$metrics$overall_robustness)
+
+  out <- capture.output(print(res))
+  expect_true(any(grepl("joint F", out, fixed = TRUE)))
+  expect_true(any(grepl("ndf = 2", out, fixed = TRUE)))
+  expect_true(any(grepl("estimate = NA", out, fixed = TRUE)))
+})
+
+test_that("robustness_lm binary factor term label resolves to single coef", {
+  set.seed(3)
+  n <- 40
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n),
+    y = rnorm(n)
+  )
+  res <- robustness_lm(y ~ arm + x, dat, term = "arm", n_boot = 20, seed = 3)
+  expect_identical(res$term_info$type, "single")
+  expect_identical(res$term_info$coef_name, "armA")
+  expect_false(is.na(res$original_estimate))
 })
 
 test_that("robustness_surv works on a Cox term", {

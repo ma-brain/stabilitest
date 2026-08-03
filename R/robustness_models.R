@@ -1,12 +1,13 @@
 # ==============================================================================
 # Robustness Analysis — model-based extensions (July 2026)
 #
-# robustness_lm()   : linear models / ANCOVA (treatment effect adjusted for
-#                     covariates, e.g. change ~ arm + baseline)
+# robustness_lm()   : linear models / ANCOVA (single-coef Wald/t or multi-df
+#                     joint F via drop1 for factor term labels)
 # robustness_surv() : time-to-event endpoints via Cox proportional hazards
 #                     (Wald p-value; with a single binary arm the score test
 #                     is asymptotically the log-rank test)
-# robustness_glm()  : binomial logistic GLM terms (logit link only in v1)
+# robustness_glm()  : binomial logistic GLM terms (logit link only in v1;
+#                     multi-df factors still out of scope for glm)
 #
 # All reuse a common case-deletion engine: jackknife, greedy worst-case
 # removal (AMIP-style), and case-resampling bootstrap operate on ROWS of the
@@ -14,6 +15,149 @@
 # Companion to robustness_analysis.R (two-sample version); see
 # manuscript/methodological_review.md for the rationale behind the v2 metrics.
 # ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Term resolution (shared by lm now; glm / surv can reuse later)
+#
+# Matching rules (v1):
+#   1. Exact match to one coefficient row name -> single-coef Wald/t.
+#   2. Exact match to a terms() term label with >= 2 design-matrix columns
+#      (non-aliased) -> joint multi-df test.
+#   3. Exact match to a term label with exactly 1 non-aliased column whose
+#      coefficient name differs (e.g. binary factor "arm" -> "armA") ->
+#      resolve to that single coefficient.
+#   4. Otherwise, or if (1) and a multi-column term label collide on the same
+#      string, error with an unambiguous message.
+# ------------------------------------------------------------------------------
+resolve_model_term <- function(fit, term) {
+  if (!is.character(term) || length(term) != 1L || !nzchar(term)) {
+    stop("`term` must be a non-empty string", call. = FALSE)
+  }
+
+  ct <- stats::coef(summary(fit))
+  if (is.null(ct) || is.null(rownames(ct))) {
+    stop("Model has no coefficient table to match `term` against", call. = FALSE)
+  }
+  coef_names <- rownames(ct)
+
+  tt <- stats::terms(fit)
+  term_labels <- attr(tt, "term.labels")
+  mm <- stats::model.matrix(fit)
+  assign <- attr(mm, "assign")
+  if (is.null(assign)) {
+    stop("Model matrix has no 'assign' attribute; cannot resolve multi-df terms",
+         call. = FALSE)
+  }
+
+  exact_coef <- term %in% coef_names
+  exact_tl <- length(term_labels) > 0L && term %in% term_labels
+
+  coef_cols_for_label <- function(label) {
+    idx <- match(label, term_labels)
+    cols <- which(assign == idx)
+    # Drop aliased / NA coefficients not present in the summary table
+    intersect(colnames(mm)[cols], coef_names)
+  }
+
+  if (exact_coef && exact_tl) {
+    cols <- coef_cols_for_label(term)
+    if (length(cols) > 1L) {
+      stop(sprintf(
+        paste0("Ambiguous term '%s': matches both a coefficient row and a ",
+               "multi-df term label (%d columns: %s). Use a specific ",
+               "coefficient name for a single-df test, or a unique term label."),
+        term, length(cols), paste(cols, collapse = ", ")),
+        call. = FALSE)
+    }
+    # Continuous covariate / 1-df term whose label equals the coef name
+    return(list(
+      type = "single",
+      term = term,
+      coef_name = term,
+      coef_names = term,
+      ndf = 1L
+    ))
+  }
+
+  if (exact_coef) {
+    return(list(
+      type = "single",
+      term = term,
+      coef_name = term,
+      coef_names = term,
+      ndf = 1L
+    ))
+  }
+
+  if (exact_tl) {
+    cols <- coef_cols_for_label(term)
+    if (length(cols) == 0L) {
+      stop(sprintf(
+        "Term label '%s' has no estimable coefficients (possibly fully aliased)",
+        term), call. = FALSE)
+    }
+    if (length(cols) == 1L) {
+      return(list(
+        type = "single",
+        term = term,
+        coef_name = cols[[1L]],
+        coef_names = cols,
+        ndf = 1L
+      ))
+    }
+    return(list(
+      type = "joint",
+      term = term,
+      coef_name = NA_character_,
+      coef_names = cols,
+      ndf = length(cols)
+    ))
+  }
+
+  stop(sprintf(
+    paste0("Term '%s' not found in model coefficients or term labels.\n",
+           "  Coefficients: %s\n",
+           "  Term labels:  %s"),
+    term,
+    paste(coef_names, collapse = ", "),
+    if (length(term_labels) == 0L) "(none)" else paste(term_labels, collapse = ", ")
+  ), call. = FALSE)
+}
+
+# Extract p (and estimate for single-coef) from a fitted lm given a resolved term.
+# Returns NULL when the term cannot be tested on this subset (e.g. a factor
+# level disappeared). Joint multi-df terms use drop1(..., test = "F").
+lm_term_test <- function(fit, term_spec) {
+  if (identical(term_spec$type, "single")) {
+    ct <- summary(fit)$coefficients
+    cn <- term_spec$coef_name
+    if (is.null(ct) || !cn %in% rownames(ct)) return(NULL)
+    p <- ct[cn, "Pr(>|t|)"]
+    est <- ct[cn, "Estimate"]
+    if (is.na(p)) return(NULL)
+    return(list(p = unname(p), estimate = unname(est)))
+  }
+
+  # Joint F via marginal drop1 (base R; no car dependency)
+  scope <- stats::as.formula(paste("~", term_spec$term),
+                             env = environment(formula(fit)))
+  d1 <- tryCatch(
+    stats::drop1(fit, scope = scope, test = "F"),
+    error = function(e) NULL
+  )
+  if (is.null(d1) || !term_spec$term %in% rownames(d1)) return(NULL)
+  p <- d1[term_spec$term, "Pr(>F)"]
+  if (is.na(p)) return(NULL)
+  list(
+    p = unname(p),
+    estimate = NA_real_,
+    statistic = unname(d1[term_spec$term, "F value"]),
+    ndf = unname(d1[term_spec$term, "Df"]),
+    # RSS residual df for the full model is in the <none> row's implicit df;
+    # drop1 does not always expose ddf per row — recover from the fit.
+    ddf = unname(fit$df.residual)
+  )
+}
 
 # ------------------------------------------------------------------------------
 # Internal engine: everything is expressed through fit_fun(data) -> list(
@@ -121,8 +265,16 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
       p_at_fragility                 = p_at_k,
       bootstrap_reproducibility      = s_boot,
       bootstrap_p_mean               = mean(bootstrap$p_value),
-      estimate_range_jackknife_lo    = min(jackknife$estimate),
-      estimate_range_jackknife_hi    = max(jackknife$estimate),
+      estimate_range_jackknife_lo    = if (all(is.na(jackknife$estimate))) {
+        NA_real_
+      } else {
+        min(jackknife$estimate, na.rm = TRUE)
+      },
+      estimate_range_jackknife_hi    = if (all(is.na(jackknife$estimate))) {
+        NA_real_
+      } else {
+        max(jackknife$estimate, na.rm = TRUE)
+      },
       overall_robustness             = score),
     interpretation_label = dplyr::case_when(
       score > 70 ~ "Robust",          # > 70; bands calibrated by simulation
@@ -134,14 +286,26 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 # ------------------------------------------------------------------------------
 #' Robustness analysis for a linear model / ANCOVA term
 #'
-#' @param formula Model formula, e.g. change ~ arm + baseline
+#' @param formula Model formula, e.g. `change ~ arm + baseline`
 #' @param data Data frame (one row per subject)
-#' @param term Coefficient whose p-value defines the conclusion,
-#'   e.g. "armActive". Must match a row of summary(lm(...))$coefficients.
-#' @param alpha,n_boot,max_removal_pct,weights,seed As in robustness_analysis()
+#' @param term Term whose p-value defines the conclusion. Either:
+#'   - a single coefficient row name from `summary(lm(...))$coefficients`
+#'     (e.g. `"armActive"`), tested with the usual coefficient t / Wald p-value; or
+#'   - a multi-df term label from `attr(terms(lm(...)), "term.labels")`
+#'     (e.g. a 3-level factor `"arm"`), tested jointly via
+#'     `drop1(..., test = "F")`. For multi-df terms the stored `estimate` is
+#'     `NA` and `term_info` records the joint F test (ndf / statistic).
+#' @param alpha,n_boot,max_removal_pct,weights,seed As in [robustness_analysis()]
+#'
+#' @details Single-coefficient `term` strings keep the previous Wald/t
+#'   behaviour. Multi-df factors are detected when `term` matches a term label
+#'   that expands to more than one non-aliased design-matrix column. Ambiguous
+#'   matches error. Conclusion for the robustness pipeline is `p < alpha`
+#'   (joint F p-value for multi-df terms).
 #'
 #' @examples
 #' # res <- robustness_lm(change ~ arm + baseline, dat, term = "armActive")
+#' # res <- robustness_lm(change ~ arm + baseline, dat, term = "arm")  # joint F
 #' @export
 robustness_lm <- function(formula, data, term,
                           alpha = 0.05, n_boot = 1000, max_removal_pct = 0.30,
@@ -149,16 +313,40 @@ robustness_lm <- function(formula, data, term,
                                       bootstrap = 0.2),
                           seed = 123) {
 
+  fit0 <- stats::lm(formula, data = data)
+  term_spec <- resolve_model_term(fit0, term)
+  # Enrich term_info from the full-data test (F statistic / ndf for joint)
+  full_test <- lm_term_test(fit0, term_spec)
+  if (is.null(full_test) || is.na(full_test$p)) {
+    stop("Model could not be fitted on the full dataset", call. = FALSE)
+  }
+  if (identical(term_spec$type, "joint")) {
+    term_spec$statistic <- full_test$statistic
+    term_spec$ndf <- as.integer(full_test$ndf)
+    term_spec$ddf <- as.integer(full_test$ddf)
+    term_spec$test <- "joint_F"
+  } else {
+    term_spec$test <- "wald_t"
+  }
+
   fit_fun <- function(d) {
-    fit <- lm(formula, data = d)
-    ct  <- summary(fit)$coefficients
-    if (!term %in% rownames(ct)) return(NULL)
-    list(p = ct[term, "Pr(>|t|)"], estimate = ct[term, "Estimate"])
+    fit <- tryCatch(stats::lm(formula, data = d), error = function(e) NULL)
+    if (is.null(fit)) return(NULL)
+    lm_term_test(fit, term_spec)
   }
   out <- robustness_engine(data, fit_fun, alpha, n_boot, max_removal_pct,
                            weights, seed)
   out$term <- term
-  out$model <- deparse(formula)
+  out$term_info <- term_spec
+  out$sample_info <- list(
+    test = term_spec$test,
+    term = term,
+    coef_names = term_spec$coef_names,
+    ndf = term_spec$ndf,
+    ddf = if (is.null(term_spec$ddf)) NA_integer_ else term_spec$ddf,
+    statistic = if (is.null(term_spec$statistic)) NA_real_ else term_spec$statistic
+  )
+  out$model <- paste(deparse(formula), collapse = " ")
   out$type <- "Linear model (lm)"
   class(out) <- c("robustness_model", "list")
   out
@@ -324,13 +512,30 @@ print.robustness_model <- function(x, ...) {
   cat("================================================\n\n")
   cat(sprintf("MODEL: %s  [%s]\n", x$model, x$type))
   cat(sprintf("TERM:  %s | alpha = %.2f | n = %d\n\n", x$term, x$alpha, x$n))
-  cat(sprintf("ORIGINAL: estimate = %.4f, p = %.4f (%s)\n",
-              x$original_estimate, x$original_p,
-              ifelse(x$original_significant, "significant", "non-significant")))
-  if (x$type == "Cox proportional hazards") {
+  ti <- x$term_info
+  if (!is.null(ti) && identical(ti$type, "joint")) {
+    cat(sprintf("ORIGINAL: joint F (ndf = %d, ddf = %d",
+                ti$ndf, ti$ddf))
+    if (!is.null(ti$statistic) && !is.na(ti$statistic)) {
+      cat(sprintf(", F = %.3f", ti$statistic))
+    }
+    cat(sprintf("), p = %.4f (%s)\n",
+                x$original_p,
+                ifelse(x$original_significant, "significant", "non-significant")))
+    cat("          estimate = NA (joint multi-df term)\n")
+  } else if (is.na(x$original_estimate)) {
+    cat(sprintf("ORIGINAL: estimate = NA, p = %.4f (%s)\n",
+                x$original_p,
+                ifelse(x$original_significant, "significant", "non-significant")))
+  } else {
+    cat(sprintf("ORIGINAL: estimate = %.4f, p = %.4f (%s)\n",
+                x$original_estimate, x$original_p,
+                ifelse(x$original_significant, "significant", "non-significant")))
+  }
+  if (x$type == "Cox proportional hazards" && !is.na(x$original_estimate)) {
     cat(sprintf("          HR = %.3f\n", exp(x$original_estimate)))
   }
-  if (startsWith(x$type, "GLM (binomial")) {
+  if (startsWith(x$type, "GLM (binomial") && !is.na(x$original_estimate)) {
     cat(sprintf("          OR = %.3f\n", exp(x$original_estimate)))
   }
   cat(sprintf("\nOVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
@@ -346,8 +551,12 @@ print.robustness_model <- function(x, ...) {
                      sprintf("  [p at flip: %.4f]", m$p_at_fragility))))
   cat(sprintf("  Bootstrap reproducibility: %5.1f%%  (mean p = %.4f)\n",
               m$bootstrap_reproducibility, m$bootstrap_p_mean))
-  cat(sprintf("  Jackknife estimate range:  [%.4f, %.4f]\n\n",
-              m$estimate_range_jackknife_lo, m$estimate_range_jackknife_hi))
+  if (is.na(m$estimate_range_jackknife_lo) || is.na(m$estimate_range_jackknife_hi)) {
+    cat("  Jackknife estimate range:  NA (joint multi-df term or all fits failed)\n\n")
+  } else {
+    cat(sprintf("  Jackknife estimate range:  [%.4f, %.4f]\n\n",
+                m$estimate_range_jackknife_lo, m$estimate_range_jackknife_hi))
+  }
   if (length(x$removed_rows) > 0 && m$worstcase_fragility_k <= x$max_k) {
     cat("Rows removed by worst-case analysis (in order):\n  ")
     cat(x$removed_rows[seq_len(m$worstcase_fragility_k)], sep = ", ")

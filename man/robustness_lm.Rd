@@ -16,18 +16,33 @@ robustness_lm(
 )
 }
 \arguments{
-\item{formula}{Model formula, e.g. change ~ arm + baseline}
+\item{formula}{Model formula, e.g. \code{change ~ arm + baseline}}
 
 \item{data}{Data frame (one row per subject)}
 
-\item{term}{Coefficient whose p-value defines the conclusion,
-e.g. "armActive". Must match a row of summary(lm(...))$coefficients.}
+\item{term}{Term whose p-value defines the conclusion. Either:
+\itemize{
+\item a single coefficient row name from \code{summary(lm(...))$coefficients}
+(e.g. \code{"armActive"}), tested with the usual coefficient t / Wald p-value; or
+\item a multi-df term label from \code{attr(terms(lm(...)), "term.labels")}
+(e.g. a 3-level factor \code{"arm"}), tested jointly via
+\code{drop1(..., test = "F")}. For multi-df terms the stored \code{estimate} is
+\code{NA} and \code{term_info} records the joint F test (ndf / statistic).
+}}
 
-\item{alpha, n_boot, max_removal_pct, weights, seed}{As in robustness_analysis()}
+\item{alpha, n_boot, max_removal_pct, weights, seed}{As in \code{\link[=robustness_analysis]{robustness_analysis()}}}
 }
 \description{
 Robustness analysis for a linear model / ANCOVA term
 }
+\details{
+Single-coefficient \code{term} strings keep the previous Wald/t
+behaviour. Multi-df factors are detected when \code{term} matches a term label
+that expands to more than one non-aliased design-matrix column. Ambiguous
+matches error. Conclusion for the robustness pipeline is \code{p < alpha}
+(joint F p-value for multi-df terms).
+}
 \examples{
 # res <- robustness_lm(change ~ arm + baseline, dat, term = "armActive")
+# res <- robustness_lm(change ~ arm + baseline, dat, term = "arm")  # joint F
 }

@@ -286,7 +286,7 @@ test_that("robustness_lm rejects small n, bad weights, and missing terms", {
   )
   expect_error(
     robustness_lm(y ~ arm + x, ok, term = "armZ", n_boot = 5),
-    "Model could not be fitted on the full dataset"
+    "Term 'armZ' not found"
   )
   expect_error(
     robustness_lm(y ~ arm + x, ok, term = "armA", alpha = 0, n_boot = 5),
