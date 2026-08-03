@@ -28,6 +28,18 @@ validate_alpha_weights <- function(alpha, weights) {
   }
 }
 
+validate_fragility_capacity <- function(max_k) {
+  if (!is.numeric(max_k) || length(max_k) != 1L || is.na(max_k) || max_k < 1) {
+    stop(
+      paste(
+        "Insufficient sample for fragility analysis:",
+        "cannot evaluate a removal while retaining the minimum sample size"
+      ),
+      call. = FALSE
+    )
+  }
+}
+
 # Calibrated bands (simulation Section 3): > 70 Robust; (55, 70] Moderately
 # Robust; <= 55 Fragile. Shared by two-sample, model, and TOST paths.
 robustness_band_label <- function(score) {
@@ -39,8 +51,23 @@ robustness_band_label <- function(score) {
 }
 
 fragility_index_from_removal <- function(removal_tbl, max_k) {
-  flipped <- removal_tbl[!removal_tbl$conclusion_match, , drop = FALSE]
+  valid <- !is.na(removal_tbl$conclusion_match)
+  flipped <- removal_tbl[valid & !removal_tbl$conclusion_match, , drop = FALSE]
   if (nrow(flipped) == 0L) {
+    evaluated_k <- if (any(valid)) {
+      max(removal_tbl$k_removed[valid])
+    } else {
+      -1L
+    }
+    if (evaluated_k < max_k) {
+      stop(
+        sprintf(
+          "Fragility removal search ended before max_k (%d of %d removals evaluated)",
+          evaluated_k, max_k
+        ),
+        call. = FALSE
+      )
+    }
     as.integer(max_k + 1L)
   } else {
     as.integer(min(flipped$k_removed))

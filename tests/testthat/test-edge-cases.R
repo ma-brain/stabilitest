@@ -106,6 +106,33 @@ test_that("paired tests reject unequal lengths and tiny samples", {
     robustness_analysis(1:3, 2:4, test_type = "wilcoxon.paired", n_boot = 5),
     "Paired tests require at least 4 pairs"
   )
+  expect_error(
+    robustness_analysis(c(1, 2, 4, 8), c(0, 1, 1, 2),
+                        test_type = "paired.t.test", n_boot = 5),
+    "Insufficient sample for fragility analysis"
+  )
+})
+
+test_that("fragility analysis requires a complete, evaluable search", {
+  expect_error(
+    robustness_analysis(1:4, 5:8, n_boot = 5),
+    "Insufficient sample for fragility analysis"
+  )
+
+  complete <- tibble::tibble(
+    k_removed = 0:2,
+    conclusion_match = rep(TRUE, 3)
+  )
+  expect_identical(
+    stabilitest:::fragility_index_from_removal(complete, max_k = 2L),
+    3L
+  )
+
+  incomplete <- complete[1:2, ]
+  expect_error(
+    stabilitest:::fragility_index_from_removal(incomplete, max_k = 2L),
+    "Fragility removal search ended before"
+  )
 })
 
 test_that("paired t and Wilcoxon signed-rank handle clear paired effects", {
@@ -320,18 +347,17 @@ test_that("robustness_lm handles collinear covariates and missing factor levels"
   )
 })
 
-test_that("robustness_lm works at the minimum sample size", {
+test_that("robustness_lm rejects samples with no removable row", {
   set.seed(9)
   d <- data.frame(
     y = c(rnorm(5, 0), rnorm(5, 2)),
     arm = factor(rep(c("P", "A"), each = 5), levels = c("P", "A")),
     x = rnorm(10)
   )
-  res <- robustness_lm(y ~ arm + x, d, term = "armA", n_boot = 20, seed = 9)
-  expect_s3_class(res, "robustness_model")
-  expect_identical(res$n, 10L)
-  expect_gte(res$metrics$overall_robustness, 0)
-  expect_lte(res$metrics$overall_robustness, 100)
+  expect_error(
+    robustness_lm(y ~ arm + x, d, term = "armA", n_boot = 20, seed = 9),
+    "Insufficient sample for fragility analysis"
+  )
 })
 
 # --- robustness_surv edges ----------------------------------------------------
@@ -674,9 +700,9 @@ test_that("max_removal_pct must be in (0, 1] across engines", {
     "max_removal_pct must be a single number in \\(0, 1\\]"
   )
 
-  # Boundary max_removal_pct = 1 is allowed
+  # Boundary max_removal_pct = 1 is allowed, capped so each group retains four.
   res <- robustness_analysis(g1, g2, n_boot = 5, max_removal_pct = 1, seed = 1)
-  expect_equal(res$max_k, length(g1) + length(g2))
+  expect_equal(res$max_k, (length(g1) - 4L) + (length(g2) - 4L))
 })
 
 test_that("continuous NA is rejected with a clear message (paired + unpaired)", {

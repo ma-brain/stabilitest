@@ -255,7 +255,8 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
     stop("Model could not be fitted on the full dataset")
   }
   original_significant <- original$p < alpha
-  max_k <- floor(n * max_removal_pct)
+  max_k <- min(floor(n * max_removal_pct), n - min_n)
+  validate_fragility_capacity(max_k)
 
   safe_fit <- function(d) tryCatch(fit_fun(d), error = \(e) NULL,
                                    warning = \(w) suppressWarnings(fit_fun(d)))
@@ -775,4 +776,3 @@ print.robustness_model <- function(x, ...) {
   }
   invisible(x)
 }
-

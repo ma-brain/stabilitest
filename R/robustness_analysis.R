@@ -293,7 +293,13 @@ robustness_analysis <- function(group1, group2,
   original_significant <- original$p.value < alpha
 
   n_total <- if (paired) length(group1) else length(group1) + length(group2)
-  max_k   <- floor(n_total * max_removal_pct)
+  max_feasible_k <- if (paired) {
+    length(group1) - 4L
+  } else {
+    (length(group1) - 4L) + (length(group2) - 4L)
+  }
+  max_k <- min(floor(n_total * max_removal_pct), max_feasible_k)
+  validate_fragility_capacity(max_k)
 
   # ============================================================================
   # 1. JACKKNIFE (leave-one-out)
@@ -357,15 +363,26 @@ robustness_analysis <- function(group1, group2,
 
   if (paired) {
     extreme_next <- function(g1, g2) {
+      if (length(g1) <= 4L) return(NULL)
       d <- abs(g1 - g2)
       list(idx = which.max(d))
     }
   } else {
     extreme_next <- function(g1, g2) {
       gm <- mean(c(g1, g2))
-      d1 <- abs(g1 - gm); d2 <- abs(g2 - gm)
-      if (max(d1) >= max(d2)) list(group = 1, idx = which.max(d1))
-      else                    list(group = 2, idx = which.max(d2))
+      best <- NULL
+      if (length(g1) > 4L) {
+        d1 <- abs(g1 - gm)
+        best <- list(group = 1, idx = which.max(d1), distance = max(d1))
+      }
+      if (length(g2) > 4L) {
+        d2 <- abs(g2 - gm)
+        if (is.null(best) || max(d2) > best$distance) {
+          best <- list(group = 2, idx = which.max(d2), distance = max(d2))
+        }
+      }
+      if (!is.null(best)) best$distance <- NULL
+      best
     }
   }
   extreme <- run_removal(extreme_next)
@@ -755,4 +772,3 @@ plot.robustness_analysis <- function(x, ...) {
   }
   invisible(list(trajectories = p1, bootstrap = p2))
 }
-
