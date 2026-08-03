@@ -246,6 +246,18 @@ plot(res)
 # Equivalence / NI: robustness_tost(..., endpoint = "mean" | "prop" | "or")
 ```
 
+To reproduce the Section 3 simulation against the exact checkout containing
+the manuscript, install the development packages `pkgload` and `tidyverse`,
+then run the script from any working directory:
+
+```sh
+Rscript /path/to/stabilitest/manuscript/simulation_study.R
+```
+
+The script resolves the repository from its own location and loads that
+checkout with `pkgload`; it does not use a potentially stale installed copy of
+`stabilitest`.
+
 ## Appendix B: SAP/SAR template (updated)
 
 **SAP — Sensitivity and Robustness Analyses.** Robustness of the primary efficacy analysis will be assessed with the stabilitest framework: (1) jackknife leave-one-out analysis (influence criterion: significance flip or |Δp| > 0.05); (2) worst-case greedy removal up to 30% of the sample, yielding the removal fragility index; (3) bootstrap resampling (B = [1000] iterations) estimating the reproducibility probability. The composite score uses pre-specified weights [0.4/0.4/0.2] with calibrated bands (> 70 robust; (55, 70] moderately robust; ≤ 55 fragile; applicable to significant results). If the worst-case fragility index is below 5% of the sample, the subjects in the removal set will be reviewed for data quality and a rank-based supplementary analysis performed.

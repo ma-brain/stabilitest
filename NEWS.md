@@ -15,6 +15,13 @@
   replicates. Summaries use finite p-values, result objects expose `n_valid`
   and `n_failed`, and an entirely degenerate bootstrap fails with a clear
   error instead of producing a missing or misleading score.
+* Composite weights must now be a named numeric vector containing exactly
+  `jackknife`, `fragility`, and `bootstrap`, with finite non-negative values
+  summing to one. Malformed names, values, and sums produce specific validation
+  errors before score calculation begins.
+* `manuscript/simulation_study.R` now locates and loads the package checkout
+  containing the script through `pkgload`, so it runs from any working
+  directory without relying on a partial or stale package source.
 
 # stabilitest 0.5.0
 
