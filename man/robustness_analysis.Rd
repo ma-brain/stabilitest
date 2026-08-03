@@ -9,14 +9,16 @@
 robustness_analysis(
   group1,
   group2,
-  test_type = c("t.test", "paired.t.test", "wilcoxon", "wilcoxon.paired"),
+  test_type = c("t.test", "paired.t.test", "wilcoxon", "wilcoxon.paired", "fisher",
+    "chisq", "prop"),
   alpha = 0.05,
   n_boot = 1000,
   max_removal_pct = 0.3,
   influential_threshold = 0.05,
   weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
   seed = 123,
-  interpret = FALSE
+  interpret = FALSE,
+  correct = TRUE
 )
 
 \method{print}{robustness_analysis}(x, show_interpretation = TRUE, ...)
@@ -24,12 +26,16 @@ robustness_analysis(
 \method{plot}{robustness_analysis}(x, ...)
 }
 \arguments{
-\item{group1}{Numeric vector of observations in group 1}
+\item{group1}{Numeric vector of observations in group 1; for proportion
+tests (\code{"fisher"}, \code{"chisq"}, \code{"prop"}), binary 0/1 or logical}
 
-\item{group2}{Numeric vector of observations in group 2}
+\item{group2}{Numeric vector of observations in group 2; same coding rules
+as \code{group1}}
 
-\item{test_type}{"t.test" (Welch, default), "paired.t.test", "wilcoxon",
-or "wilcoxon.paired"}
+\item{test_type}{\code{"t.test"} (Welch, default), \code{"paired.t.test"},
+\code{"wilcoxon"}, \code{"wilcoxon.paired"}, or proportion tests \code{"fisher"}
+(Fisher's exact), \code{"chisq"} (\code{stats::chisq.test} on the 2x2 table),
+\code{"prop"} (\code{stats::prop.test})}
 
 \item{alpha}{Significance level (default 0.05)}
 
@@ -50,6 +56,10 @@ applies to the WORST-CASE fragility component. Pre-specify in the SAP.}
 
 \item{interpret}{If TRUE, generate a text interpretation (default FALSE)}
 
+\item{correct}{Continuity correction for \code{"chisq"} and \code{"prop"} (default
+\code{TRUE}, matching \code{stats::chisq.test} / \code{stats::prop.test} defaults).
+Ignored for other \code{test_type} values.}
+
 \item{x}{A \code{robustness_analysis} object}
 
 \item{show_interpretation}{If TRUE, print the text interpretation when present}
@@ -60,5 +70,9 @@ applies to the WORST-CASE fragility component. Pre-specify in the SAP.}
 Object of class "robustness_analysis"
 }
 \description{
-Comprehensive robustness analysis for two-sample comparisons
+Supports continuous location tests and two-group binary proportion tests
+(Fisher exact, chi-square, and \code{stats::prop.test}). Proportion tests take
+individual-level binary outcomes (0/1 or logical) so jackknife, worst-case
+removal, and bootstrap operate on the same observation units as the
+continuous API. Barnard's exact test is not implemented in this version.
 }

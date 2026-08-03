@@ -1,3 +1,16 @@
+# Unreleased
+
+## Features
+
+* Extended `robustness_analysis()` with two-group binary proportion tests:
+  `test_type = "fisher"` (Fisher's exact), `"chisq"` (`stats::chisq.test`),
+  and `"prop"` (`stats::prop.test`). Inputs are individual-level binary 0/1
+  or logical vectors so jackknife, worst-case removal, and bootstrap reuse the
+  existing two-sample machinery. Continuity correction for `"chisq"` /
+  `"prop"` is controlled by `correct` (default `TRUE`, matching base R).
+  Barnard's exact test is not included (no light dependency / pure
+  implementation in this release).
+
 # stabilitest 0.3.0
 
 ## Features

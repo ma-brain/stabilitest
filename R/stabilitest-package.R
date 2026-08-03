@@ -6,7 +6,7 @@
 #' @import tibble
 #' @importFrom purrr map_dfr
 #' @importFrom ggplot2 ggplot aes geom_hline geom_line geom_point geom_histogram geom_vline labs theme_minimal theme
-#' @importFrom stats t.test wilcox.test sd median quantile lm glm binomial
+#' @importFrom stats t.test wilcox.test fisher.test chisq.test prop.test sd median quantile lm glm binomial
 ## usethis namespace: end
 NULL
 

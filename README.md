@@ -38,6 +38,14 @@ res <- robustness_analysis(pain_treatment, pain_placebo,
 print(res)
 plot(res)
 
+# Two-group binary proportions (Fisher / chi-square / prop.test)
+# Individual-level 0/1 (or logical) outcomes — same jackknife / fragility /
+# bootstrap machinery as the continuous API
+g1 <- c(1, 1, 1, 1, 1, 1, 0, 0, 0, 0)   # 6/10 responders
+g2 <- c(1, 1, 0, 0, 0, 0, 0, 0, 0, 0)   # 2/10 responders
+res_prop <- robustness_analysis(g1, g2, test_type = "fisher", n_boot = 500)
+# Also: test_type = "chisq" or "prop"; correct = TRUE/FALSE for chisq/prop
+
 # ANCOVA term
 res_lm <- robustness_lm(change ~ arm + baseline, dat, term = "armActive")
 

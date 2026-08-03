@@ -16,12 +16,50 @@
 #   * Influential observations flagged by significance flip OR |delta p|
 # ==============================================================================
 
+# Coerce logical/numeric to 0/1 for two-group proportion tests; reject otherwise.
+coerce_binary <- function(x, name) {
+  if (is.logical(x)) {
+    if (anyNA(x)) stop(sprintf("%s must not contain missing values", name))
+    return(as.numeric(x))
+  }
+  if (!is.numeric(x)) {
+    stop(sprintf("%s must be numeric 0/1 or logical for proportion tests", name))
+  }
+  if (anyNA(x)) stop(sprintf("%s must not contain missing values", name))
+  # Allow integerish 0/1 only (reject 0.5, 2, etc.)
+  if (!all(x %in% c(0, 1))) {
+    stop(sprintf("%s must be binary (0/1 or logical) for proportion tests", name))
+  }
+  as.numeric(x)
+}
+
+# 2x2 contingency table: rows = outcome (success, failure), cols = group
+prop_table_2x2 <- function(g1, g2) {
+  matrix(
+    c(sum(g1), length(g1) - sum(g1),
+      sum(g2), length(g2) - sum(g2)),
+    nrow = 2,
+    dimnames = list(outcome = c("success", "failure"),
+                    group = c("group1", "group2"))
+  )
+}
+
 #' Comprehensive robustness analysis for two-sample comparisons
 #'
-#' @param group1 Numeric vector of observations in group 1
-#' @param group2 Numeric vector of observations in group 2
-#' @param test_type "t.test" (Welch, default), "paired.t.test", "wilcoxon",
-#'   or "wilcoxon.paired"
+#' Supports continuous location tests and two-group binary proportion tests
+#' (Fisher exact, chi-square, and `stats::prop.test`). Proportion tests take
+#' individual-level binary outcomes (0/1 or logical) so jackknife, worst-case
+#' removal, and bootstrap operate on the same observation units as the
+#' continuous API. Barnard's exact test is not implemented in this version.
+#'
+#' @param group1 Numeric vector of observations in group 1; for proportion
+#'   tests (`"fisher"`, `"chisq"`, `"prop"`), binary 0/1 or logical
+#' @param group2 Numeric vector of observations in group 2; same coding rules
+#'   as `group1`
+#' @param test_type `"t.test"` (Welch, default), `"paired.t.test"`,
+#'   `"wilcoxon"`, `"wilcoxon.paired"`, or proportion tests `"fisher"`
+#'   (Fisher's exact), `"chisq"` (`stats::chisq.test` on the 2x2 table),
+#'   `"prop"` (`stats::prop.test`)
 #' @param alpha Significance level (default 0.05)
 #' @param n_boot Bootstrap iterations (default 1000)
 #' @param max_removal_pct Maximum proportion of observations removed in the
@@ -34,24 +72,38 @@
 #'   applies to the WORST-CASE fragility component. Pre-specify in the SAP.
 #' @param seed RNG seed for the bootstrap (default 123)
 #' @param interpret If TRUE, generate a text interpretation (default FALSE)
+#' @param correct Continuity correction for `"chisq"` and `"prop"` (default
+#'   `TRUE`, matching `stats::chisq.test` / `stats::prop.test` defaults).
+#'   Ignored for other `test_type` values.
 #'
 #' @return Object of class "robustness_analysis"
 #' @export
 robustness_analysis <- function(group1, group2,
                                 test_type = c("t.test", "paired.t.test",
-                                              "wilcoxon", "wilcoxon.paired"),
+                                              "wilcoxon", "wilcoxon.paired",
+                                              "fisher", "chisq", "prop"),
                                 alpha = 0.05, n_boot = 1000,
                                 max_removal_pct = 0.30,
                                 influential_threshold = 0.05,
                                 weights = c(jackknife = 0.4, fragility = 0.4,
                                             bootstrap = 0.2),
-                                seed = 123, interpret = FALSE) {
+                                seed = 123, interpret = FALSE,
+                                correct = TRUE) {
 
   test_type <- match.arg(test_type)
   paired <- test_type %in% c("paired.t.test", "wilcoxon.paired")
+  is_prop <- test_type %in% c("fisher", "chisq", "prop")
 
   # --- validation -------------------------------------------------------------
-  stopifnot(is.numeric(group1), is.numeric(group2))
+  if (is_prop) {
+    if (!is.logical(correct) || length(correct) != 1L || is.na(correct)) {
+      stop("correct must be a single non-missing logical")
+    }
+    group1 <- coerce_binary(group1, "group1")
+    group2 <- coerce_binary(group2, "group2")
+  } else {
+    stopifnot(is.numeric(group1), is.numeric(group2))
+  }
   if (paired) {
     if (length(group1) != length(group2)) stop("Paired tests require equal length vectors")
     if (length(group1) < 4) stop("Paired tests require at least 4 pairs")
@@ -65,6 +117,24 @@ robustness_analysis <- function(group1, group2,
 
   # --- test wrapper -----------------------------------------------------------
   perform_test <- function(g1, g2) {
+    if (is_prop) {
+      tab <- prop_table_2x2(g1, g2)
+      result <- switch(test_type,
+        "fisher" = stats::fisher.test(tab),
+        "chisq"  = suppressWarnings(stats::chisq.test(tab, correct = correct)),
+        "prop"   = suppressWarnings(
+          stats::prop.test(c(sum(g1), sum(g2)),
+                           c(length(g1), length(g2)),
+                           correct = correct)
+        )
+      )
+      # Effect size is always the difference in success proportions (g1 - g2)
+      mean_diff <- mean(g1) - mean(g2)
+      statistic <- if (!is.null(result$statistic)) unname(result$statistic) else NA_real_
+      conf.int <- if (!is.null(result$conf.int)) result$conf.int else c(NA_real_, NA_real_)
+      return(list(p.value = result$p.value, statistic = statistic,
+                  mean_diff = mean_diff, conf.int = conf.int))
+    }
     result <- switch(test_type,
       "t.test"          = t.test(g1, g2),
       "paired.t.test"   = t.test(g1, g2, paired = TRUE),
@@ -278,6 +348,12 @@ robustness_analysis <- function(group1, group2,
          group1_mean = mean(group1), group1_sd = sd(group1),
          group2_mean = mean(group2), group2_sd = sd(group2),
          diff_mean = mean(group1 - group2), diff_sd = sd(group1 - group2))
+  } else if (is_prop) {
+    list(test_type = test_type,
+         n1 = length(group1), n2 = length(group2), n_total = n_total,
+         group1_prop = mean(group1), group2_prop = mean(group2),
+         prop_diff = mean(group1) - mean(group2),
+         correct = if (test_type %in% c("chisq", "prop")) correct else NA)
   } else {
     list(test_type = test_type,
          n1 = length(group1), n2 = length(group2), n_total = n_total,
@@ -341,7 +417,10 @@ generate_interpretation <- function(x) {
     "t.test"          = "Welch two-sample t-test",
     "paired.t.test"   = "paired t-test",
     "wilcoxon"        = "Wilcoxon rank-sum test",
-    "wilcoxon.paired" = "Wilcoxon signed-rank test")
+    "wilcoxon.paired" = "Wilcoxon signed-rank test",
+    "fisher"          = "Fisher's exact test",
+    "chisq"           = "chi-square test of independence",
+    "prop"            = "two-sample proportion test")
 
   overall <- sprintf(
     "The %s yielded a %s result (p = %.4f, alpha = %.2f). Overall robustness score: %.1f/100 ('%s'; weights %s).",
@@ -422,15 +501,26 @@ print.robustness_analysis <- function(x, show_interpretation = TRUE, ...) {
   if (!is.null(x$sample_info$n_pairs)) {
     cat(sprintf("  n = %d pairs; mean difference (g1 - g2): %.3f (SD %.3f)\n",
                 x$sample_info$n_pairs, x$sample_info$diff_mean, x$sample_info$diff_sd))
+  } else if (!is.null(x$sample_info$group1_prop)) {
+    cat(sprintf("  n1 = %d, n2 = %d\n", x$sample_info$n1, x$sample_info$n2))
+    cat(sprintf("  Proportions: p1 = %.3f, p2 = %.3f (diff p1 - p2 = %.3f)\n",
+                x$sample_info$group1_prop, x$sample_info$group2_prop,
+                x$sample_info$prop_diff))
   } else {
     cat(sprintf("  n1 = %d, n2 = %d\n", x$sample_info$n1, x$sample_info$n2))
     if (!is.na(x$original_mean_diff))
       cat(sprintf("  Mean difference (g1 - g2): %.3f (95%% CI %.3f, %.3f)\n",
                   x$original_mean_diff, x$original_ci[1], x$original_ci[2]))
   }
-  cat(sprintf("  Statistic = %.3f, p = %.4f (%s)\n\n",
-              x$original_statistic, x$original_p,
-              ifelse(x$original_significant, "significant", "non-significant")))
+  if (is.na(x$original_statistic)) {
+    cat(sprintf("  p = %.4f (%s)\n\n",
+                x$original_p,
+                ifelse(x$original_significant, "significant", "non-significant")))
+  } else {
+    cat(sprintf("  Statistic = %.3f, p = %.4f (%s)\n\n",
+                x$original_statistic, x$original_p,
+                ifelse(x$original_significant, "significant", "non-significant")))
+  }
 
   cat(sprintf("OVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
               m$overall_robustness, x$robustness_interpretation))

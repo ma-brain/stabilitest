@@ -64,6 +64,16 @@ test_that("robustness_analysis rejects bad alpha, weights, and test_type", {
     robustness_analysis(g1, g2, test_type = "anova", n_boot = 5),
     "should be one of"
   )
+  expect_error(
+    robustness_analysis(rep(0:1, 5), rep(0:1, 5),
+                        test_type = "chisq", correct = NA, n_boot = 5),
+    "correct must be a single non-missing logical"
+  )
+  expect_error(
+    robustness_analysis(c(0, 1, 0), c(1, 0, 1),
+                        test_type = "fisher", n_boot = 5),
+    "Each group must have at least 4 observations"
+  )
 })
 
 test_that("custom named weights that sum to 1 are accepted", {

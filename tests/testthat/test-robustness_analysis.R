@@ -231,3 +231,101 @@ test_that("borderline significant results can be fragile", {
   expect_lte(res$worstcase$fragility_index, 2L)
   expect_identical(res$robustness_interpretation, "Fragile")
 })
+
+# --- proportion / binary two-sample tests -------------------------------------
+
+.prop_fixture <- function() {
+  # Clear imbalance: 12/15 vs 3/15 successes
+  list(
+    g1 = c(rep(1, 12), rep(0, 3)),
+    g2 = c(rep(1, 3), rep(0, 12))
+  )
+}
+
+test_that("fisher / chisq / prop run and match base R p-values", {
+  fx <- .prop_fixture()
+  tab <- matrix(c(sum(fx$g1), length(fx$g1) - sum(fx$g1),
+                  sum(fx$g2), length(fx$g2) - sum(fx$g2)), nrow = 2)
+
+  rf <- robustness_analysis(fx$g1, fx$g2, test_type = "fisher",
+                            n_boot = 40, seed = 3)
+  expect_s3_class(rf, "robustness_analysis")
+  expect_equal(rf$original_p, fisher.test(tab)$p.value)
+  expect_equal(rf$original_mean_diff, mean(fx$g1) - mean(fx$g2))
+  expect_true(is.na(rf$original_statistic))
+  expect_equal(rf$sample_info$group1_prop, mean(fx$g1))
+  expect_gte(rf$robustness_metrics$overall_robustness, 0)
+  expect_lte(rf$robustness_metrics$overall_robustness, 100)
+
+  rc <- robustness_analysis(fx$g1, fx$g2, test_type = "chisq",
+                            n_boot = 40, seed = 3, correct = TRUE)
+  expect_equal(rc$original_p,
+               suppressWarnings(chisq.test(tab, correct = TRUE)$p.value))
+  expect_equal(unname(rc$original_statistic),
+               unname(suppressWarnings(chisq.test(tab, correct = TRUE)$statistic)))
+
+  rp <- robustness_analysis(fx$g1, fx$g2, test_type = "prop",
+                            n_boot = 40, seed = 3, correct = TRUE)
+  expect_equal(
+    rp$original_p,
+    suppressWarnings(
+      prop.test(c(sum(fx$g1), sum(fx$g2)),
+                c(length(fx$g1), length(fx$g2)),
+                correct = TRUE)$p.value
+    )
+  )
+})
+
+test_that("chisq continuity correction is configurable", {
+  fx <- .prop_fixture()
+  tab <- matrix(c(sum(fx$g1), length(fx$g1) - sum(fx$g1),
+                  sum(fx$g2), length(fx$g2) - sum(fx$g2)), nrow = 2)
+  with_c <- robustness_analysis(fx$g1, fx$g2, test_type = "chisq",
+                                correct = TRUE, n_boot = 20, seed = 1)
+  no_c <- robustness_analysis(fx$g1, fx$g2, test_type = "chisq",
+                              correct = FALSE, n_boot = 20, seed = 1)
+  expect_equal(with_c$original_p,
+               suppressWarnings(chisq.test(tab, correct = TRUE)$p.value))
+  expect_equal(no_c$original_p,
+               suppressWarnings(chisq.test(tab, correct = FALSE)$p.value))
+  expect_false(isTRUE(all.equal(with_c$original_p, no_c$original_p)))
+})
+
+test_that("proportion tests accept logical vectors", {
+  g1 <- c(TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
+  g2 <- c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)
+  res <- robustness_analysis(g1, g2, test_type = "fisher", n_boot = 30, seed = 4)
+  expect_s3_class(res, "robustness_analysis")
+  expect_equal(res$sample_info$group1_prop, mean(as.numeric(g1)))
+})
+
+test_that("proportion tests reject non-binary input", {
+  expect_error(
+    robustness_analysis(c(0, 1, 0, 1, 2), c(0, 0, 1, 1, 0),
+                        test_type = "fisher", n_boot = 5),
+    "binary"
+  )
+  expect_error(
+    robustness_analysis(c(0, 0.5, 1, 1), c(0, 0, 1, 1),
+                        test_type = "chisq", n_boot = 5),
+    "binary"
+  )
+  expect_error(
+    robustness_analysis(c(0, 1, NA, 1), c(0, 0, 1, 1),
+                        test_type = "prop", n_boot = 5),
+    "missing"
+  )
+  expect_error(
+    robustness_analysis(letters[1:8], rep(0:1, 4),
+                        test_type = "fisher", n_boot = 5),
+    "numeric 0/1 or logical"
+  )
+})
+
+test_that("proportion test interpretation names the test", {
+  fx <- .prop_fixture()
+  res <- robustness_analysis(fx$g1, fx$g2, test_type = "fisher",
+                             n_boot = 30, interpret = TRUE, seed = 5)
+  expect_match(res$interpretation$overall, "Fisher")
+  expect_output(print(res), "p1 =")
+})
