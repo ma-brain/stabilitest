@@ -23,8 +23,16 @@ Experimental initial release. The API may change.
 * Added vignette *Pain Trial Case Study: Interpreting Robustness Scores*,
   covering the case-study walkthrough and interpretation bands.
 
+## Bug fixes
+
+* Aligned `robustness_engine()` weight and alpha validation with
+  `robustness_analysis()`, and reject all-censored Cox fits cleanly when the
+  model returns an NA p-value instead of crashing downstream.
+
 ## Testing and development
 
 * Expanded testthat coverage for survival analyses, plotting, non-significant
   and borderline cases, and other edge conditions.
+* Added dedicated edge-case tests covering invalid weights/alpha and
+  all-censored Cox input.
 * Added GitHub Actions `R-CMD-check` workflow.

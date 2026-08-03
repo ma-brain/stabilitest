@@ -25,8 +25,14 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 
   n <- nrow(data)
   if (n < min_n) stop(sprintf("Need at least %d rows", min_n))
+  if (alpha <= 0 || alpha >= 1) stop("alpha must be in (0, 1)")
+  if (abs(sum(weights) - 1) > 1e-8 || length(weights) != 3 || any(weights < 0)) {
+    stop("weights must be 3 non-negative values summing to 1")
+  }
   original <- fit_fun(data)
-  if (is.null(original)) stop("Model could not be fitted on the full dataset")
+  if (is.null(original) || is.na(original$p)) {
+    stop("Model could not be fitted on the full dataset")
+  }
   original_significant <- original$p < alpha
   max_k <- floor(n * max_removal_pct)
 
