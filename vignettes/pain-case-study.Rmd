@@ -83,16 +83,18 @@ With default weights, bands were calibrated by simulation *conditional on a sign
 | Overall score | Label | Typical simulation profile |
 |---------------|-------|----------------------------|
 | > 70 | **Robust** | True large effects (mean score ~75) |
-| 55–70 | **Moderately Robust** | True moderate effects; report components transparently |
+| (55, 70] | **Moderately Robust** | True moderate effects; report components transparently |
 | ≤ 55 | **Fragile** | Chance-significant findings under H₀ (mean score ~52) |
+
+Exact 70 is Moderately Robust; exact 55 is Fragile.
 
 In code:
 
 ```{r bands-logic, eval = FALSE}
 # As implemented in robustness_analysis():
-#   > 70  -> "Robust"
-#   > 55  -> "Moderately Robust"
-#   else  -> "Fragile"
+#   > 70  -> "Robust"              # score > 70
+#   > 55  -> "Moderately Robust"   # (55, 70]
+#   else  -> "Fragile"             # score ≤ 55
 ```
 
 Practical reading of the components alongside the label:

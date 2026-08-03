@@ -2,7 +2,7 @@
 # Robustness Analysis Framework for Two-Sample Comparisons — v2 (July 2026)
 #
 # Revision of the January 2026 version following methodological review
-# (see methodological_review.md). Key changes:
+# (see manuscript/methodological_review.md). Key changes:
 #   * NEW: worst-case (greedy, AMIP-style) removal analysis; its fragility
 #     index replaces the grand-mean fragility in the composite score
 #   * Grand-mean removal retained as descriptive "extreme-value removal"
@@ -124,7 +124,7 @@ robustness_analysis <- function(group1, group2,
   # 2. EXTREME-VALUE REMOVAL (descriptive; grand-mean / abs-difference ranked)
   #    Retained from v1 for continuity. NOT used in the composite score:
   #    under a true effect it preferentially removes genuine responders and
-  #    is not a worst-case bound (see methodological_review.md, issue 1.2).
+  #    is not a worst-case bound (see manuscript/methodological_review.md, issue 1.2).
   # ============================================================================
   run_removal <- function(order_fun) {
     # order_fun returns, for the CURRENT data, index of next unit to drop
@@ -265,6 +265,7 @@ robustness_analysis <- function(group1, group2,
   # Bands calibrated by simulation (see manuscript Section 3): with default
   # weights, chance-significant findings under H0 average ~52 while true
   # large effects average ~75. Calibration applies to SIGNIFICANT results.
+  # Boundaries: > 70 Robust; (55, 70] Moderately Robust; ≤ 55 Fragile.
   robustness_interpretation <- case_when(
     robustness_score$overall_robustness > 70 ~ "Robust",
     robustness_score$overall_robustness > 55 ~ "Moderately Robust",

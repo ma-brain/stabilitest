@@ -11,7 +11,7 @@
 # removal (AMIP-style), and case-resampling bootstrap operate on ROWS of the
 # analysis dataset, so covariate adjustment is preserved throughout.
 # Companion to robustness_analysis.R (two-sample version); see
-# methodological_review.md for the rationale behind the v2 metrics.
+# manuscript/methodological_review.md for the rationale behind the v2 metrics.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -118,9 +118,9 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
       estimate_range_jackknife_hi    = max(jackknife$estimate),
       overall_robustness             = score),
     interpretation_label = dplyr::case_when(
-      score > 70 ~ "Robust",          # bands calibrated by simulation
-      score > 55 ~ "Moderately Robust",
-      TRUE ~ "Fragile")
+      score > 70 ~ "Robust",          # > 70; bands calibrated by simulation
+      score > 55 ~ "Moderately Robust",  # (55, 70]
+      TRUE ~ "Fragile")                  # ≤ 55
   )
 }
 
