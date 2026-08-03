@@ -48,6 +48,11 @@ of length \code{nrow(data)}, passed to \code{stats::glm(..., weights = obs_weigh
 \code{NULL} (default) fits an unweighted GLM. Distinct from the composite
 score \code{weights} argument.}
 }
+\value{
+An object of class \code{"robustness_model"} (a named list). Same engine
+fields as \code{\link[=robustness_lm]{robustness_lm()}}, plus \code{family} and \code{link} recording the GLM
+family used.
+}
 \description{
 Robustness analysis for a GLM term (binomial logit or Poisson log)
 }
@@ -63,7 +68,23 @@ Score bands are shared with the ANCOVA / Cox engines and are not
 separately calibrated for GLM.
 }
 \examples{
-# res <- robustness_glm(y ~ arm + x, dat, term = "armA", family = binomial())
-# res <- robustness_glm(count ~ arm + x, dat, term = "arm",
-#                       family = poisson())  # joint LRT
+set.seed(1)
+dat <- data.frame(
+  y = rbinom(40, 1, 0.45),
+  arm = factor(rep(c("A", "B"), each = 20)),
+  x = rnorm(40)
+)
+res <- robustness_glm(y ~ arm + x, dat, term = "armB",
+                      family = binomial(), n_boot = 20, seed = 1)
+print(res)
+
+# Poisson log-link
+set.seed(2)
+count_dat <- data.frame(
+  count = rpois(40, lambda = 3),
+  arm = factor(rep(c("A", "B"), each = 20)),
+  x = rnorm(40)
+)
+res_pois <- robustness_glm(count ~ arm + x, count_dat, term = "armB",
+                           family = poisson(), n_boot = 20, seed = 2)
 }

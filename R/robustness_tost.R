@@ -557,9 +557,13 @@ tost_or_test <- function(group1, group2, type,
 #' @param test Optional alias for `endpoint` (same choices). Prefer
 #'   `endpoint` in new code.
 #'
-#' @return Object of class `"robustness_tost"` (also `"robustness_model"`),
-#'   with the usual engine fields plus TOST/NI metadata (`tost_type`,
-#'   `endpoint`, margins, one-sided p-values, `(1 - 2 * alpha)` CI).
+#' @return An object of class `"robustness_tost"` (also `"robustness_model"`),
+#'   a named list with the shared model-engine fields
+#'   (`original_p` / effective p-value, `original_estimate`,
+#'   `original_significant`, `metrics`, `interpretation_label`, jackknife /
+#'   worst-case / bootstrap tibbles, `n`, `max_k`, `alpha`, `weights`) plus
+#'   TOST/NI metadata (`tost_type`, `endpoint`, `margin` / `delta_L` /
+#'   `delta_U`, one-sided p-values, `(1 - 2 * alpha)` CI, `method`).
 #'
 #' @section Limitations:
 #' Binary methods use **Wald** normal approximations (RD or log OR), which can

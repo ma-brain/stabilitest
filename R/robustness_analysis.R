@@ -33,6 +33,18 @@ coerce_binary <- function(x, name) {
   as.numeric(x)
 }
 
+# Shared bootstrap / removal argument checks (two-sample + model engines).
+validate_n_boot_max_removal <- function(n_boot, max_removal_pct) {
+  if (!is.numeric(n_boot) || length(n_boot) != 1L || is.na(n_boot) ||
+      n_boot < 1 || floor(n_boot) != n_boot) {
+    stop("n_boot must be a single positive integer", call. = FALSE)
+  }
+  if (!is.numeric(max_removal_pct) || length(max_removal_pct) != 1L ||
+      is.na(max_removal_pct) || max_removal_pct <= 0 || max_removal_pct > 1) {
+    stop("max_removal_pct must be a single number in (0, 1]", call. = FALSE)
+  }
+}
+
 # 2x2 contingency table: rows = outcome (success, failure), cols = group
 prop_table_2x2 <- function(g1, g2) {
   matrix(
@@ -134,9 +146,10 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'   `"chisq"` (`stats::chisq.test` on the 2x2 table), `"prop"`
 #'   (`stats::prop.test`)
 #' @param alpha Significance level (default 0.05)
-#' @param n_boot Bootstrap iterations (default 1000)
+#' @param n_boot Bootstrap iterations (default 1000); must be a single
+#'   positive integer
 #' @param max_removal_pct Maximum proportion of observations removed in the
-#'   removal analyses (default 0.30)
+#'   removal analyses (default 0.30); must be in `(0, 1]`
 #' @param influential_threshold |delta p| threshold for flagging influential
 #'   observations in the jackknife (default 0.05); observations whose removal
 #'   flips the significance conclusion are always flagged
@@ -149,7 +162,37 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'   `TRUE`, matching `stats::chisq.test` / `stats::prop.test` defaults).
 #'   Ignored for other `test_type` values.
 #'
-#' @return Object of class "robustness_analysis"
+#' @return An object of class `"robustness_analysis"` (a named list) with:
+#' \describe{
+#'   \item{original_p, original_significant, original_statistic,
+#'     original_mean_diff, original_ci}{Full-sample test results (effect
+#'     field is a mean difference, Hodges–Lehmann shift, or proportion
+#'     difference depending on `test_type`).}
+#'   \item{robustness_metrics}{Component scores (jackknife conclusion
+#'     stability, worst-case fragility, bootstrap reproducibility, overall
+#'     composite) and related diagnostics.}
+#'   \item{robustness_interpretation}{Label: `"Robust"`,
+#'     `"Moderately Robust"`, or `"Fragile"`.}
+#'   \item{jackknife, worstcase, extreme, bootstrap}{Component analysis
+#'     results (tibbles plus summary scalars).}
+#'   \item{sample_info, weights, alpha, max_removal_pct, max_k}{Analysis
+#'     metadata.}
+#'   \item{interpretation}{Optional text blocks when `interpret = TRUE`;
+#'     otherwise `NULL`.}
+#' }
+#'
+#' @examples
+#' # Continuous two-sample (modest bootstrap for examples)
+#' res <- robustness_analysis(pain_treatment, pain_placebo,
+#'                            test_type = "t.test", n_boot = 50, seed = 1)
+#' print(res)
+#'
+#' # Binary proportion (Fisher exact)
+#' set.seed(2)
+#' g1 <- rbinom(20, 1, 0.3)
+#' g2 <- rbinom(20, 1, 0.6)
+#' res_prop <- robustness_analysis(g1, g2, test_type = "fisher",
+#'                                 n_boot = 30, seed = 2)
 #' @export
 robustness_analysis <- function(group1, group2,
                                 test_type = c("t.test", "paired.t.test",
@@ -178,6 +221,9 @@ robustness_analysis <- function(group1, group2,
     group2 <- coerce_binary(group2, "group2")
   } else {
     stopifnot(is.numeric(group1), is.numeric(group2))
+    if (anyNA(group1) || anyNA(group2)) {
+      stop("group1 and group2 must not contain missing values", call. = FALSE)
+    }
   }
   if (paired) {
     if (length(group1) != length(group2)) stop("Paired tests require equal length vectors")
@@ -189,6 +235,7 @@ robustness_analysis <- function(group1, group2,
   if (abs(sum(weights) - 1) > 1e-8 || length(weights) != 3 || any(weights < 0)) {
     stop("weights must be 3 non-negative values summing to 1")
   }
+  validate_n_boot_max_removal(n_boot, max_removal_pct)
 
   # --- test wrapper -----------------------------------------------------------
   perform_test <- function(g1, g2) {

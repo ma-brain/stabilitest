@@ -31,7 +31,13 @@ For multi-df terms the stored \code{estimate} is \code{NA} and \code{term_info} 
 the joint LRT (ndf / statistic).
 }}
 
-\item{alpha, n_boot, max_removal_pct, weights, seed}{As in robustness_analysis()}
+\item{alpha, n_boot, max_removal_pct, weights, seed}{As in \code{\link[=robustness_analysis]{robustness_analysis()}}}
+}
+\value{
+An object of class \code{"robustness_model"} (a named list). Same engine
+fields as \code{\link[=robustness_lm]{robustness_lm()}} (\code{original_p}, \code{metrics},
+\code{interpretation_label}, jackknife / worst-case / bootstrap tibbles, plus
+\code{term}, \code{term_info}, \code{model}, \code{type}, and related metadata).
 }
 \description{
 Robustness analysis for a Cox proportional hazards term
@@ -44,4 +50,18 @@ to more than one non-aliased design-matrix column (same rules as
 patterns are handled naturally. Removing whole subjects (with their
 follow-up) differs from the event-flip fragility of Walsh et al.; interpret
 as a removal fragility index.
+}
+\examples{
+if (requireNamespace("survival", quietly = TRUE)) {
+  set.seed(1)
+  dat <- data.frame(
+    time = rexp(30, 0.1),
+    event = rbinom(30, 1, 0.8),
+    arm = factor(rep(c("A", "B"), each = 15)),
+    age = rnorm(30, 60, 8)
+  )
+  res <- robustness_surv(survival::Surv(time, event) ~ arm + age, dat,
+                         term = "armB", n_boot = 15, seed = 1)
+  print(res)
+}
 }

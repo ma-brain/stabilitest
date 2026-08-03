@@ -1,3 +1,25 @@
+# stabilitest 0.4.2
+
+## CRAN check cleanup
+
+* `.Rbuildignore` now excludes `.github/` (`^\.github$`).
+* Import `stats::formula` (used by model engines) and declare
+  `.__obs_w__` via `globalVariables()` to clear R CMD check NOTES.
+
+## Documentation
+
+* Added `\value` sections and runnable examples for
+  `robustness_analysis()`, `robustness_lm()`, `robustness_glm()`,
+  `robustness_surv()`, and `robustness_tost()`.
+
+## Validation
+
+* Continuous `group1` / `group2` inputs reject missing values with a clear
+  error (including paired and TOST paths).
+* Shared checks: `n_boot` must be a single positive integer;
+  `max_removal_pct` must be in `(0, 1]` (across two-sample and model
+  engines). Covered by edge-case tests.
+
 # stabilitest 0.4.1
 
 ## Features

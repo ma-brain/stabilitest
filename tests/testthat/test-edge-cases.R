@@ -19,7 +19,8 @@ test_that("robustness_analysis rejects invalid group inputs", {
     "is.numeric\\(group1\\) is not TRUE"
   )
   expect_error(
-    robustness_analysis(c(1:9, NA_real_), 1:10, n_boot = 5)
+    robustness_analysis(c(1:9, NA_real_), 1:10, n_boot = 5),
+    "must not contain missing values"
   )
   expect_error(
     robustness_analysis(rep(5, 10), rep(5, 10), n_boot = 5),
@@ -591,4 +592,106 @@ test_that("print.robustness_model shows GLM IRR for poisson", {
   expect_true(any(grepl("GLM \\(poisson", out)))
   expect_true(any(grepl("IRR =", out)))
   expect_false(any(grepl("OR =", out)))
+})
+
+# --- n_boot / max_removal_pct validation (shared across APIs) -----------------
+
+test_that("n_boot must be a positive integer across engines", {
+  g1 <- 1:10
+  g2 <- 11:20
+  expect_error(
+    robustness_analysis(g1, g2, n_boot = 0),
+    "n_boot must be a single positive integer"
+  )
+  expect_error(
+    robustness_analysis(g1, g2, n_boot = -1),
+    "n_boot must be a single positive integer"
+  )
+  expect_error(
+    robustness_analysis(g1, g2, n_boot = 1.5),
+    "n_boot must be a single positive integer"
+  )
+  expect_error(
+    robustness_analysis(g1, g2, n_boot = NA_real_),
+    "n_boot must be a single positive integer"
+  )
+
+  set.seed(1)
+  dat <- data.frame(
+    y = rnorm(20),
+    arm = factor(rep(c("A", "B"), each = 10)),
+    x = rnorm(20)
+  )
+  expect_error(
+    robustness_lm(y ~ arm + x, dat, term = "armB", n_boot = 0),
+    "n_boot must be a single positive integer"
+  )
+  expect_error(
+    robustness_glm(I(y > 0) ~ arm + x, dat, term = "armB",
+                   family = binomial(), n_boot = 0),
+    "n_boot must be a single positive integer"
+  )
+  expect_error(
+    robustness_tost(g1, g2, type = "equivalence", margin = 5, n_boot = 0),
+    "n_boot must be a single positive integer"
+  )
+})
+
+test_that("max_removal_pct must be in (0, 1] across engines", {
+  g1 <- 1:10
+  g2 <- 11:20
+  expect_error(
+    robustness_analysis(g1, g2, n_boot = 5, max_removal_pct = 0),
+    "max_removal_pct must be a single number in \\(0, 1\\]"
+  )
+  expect_error(
+    robustness_analysis(g1, g2, n_boot = 5, max_removal_pct = -0.1),
+    "max_removal_pct must be a single number in \\(0, 1\\]"
+  )
+  expect_error(
+    robustness_analysis(g1, g2, n_boot = 5, max_removal_pct = 1.5),
+    "max_removal_pct must be a single number in \\(0, 1\\]"
+  )
+  expect_error(
+    robustness_analysis(g1, g2, n_boot = 5, max_removal_pct = NA_real_),
+    "max_removal_pct must be a single number in \\(0, 1\\]"
+  )
+
+  set.seed(2)
+  dat <- data.frame(
+    y = rnorm(20),
+    arm = factor(rep(c("A", "B"), each = 10)),
+    x = rnorm(20)
+  )
+  expect_error(
+    robustness_lm(y ~ arm + x, dat, term = "armB",
+                  n_boot = 5, max_removal_pct = 2),
+    "max_removal_pct must be a single number in \\(0, 1\\]"
+  )
+  expect_error(
+    robustness_tost(g1, g2, type = "equivalence", margin = 5,
+                    n_boot = 5, max_removal_pct = 0),
+    "max_removal_pct must be a single number in \\(0, 1\\]"
+  )
+
+  # Boundary max_removal_pct = 1 is allowed
+  res <- robustness_analysis(g1, g2, n_boot = 5, max_removal_pct = 1, seed = 1)
+  expect_equal(res$max_k, length(g1) + length(g2))
+})
+
+test_that("continuous NA is rejected with a clear message (paired + unpaired)", {
+  expect_error(
+    robustness_analysis(c(1:9, NA_real_), 1:10, n_boot = 5),
+    "must not contain missing values"
+  )
+  expect_error(
+    robustness_analysis(1:10, c(1:9, NA_real_),
+                        test_type = "paired.t.test", n_boot = 5),
+    "must not contain missing values"
+  )
+  expect_error(
+    robustness_tost(c(1:9, NA_real_), 1:10, type = "equivalence",
+                    margin = 1, n_boot = 5),
+    "must not contain missing values"
+  )
 })

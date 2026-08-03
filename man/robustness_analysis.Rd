@@ -40,10 +40,11 @@ Brunner–Munzel), or proportion tests \code{"fisher"} (Fisher's exact),
 
 \item{alpha}{Significance level (default 0.05)}
 
-\item{n_boot}{Bootstrap iterations (default 1000)}
+\item{n_boot}{Bootstrap iterations (default 1000); must be a single
+positive integer}
 
 \item{max_removal_pct}{Maximum proportion of observations removed in the
-removal analyses (default 0.30)}
+removal analyses (default 0.30); must be in \verb{(0, 1]}}
 
 \item{influential_threshold}{|delta p| threshold for flagging influential
 observations in the jackknife (default 0.05); observations whose removal
@@ -68,7 +69,24 @@ Ignored for other \code{test_type} values.}
 \item{...}{Unused}
 }
 \value{
-Object of class "robustness_analysis"
+An object of class \code{"robustness_analysis"} (a named list) with:
+\describe{
+\item{original_p, original_significant, original_statistic,
+original_mean_diff, original_ci}{Full-sample test results (effect
+field is a mean difference, Hodges–Lehmann shift, or proportion
+difference depending on \code{test_type}).}
+\item{robustness_metrics}{Component scores (jackknife conclusion
+stability, worst-case fragility, bootstrap reproducibility, overall
+composite) and related diagnostics.}
+\item{robustness_interpretation}{Label: \code{"Robust"},
+\code{"Moderately Robust"}, or \code{"Fragile"}.}
+\item{jackknife, worstcase, extreme, bootstrap}{Component analysis
+results (tibbles plus summary scalars).}
+\item{sample_info, weights, alpha, max_removal_pct, max_k}{Analysis
+metadata.}
+\item{interpretation}{Optional text blocks when \code{interpret = TRUE};
+otherwise \code{NULL}.}
+}
 }
 \description{
 Supports continuous location tests and two-group binary proportion tests
@@ -88,4 +106,17 @@ For \code{"wilcoxon"}, \code{"wilcoxon.paired"}, and \code{"brunner_munzel"}, th
 effect size is the Hodges–Lehmann location shift (median of all pairwise
 differences for unpaired tests; median of Walsh averages of within-pair
 differences for paired Wilcoxon), stored in \code{original_mean_diff}.
+}
+\examples{
+# Continuous two-sample (modest bootstrap for examples)
+res <- robustness_analysis(pain_treatment, pain_placebo,
+                           test_type = "t.test", n_boot = 50, seed = 1)
+print(res)
+
+# Binary proportion (Fisher exact)
+set.seed(2)
+g1 <- rbinom(20, 1, 0.3)
+g2 <- rbinom(20, 1, 0.6)
+res_prop <- robustness_analysis(g1, g2, test_type = "fisher",
+                                n_boot = 30, seed = 2)
 }

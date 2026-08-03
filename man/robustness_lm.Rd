@@ -32,6 +32,21 @@ robustness_lm(
 
 \item{alpha, n_boot, max_removal_pct, weights, seed}{As in \code{\link[=robustness_analysis]{robustness_analysis()}}}
 }
+\value{
+An object of class \code{"robustness_model"} (a named list) with:
+\describe{
+\item{original_p, original_estimate, original_significant}{Full-data
+term test (\code{estimate} is \code{NA} for multi-df joint tests).}
+\item{metrics}{Tibble of jackknife / worst-case fragility / bootstrap
+component scores and the overall composite.}
+\item{interpretation_label}{\code{"Robust"}, \code{"Moderately Robust"}, or
+\code{"Fragile"}.}
+\item{jackknife, worstcase, bootstrap, removed_rows}{Component analysis
+tibbles and the greedy-removal path.}
+\item{term, term_info, sample_info, model, type, n, max_k, alpha,
+weights}{Model and analysis metadata.}
+}
+}
 \description{
 Robustness analysis for a linear model / ANCOVA term
 }
@@ -43,6 +58,18 @@ matches error. Conclusion for the robustness pipeline is \code{p < alpha}
 (joint F p-value for multi-df terms).
 }
 \examples{
-# res <- robustness_lm(change ~ arm + baseline, dat, term = "armActive")
-# res <- robustness_lm(change ~ arm + baseline, dat, term = "arm")  # joint F
+set.seed(1)
+dat <- data.frame(
+  change = c(rnorm(15, -5), rnorm(15, 0)),
+  arm = factor(rep(c("Placebo", "Active"), each = 15),
+               levels = c("Placebo", "Active")),
+  baseline = rnorm(30, 50, 10)
+)
+res <- robustness_lm(change ~ arm + baseline, dat,
+                     term = "armActive", n_boot = 25, seed = 1)
+print(res)
+
+# Multi-df factor: joint F via drop1()
+res_joint <- robustness_lm(change ~ arm + baseline, dat,
+                           term = "arm", n_boot = 25, seed = 1)
 }

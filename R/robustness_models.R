@@ -251,6 +251,7 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
   if (abs(sum(weights) - 1) > 1e-8 || length(weights) != 3 || any(weights < 0)) {
     stop("weights must be 3 non-negative values summing to 1")
   }
+  validate_n_boot_max_removal(n_boot, max_removal_pct)
   original <- fit_fun(data)
   if (is.null(original) || is.na(original$p)) {
     stop("Model could not be fitted on the full dataset")
@@ -380,9 +381,35 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 #'   matches error. Conclusion for the robustness pipeline is `p < alpha`
 #'   (joint F p-value for multi-df terms).
 #'
+#' @return An object of class `"robustness_model"` (a named list) with:
+#' \describe{
+#'   \item{original_p, original_estimate, original_significant}{Full-data
+#'     term test (`estimate` is `NA` for multi-df joint tests).}
+#'   \item{metrics}{Tibble of jackknife / worst-case fragility / bootstrap
+#'     component scores and the overall composite.}
+#'   \item{interpretation_label}{`"Robust"`, `"Moderately Robust"`, or
+#'     `"Fragile"`.}
+#'   \item{jackknife, worstcase, bootstrap, removed_rows}{Component analysis
+#'     tibbles and the greedy-removal path.}
+#'   \item{term, term_info, sample_info, model, type, n, max_k, alpha,
+#'     weights}{Model and analysis metadata.}
+#' }
+#'
 #' @examples
-#' # res <- robustness_lm(change ~ arm + baseline, dat, term = "armActive")
-#' # res <- robustness_lm(change ~ arm + baseline, dat, term = "arm")  # joint F
+#' set.seed(1)
+#' dat <- data.frame(
+#'   change = c(rnorm(15, -5), rnorm(15, 0)),
+#'   arm = factor(rep(c("Placebo", "Active"), each = 15),
+#'                levels = c("Placebo", "Active")),
+#'   baseline = rnorm(30, 50, 10)
+#' )
+#' res <- robustness_lm(change ~ arm + baseline, dat,
+#'                      term = "armActive", n_boot = 25, seed = 1)
+#' print(res)
+#'
+#' # Multi-df factor: joint F via drop1()
+#' res_joint <- robustness_lm(change ~ arm + baseline, dat,
+#'                            term = "arm", n_boot = 25, seed = 1)
 #' @export
 robustness_lm <- function(formula, data, term,
                           alpha = 0.05, n_boot = 1000, max_removal_pct = 0.30,
@@ -442,7 +469,7 @@ robustness_lm <- function(formula, data, term,
 #'     `drop1(..., test = "Chisq")` (likelihood-ratio test; survival S3 method).
 #'     For multi-df terms the stored `estimate` is `NA` and `term_info` records
 #'     the joint LRT (ndf / statistic).
-#' @param alpha,n_boot,max_removal_pct,weights,seed As in robustness_analysis()
+#' @param alpha,n_boot,max_removal_pct,weights,seed As in [robustness_analysis()]
 #'
 #' @details Single-coefficient `term` strings keep the previous Wald behaviour.
 #'   Multi-df factors are detected when `term` matches a term label that expands
@@ -451,6 +478,25 @@ robustness_lm <- function(formula, data, term,
 #'   patterns are handled naturally. Removing whole subjects (with their
 #'   follow-up) differs from the event-flip fragility of Walsh et al.; interpret
 #'   as a removal fragility index.
+#'
+#' @return An object of class `"robustness_model"` (a named list). Same engine
+#'   fields as [robustness_lm()] (`original_p`, `metrics`,
+#'   `interpretation_label`, jackknife / worst-case / bootstrap tibbles, plus
+#'   `term`, `term_info`, `model`, `type`, and related metadata).
+#'
+#' @examples
+#' if (requireNamespace("survival", quietly = TRUE)) {
+#'   set.seed(1)
+#'   dat <- data.frame(
+#'     time = rexp(30, 0.1),
+#'     event = rbinom(30, 1, 0.8),
+#'     arm = factor(rep(c("A", "B"), each = 15)),
+#'     age = rnorm(30, 60, 8)
+#'   )
+#'   res <- robustness_surv(survival::Surv(time, event) ~ arm + age, dat,
+#'                          term = "armB", n_boot = 15, seed = 1)
+#'   print(res)
+#' }
 #' @export
 robustness_surv <- function(formula, data, term,
                             alpha = 0.05, n_boot = 1000, max_removal_pct = 0.30,
@@ -543,10 +589,30 @@ robustness_surv <- function(formula, data, term,
 #'   Score bands are shared with the ANCOVA / Cox engines and are not
 #'   separately calibrated for GLM.
 #'
+#' @return An object of class `"robustness_model"` (a named list). Same engine
+#'   fields as [robustness_lm()], plus `family` and `link` recording the GLM
+#'   family used.
+#'
 #' @examples
-#' # res <- robustness_glm(y ~ arm + x, dat, term = "armA", family = binomial())
-#' # res <- robustness_glm(count ~ arm + x, dat, term = "arm",
-#' #                       family = poisson())  # joint LRT
+#' set.seed(1)
+#' dat <- data.frame(
+#'   y = rbinom(40, 1, 0.45),
+#'   arm = factor(rep(c("A", "B"), each = 20)),
+#'   x = rnorm(40)
+#' )
+#' res <- robustness_glm(y ~ arm + x, dat, term = "armB",
+#'                       family = binomial(), n_boot = 20, seed = 1)
+#' print(res)
+#'
+#' # Poisson log-link
+#' set.seed(2)
+#' count_dat <- data.frame(
+#'   count = rpois(40, lambda = 3),
+#'   arm = factor(rep(c("A", "B"), each = 20)),
+#'   x = rnorm(40)
+#' )
+#' res_pois <- robustness_glm(count ~ arm + x, count_dat, term = "armB",
+#'                            family = poisson(), n_boot = 20, seed = 2)
 #' @export
 robustness_glm <- function(formula, data, term,
                            family = stats::binomial(),
