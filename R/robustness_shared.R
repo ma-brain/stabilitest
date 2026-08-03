@@ -23,8 +23,29 @@ validate_alpha_weights <- function(alpha, weights) {
       alpha <= 0 || alpha >= 1) {
     stop("alpha must be in (0, 1)", call. = FALSE)
   }
-  if (abs(sum(weights) - 1) > 1e-8 || length(weights) != 3 || any(weights < 0)) {
-    stop("weights must be 3 non-negative values summing to 1", call. = FALSE)
+
+  required_names <- c("jackknife", "fragility", "bootstrap")
+  valid_names <- is.numeric(weights) &&
+    length(weights) == length(required_names) &&
+    !is.null(names(weights)) &&
+    !anyNA(names(weights)) &&
+    all(nzchar(names(weights))) &&
+    !anyDuplicated(names(weights)) &&
+    setequal(names(weights), required_names)
+  if (!valid_names) {
+    stop(
+      paste(
+        "weights must be a named numeric vector containing exactly:",
+        paste(required_names, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+  if (any(!is.finite(weights)) || any(weights < 0)) {
+    stop("weights must contain only finite, non-negative values", call. = FALSE)
+  }
+  if (abs(sum(weights) - 1) > 1e-8) {
+    stop("weights must sum to 1", call. = FALSE)
   }
 }
 

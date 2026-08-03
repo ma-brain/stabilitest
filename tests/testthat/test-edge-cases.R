@@ -43,23 +43,42 @@ test_that("robustness_analysis rejects bad alpha, weights, and test_type", {
     robustness_analysis(g1, g2, alpha = -0.1, n_boot = 5),
     "alpha must be in \\(0, 1\\)"
   )
-  expect_error(
-    robustness_analysis(g1, g2,
-                        weights = c(jackknife = 0.5, fragility = 0.5, bootstrap = 0.5),
-                        n_boot = 5),
-    "weights must be 3 non-negative values summing to 1"
+  bad_name_weights <- list(
+    unnamed = c(0.4, 0.4, 0.2),
+    missing_name = setNames(c(0.4, 0.4, 0.2),
+                            c("jackknife", "", "bootstrap")),
+    duplicate_name = c(jackknife = 0.4, jackknife = 0.4, bootstrap = 0.2),
+    unknown_name = c(jackknife = 0.4, fragility = 0.4, other = 0.2),
+    non_numeric = c(jackknife = "0.4", fragility = "0.4", bootstrap = "0.2"),
+    too_short = c(jackknife = 0.5, fragility = 0.5)
   )
-  expect_error(
-    robustness_analysis(g1, g2,
-                        weights = c(jackknife = 0.5, fragility = 0.6, bootstrap = -0.1),
-                        n_boot = 5),
-    "weights must be 3 non-negative values summing to 1"
+  for (bad_weights in bad_name_weights) {
+    expect_error(
+      robustness_analysis(g1, g2, weights = bad_weights, n_boot = 5),
+      "weights must be a named numeric vector containing exactly"
+    )
+  }
+
+  bad_value_weights <- list(
+    missing = c(jackknife = 0.4, fragility = 0.4, bootstrap = NA_real_),
+    not_a_number = c(jackknife = 0.4, fragility = 0.4, bootstrap = NaN),
+    infinite = c(jackknife = 0.4, fragility = 0.4, bootstrap = Inf),
+    negative = c(jackknife = -0.1, fragility = 0.6, bootstrap = 0.5)
   )
+  for (bad_weights in bad_value_weights) {
+    expect_error(
+      robustness_analysis(g1, g2, weights = bad_weights, n_boot = 5),
+      "weights must contain only finite, non-negative values"
+    )
+  }
+
   expect_error(
-    robustness_analysis(g1, g2,
-                        weights = c(jackknife = 1, fragility = 0),
-                        n_boot = 5),
-    "weights must be 3 non-negative values summing to 1"
+    robustness_analysis(
+      g1, g2,
+      weights = c(jackknife = 0.5, fragility = 0.5, bootstrap = 0.5),
+      n_boot = 5
+    ),
+    "weights must sum to 1"
   )
   expect_error(
     robustness_analysis(g1, g2, test_type = "anova", n_boot = 5),
@@ -81,7 +100,7 @@ test_that("custom named weights that sum to 1 are accepted", {
   set.seed(11)
   res <- robustness_analysis(
     pain_treatment, pain_placebo, n_boot = 30, seed = 11,
-    weights = c(jackknife = 1, fragility = 0, bootstrap = 0)
+    weights = c(bootstrap = 0, jackknife = 1, fragility = 0)
   )
   expect_equal(res$robustness_metrics$overall_robustness,
                res$robustness_metrics$jackknife_conclusion_stability)
@@ -310,15 +329,15 @@ test_that("robustness_lm rejects small n, bad weights, and missing terms", {
   )
   expect_error(
     robustness_lm(y ~ arm + x, ok, term = "armA",
-                  weights = c(jackknife = 0.5, fragility = 0.5, bootstrap = 0.5),
+                  weights = c(0.4, 0.4, 0.2),
                   n_boot = 5),
-    "weights must be 3 non-negative values summing to 1"
+    "weights must be a named numeric vector containing exactly"
   )
   expect_error(
     robustness_lm(y ~ arm + x, ok, term = "armA",
                   weights = c(jackknife = 0.5, fragility = 0.6, bootstrap = -0.1),
                   n_boot = 5),
-    "weights must be 3 non-negative values summing to 1"
+    "weights must contain only finite, non-negative values"
   )
   expect_error(
     robustness_lm(y ~ arm + x, ok, term = "armZ", n_boot = 5),
@@ -431,7 +450,7 @@ test_that("robustness_surv rejects bad weights", {
     robustness_surv(survival::Surv(time, event) ~ arm, dat, term = "armA",
                     weights = c(jackknife = 0.5, fragility = 0.5, bootstrap = 0.5),
                     n_boot = 5),
-    "weights must be 3 non-negative values summing to 1"
+    "weights must sum to 1"
   )
 })
 
@@ -491,7 +510,7 @@ test_that("robustness_glm rejects small n, bad weights, and missing terms", {
     robustness_glm(y ~ arm + x, ok, term = "armA",
                    weights = c(jackknife = 0.5, fragility = 0.5, bootstrap = 0.5),
                    n_boot = 5),
-    "weights must be 3 non-negative values summing to 1"
+    "weights must sum to 1"
   )
   expect_error(
     robustness_glm(y ~ arm + x, ok, term = "armZ", n_boot = 5),

@@ -201,7 +201,7 @@ test_that("validation: margins, alpha, min-n, NA, mutual exclusion", {
   expect_error(
     robustness_tost(g1, g2, type = "equivalence", margin = 1,
                     weights = c(0.5, 0.5, 0.5), n_boot = 5),
-    "weights must be 3 non-negative"
+    "weights must be a named numeric vector containing exactly"
   )
 })
 
