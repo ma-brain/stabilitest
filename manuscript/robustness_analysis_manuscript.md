@@ -164,7 +164,7 @@ Treatment: mean change −19.80 (SD 13.80). Placebo: −8.40 (SD 11.88). Welch t
 
 The result is classified robust: strong primary evidence (p = 0.0018), perfect leave-one-out stability, worst-case fragility comparable to simulated true large effects, and high reproducibility. Two actions are still warranted for the CSR: clinical review of subject 14 (protocol adherence, concomitant medication) since this patient heads the worst-case removal set; and a supplementary rank-based analysis, which is less leveraged by extreme responders.
 
-Suggested reporting text (Results): "Robustness analysis (stabilitest v0.3; B = 2000, seed = 14) yielded an overall score of 72.5/100 (robust; calibrated bands from simulation). All 55 leave-one-out analyses preserved statistical significance (p ≤ 0.0034). Worst-case removal analysis identified a set of 6 patients (10.9% of the sample) whose exclusion would raise the p-value to 0.060; the corresponding median for chance-significant findings in simulation is 1–2 patients. Bootstrap reproducibility probability was 92%."
+Suggested reporting text (Results): "Robustness analysis (stabilitest v0.4; B = 2000, seed = 14) yielded an overall score of 72.5/100 (robust; calibrated bands from simulation). All 55 leave-one-out analyses preserved statistical significance (p ≤ 0.0034). Worst-case removal analysis identified a set of 6 patients (10.9% of the sample) whose exclusion would raise the p-value to 0.060; the corresponding median for chance-significant findings in simulation is 1–2 patients. Bootstrap reproducibility probability was 92%."
 
 ---
 
@@ -200,7 +200,7 @@ Statistical significance answers "is there an effect?" Robustness analysis answe
 
 ## References
 
-Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.3.0; 2026. Available from: https://github.com/ma-brain/stabilitest
+Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.4.0; 2026. Available from: https://github.com/ma-brain/stabilitest
 
 Belsley DA, Kuh E, Welsch RE. *Regression Diagnostics: Identifying Influential Data and Sources of Collinearity*. John Wiley & Sons; 1980.
 

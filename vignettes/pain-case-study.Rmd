@@ -33,7 +33,7 @@ library(stabilitest)
 
 A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Primary interpretation should stay with the component metrics; the composite is a communication heuristic calibrated by simulation (see the accompanying manuscript).
 
-> **Status.** Experimental (v0.3.0). API and band cut-offs may evolve. Bands below apply to *significant* primary results.
+> **Status.** Experimental (v0.4.0). API and band cut-offs may evolve. Bands below apply to *significant* primary results.
 
 ## Pain trial case study
 

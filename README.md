@@ -81,7 +81,7 @@ res_ni <- robustness_tost(g1, g2, type = "noninferiority", margin = 0.3,
 
 ## Status
 
-Experimental (v0.3.0). API may change. See [NEWS.md](NEWS.md) for release
+Experimental (v0.4.0). API may change. See [NEWS.md](NEWS.md) for release
 notes. Cite with `citation("stabilitest")`. Browse the vignette with
 `browseVignettes("stabilitest")` or
 `vignette("pain-case-study", package = "stabilitest")`. `NAMESPACE` and `man/`
