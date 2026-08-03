@@ -83,7 +83,8 @@ composite) and related diagnostics. Alias: \code{metrics} (same tibble).}
 \item{original_mean_diff}{Effect summary (mean / HL / proportion
 difference). Alias: \code{original_estimate}.}
 \item{jackknife, worstcase, extreme, bootstrap}{Component analysis
-results (nested lists with tibbles plus summary scalars).}
+results (nested lists with tibbles plus summary scalars). The bootstrap
+list includes \code{n_valid} and \code{n_failed} replicate counts.}
 \item{sample_info, weights, alpha, max_removal_pct, max_k, n}{Analysis
 metadata (\code{n} is total sample size / pairs as appropriate).}
 \item{interpretation}{Optional text blocks when \code{interpret = TRUE};
@@ -108,6 +109,17 @@ For \code{"wilcoxon"}, \code{"wilcoxon.paired"}, and \code{"brunner_munzel"}, th
 effect size is the Hodges–Lehmann location shift (median of all pairwise
 differences for unpaired tests; median of Walsh averages of within-pair
 differences for paired Wilcoxon), stored in \code{original_mean_diff}.
+
+The removal component must be able to evaluate at least one deletion while
+retaining four observations per group (or four pairs). \code{max_k} is capped at
+that feasible deletion capacity. A no-flip fragility index of \code{max_k + 1}
+is reported only after the complete feasible search; an unevaluable or
+prematurely terminated search raises an error.
+
+Bootstrap attempts with errors or non-finite p-values are retained as failed
+replicates but excluded from reproducibility and p-value summaries. The
+returned bootstrap component records \code{n_valid} and \code{n_failed}; if no finite
+replicate remains, the analysis raises an error.
 }
 \examples{
 # Continuous two-sample (modest bootstrap for examples)

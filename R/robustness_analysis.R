@@ -124,6 +124,17 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #' differences for unpaired tests; median of Walsh averages of within-pair
 #' differences for paired Wilcoxon), stored in `original_mean_diff`.
 #'
+#' The removal component must be able to evaluate at least one deletion while
+#' retaining four observations per group (or four pairs). `max_k` is capped at
+#' that feasible deletion capacity. A no-flip fragility index of `max_k + 1`
+#' is reported only after the complete feasible search; an unevaluable or
+#' prematurely terminated search raises an error.
+#'
+#' Bootstrap attempts with errors or non-finite p-values are retained as failed
+#' replicates but excluded from reproducibility and p-value summaries. The
+#' returned bootstrap component records `n_valid` and `n_failed`; if no finite
+#' replicate remains, the analysis raises an error.
+#'
 #' @param group1 Numeric vector of observations in group 1; for proportion
 #'   tests (`"fisher"`, `"chisq"`, `"prop"`), binary 0/1 or logical
 #' @param group2 Numeric vector of observations in group 2; same coding rules
@@ -164,7 +175,8 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'   \item{original_mean_diff}{Effect summary (mean / HL / proportion
 #'     difference). Alias: `original_estimate`.}
 #'   \item{jackknife, worstcase, extreme, bootstrap}{Component analysis
-#'     results (nested lists with tibbles plus summary scalars).}
+#'     results (nested lists with tibbles plus summary scalars). The bootstrap
+#'     list includes `n_valid` and `n_failed` replicate counts.}
 #'   \item{sample_info, weights, alpha, max_removal_pct, max_k, n}{Analysis
 #'     metadata (`n` is total sample size / pairs as appropriate).}
 #'   \item{interpretation}{Optional text blocks when `interpret = TRUE`;

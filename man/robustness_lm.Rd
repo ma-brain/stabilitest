@@ -61,6 +61,12 @@ behaviour. Multi-df factors are detected when \code{term} matches a term label
 that expands to more than one non-aliased design-matrix column. Ambiguous
 matches error. Conclusion for the robustness pipeline is \code{p < alpha}
 (joint F p-value for multi-df terms).
+
+Robustness calculations use exactly the rows retained by the full fitted
+model after its \code{na.action}. At least one further row must be removable
+while retaining the engine's minimum analysis size; otherwise the function
+raises an insufficient-sample error rather than returning an unevaluated
+fragility score.
 }
 \examples{
 set.seed(1)

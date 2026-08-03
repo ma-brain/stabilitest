@@ -60,6 +60,10 @@ Robustness analysis for a GLM term (binomial logit or Poisson log)
 Single-coefficient \code{term} strings keep the previous Wald behaviour.
 Multi-df factors use the same \code{resolve_model_term()} rules as
 \code{\link[=robustness_lm]{robustness_lm()}}. Case deletion / resampling acts on rows of \code{data}.
+Rows omitted by the full fitted model are excluded from all robustness
+calculations; \code{obs_weights} remain aligned through the private row ID.
+At least one retained row must be removable while keeping the minimum
+analysis size.
 
 Complete or quasi-complete separation is handled only via \code{converged}
 and finite p-values: failed full-data fits error; failed subsets are

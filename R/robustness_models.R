@@ -372,6 +372,12 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 #'   matches error. Conclusion for the robustness pipeline is `p < alpha`
 #'   (joint F p-value for multi-df terms).
 #'
+#'   Robustness calculations use exactly the rows retained by the full fitted
+#'   model after its `na.action`. At least one further row must be removable
+#'   while retaining the engine's minimum analysis size; otherwise the function
+#'   raises an insufficient-sample error rather than returning an unevaluated
+#'   fragility score.
+#'
 #' @return An object of class `"robustness_model"` (a named list) with:
 #' \describe{
 #'   \item{original_p, original_estimate, original_significant}{Full-data
@@ -475,6 +481,10 @@ robustness_lm <- function(formula, data, term,
 #'   patterns are handled naturally. Removing whole subjects (with their
 #'   follow-up) differs from the event-flip fragility of Walsh et al.; interpret
 #'   as a removal fragility index.
+#'
+#'   Robustness calculations use exactly the rows retained by the full fitted
+#'   model after its `na.action`. At least one further row must be removable
+#'   while retaining the engine's minimum analysis size.
 #'
 #' @return An object of class `"robustness_model"` (a named list). Same engine
 #'   fields as [robustness_lm()] (`original_p`, `metrics`,
@@ -580,6 +590,10 @@ robustness_surv <- function(formula, data, term,
 #' @details Single-coefficient `term` strings keep the previous Wald behaviour.
 #'   Multi-df factors use the same `resolve_model_term()` rules as
 #'   [robustness_lm()]. Case deletion / resampling acts on rows of `data`.
+#'   Rows omitted by the full fitted model are excluded from all robustness
+#'   calculations; `obs_weights` remain aligned through the private row ID.
+#'   At least one retained row must be removable while keeping the minimum
+#'   analysis size.
 #'
 #'   Complete or quasi-complete separation is handled only via `converged`
 #'   and finite p-values: failed full-data fits error; failed subsets are

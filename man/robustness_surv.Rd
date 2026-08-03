@@ -50,6 +50,10 @@ to more than one non-aliased design-matrix column (same rules as
 patterns are handled naturally. Removing whole subjects (with their
 follow-up) differs from the event-flip fragility of Walsh et al.; interpret
 as a removal fragility index.
+
+Robustness calculations use exactly the rows retained by the full fitted
+model after its \code{na.action}. At least one further row must be removable
+while retaining the engine's minimum analysis size.
 }
 \examples{
 if (requireNamespace("survival", quietly = TRUE)) {

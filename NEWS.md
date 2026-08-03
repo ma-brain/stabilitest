@@ -1,3 +1,21 @@
+# stabilitest (development version)
+
+## Correctness
+
+* Fragility scoring now requires at least one feasible deletion and only reports
+  the right-censored `max_k + 1` index after completing the configured removal
+  horizon. Analyses fail clearly when the sample cannot support a deletion or
+  when candidate fitting ends the search prematurely.
+* `robustness_lm()`, `robustness_glm()`, and `robustness_surv()` now run
+  jackknife, removal, and bootstrap calculations on exactly the rows retained
+  by the full fitted model. Reported sample sizes and percentages therefore
+  exclude observations omitted for missing model variables; GLM observation
+  weights remain aligned to their original rows.
+* Two-sample bootstrap runs now retain and count non-finite or failed
+  replicates. Summaries use finite p-values, result objects expose `n_valid`
+  and `n_failed`, and an entirely degenerate bootstrap fails with a clear
+  error instead of producing a missing or misleading score.
+
 # stabilitest 0.5.0
 
 ## Internal

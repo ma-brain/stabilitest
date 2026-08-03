@@ -572,7 +572,9 @@ tost_or_test <- function(group1, group2, type,
 #' be anticonservative with sparse tables; Farrington–Manning score and exact
 #' unconditional procedures are not implemented. Rank-based TOST is still
 #' deferred. Composite score bands are **not** separately calibrated for
-#' equivalence/NI conclusions (any endpoint).
+#' equivalence/NI conclusions (any endpoint). The fragility component requires
+#' at least one deletion that retains four pairs or eight unpaired observations;
+#' otherwise the analysis raises an insufficient-sample error.
 #'
 #' @examples
 #' set.seed(1)
