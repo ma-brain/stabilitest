@@ -125,9 +125,29 @@ test_that("paired t and Wilcoxon signed-rank handle clear paired effects", {
                             n_boot = 40, seed = 33)
   expect_s3_class(rw, "robustness_analysis")
   expect_identical(rw$sample_info$test_type, "wilcoxon.paired")
-  expect_true(is.na(rw$original_mean_diff))
+  expect_identical(rw$sample_info$effect_type, "hodges_lehmann")
+  expect_true(is.finite(rw$original_mean_diff))
+  # Paired HL = median of Walsh averages of within-pair differences
+  d <- x - y
+  n <- length(d)
+  idx <- which(lower.tri(matrix(0, n, n), diag = TRUE), arr.ind = TRUE)
+  hl_paired <- median((d[idx[, 1]] + d[idx[, 2]]) / 2)
+  expect_equal(rw$original_mean_diff, hl_paired)
   expect_gte(rw$robustness_metrics$overall_robustness, 0)
   expect_lte(rw$robustness_metrics$overall_robustness, 100)
+})
+
+test_that("brunner_munzel is unpaired only and rejects tiny samples", {
+  expect_error(
+    robustness_analysis(1:3, 2:4, test_type = "brunner_munzel", n_boot = 5),
+    "Each group must have at least 4 observations"
+  )
+  # match.arg rejects unknown aliases; paired BM is not a valid test_type
+  expect_error(
+    robustness_analysis(1:10, 1:10, test_type = "brunner_munzel.paired",
+                        n_boot = 5),
+    "should be one of"
+  )
 })
 
 # --- score band boundaries via generate_interpretation ------------------------
@@ -374,7 +394,28 @@ test_that("wilcoxon two-sample runs on overlapping distributions", {
   res <- robustness_analysis(x, y, test_type = "wilcoxon",
                              n_boot = 40, seed = 55)
   expect_s3_class(res, "robustness_analysis")
-  expect_true(is.na(res$original_mean_diff))
+  expect_true(is.finite(res$original_mean_diff))
+  expect_equal(res$original_mean_diff, median(outer(x, y, `-`)))
+  expect_identical(res$sample_info$effect_type, "hodges_lehmann")
+  expect_gte(res$robustness_metrics$overall_robustness, 0)
+  expect_lte(res$robustness_metrics$overall_robustness, 100)
+})
+
+test_that("brunner_munzel runs under heteroscedasticity", {
+  set.seed(56)
+  x <- rnorm(20, 0, 1)
+  y <- rnorm(20, 0.5, 3)
+  res <- robustness_analysis(x, y, test_type = "brunner_munzel",
+                             n_boot = 40, seed = 56)
+  expect_s3_class(res, "robustness_analysis")
+  expect_identical(res$sample_info$test_type, "brunner_munzel")
+  expect_true(is.finite(res$original_mean_diff))
+  expect_true(is.finite(res$sample_info$stochastic_superiority))
+  expect_match(
+    capture.output(print(res, show_interpretation = FALSE)),
+    "Hodges-Lehmann",
+    all = FALSE
+  )
   expect_gte(res$robustness_metrics$overall_robustness, 0)
   expect_lte(res$robustness_metrics$overall_robustness, 100)
 })

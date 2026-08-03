@@ -44,6 +44,67 @@ prop_table_2x2 <- function(g1, g2) {
   )
 }
 
+# Hodges–Lehmann two-sample location shift: median of all pairwise diffs x_i - y_j
+hodges_lehmann_unpaired <- function(x, y) {
+  as.numeric(stats::median(outer(x, y, `-`)))
+}
+
+# Hodges–Lehmann paired / one-sample: median of Walsh averages of within-pair diffs
+hodges_lehmann_paired <- function(x, y) {
+  d <- x - y
+  n <- length(d)
+  idx <- which(lower.tri(matrix(0, n, n), diag = TRUE), arr.ind = TRUE)
+  walsh <- (d[idx[, 1L]] + d[idx[, 2L]]) / 2
+  as.numeric(stats::median(walsh))
+}
+
+# Brunner–Munzel test (Neubert & Brunner 2007 corrected formulas; base R).
+# Unpaired only. Estimate is P(X < Y) + 0.5 P(X = Y) with X = group1, Y = group2.
+brunner_munzel_test <- function(x, y, alpha = 0.05) {
+  n1 <- length(x)
+  n2 <- length(y)
+  r1_place <- rank(x, ties.method = "average")
+  r2_place <- rank(y, ties.method = "average")
+  r <- rank(c(x, y), ties.method = "average")
+  r1 <- r[seq_len(n1)]
+  r2 <- r[n1 + seq_len(n2)]
+  m1 <- mean(r1)
+  m2 <- mean(r2)
+  pst <- (m2 - (n2 + 1) / 2) / n1
+  v1 <- sum((r1 - r1_place - m1 + (n1 + 1) / 2)^2) / (n1 - 1)
+  v2 <- sum((r2 - r2_place - m2 + (n2 + 1) / 2)^2) / (n2 - 1)
+  denom <- sqrt(n1 * v1 + n2 * v2)
+  if (!is.finite(denom) || denom < .Machine$double.eps) {
+    statistic <- NA_real_
+    dfbm <- NA_real_
+    p.value <- NA_real_
+    conf.int <- c(NA_real_, NA_real_)
+  } else {
+    statistic <- n1 * n2 * (m2 - m1) / (n1 + n2) / denom
+    dfbm <- ((n1 * v1 + n2 * v2)^2) /
+      (((n1 * v1)^2) / (n1 - 1) + ((n2 * v2)^2) / (n2 - 1))
+    p.value <- 2 * stats::pt(-abs(statistic), df = dfbm)
+    se <- sqrt(v1 / (n1 * n2^2) + v2 / (n2 * n1^2))
+    conf.int <- pst + c(-1, 1) * stats::qt(1 - alpha / 2, df = dfbm) * se
+  }
+  attr(conf.int, "conf.level") <- 1 - alpha
+  estimate <- c("P(X<Y)+.5*P(X=Y)" = pst)
+  structure(
+    list(
+      statistic = c("Brunner-Munzel" = unname(statistic)),
+      parameter = c(df = unname(dfbm)),
+      p.value = unname(p.value),
+      conf.int = conf.int,
+      estimate = estimate,
+      null.value = c("P(X<Y)+.5*P(X=Y)" = 0.5),
+      alternative = "two.sided",
+      method = "Brunner-Munzel Test",
+      data.name = "x and y"
+    ),
+    class = "htest"
+  )
+}
+
 #' Comprehensive robustness analysis for two-sample comparisons
 #'
 #' Supports continuous location tests and two-group binary proportion tests
@@ -52,14 +113,26 @@ prop_table_2x2 <- function(g1, g2) {
 #' removal, and bootstrap operate on the same observation units as the
 #' continuous API. Barnard's exact test is not implemented in this version.
 #'
+#' Rank-based options: `"wilcoxon"` (Mann–Whitney / Wilcoxon rank-sum) assumes
+#' exchangeable distributions under the null (equal shapes/variances for a pure
+#' location interpretation); `"brunner_munzel"` is the unpaired nonparametric
+#' Behrens–Fisher alternative that allows unequal variances. Prefer
+#' `"brunner_munzel"` when heteroscedasticity is plausible; prefer `"wilcoxon"`
+#' for the classical Mann–Whitney setting. Brunner–Munzel is unpaired only.
+#' For `"wilcoxon"`, `"wilcoxon.paired"`, and `"brunner_munzel"`, the reported
+#' effect size is the Hodges–Lehmann location shift (median of all pairwise
+#' differences for unpaired tests; median of Walsh averages of within-pair
+#' differences for paired Wilcoxon), stored in `original_mean_diff`.
+#'
 #' @param group1 Numeric vector of observations in group 1; for proportion
 #'   tests (`"fisher"`, `"chisq"`, `"prop"`), binary 0/1 or logical
 #' @param group2 Numeric vector of observations in group 2; same coding rules
 #'   as `group1`
 #' @param test_type `"t.test"` (Welch, default), `"paired.t.test"`,
-#'   `"wilcoxon"`, `"wilcoxon.paired"`, or proportion tests `"fisher"`
-#'   (Fisher's exact), `"chisq"` (`stats::chisq.test` on the 2x2 table),
-#'   `"prop"` (`stats::prop.test`)
+#'   `"wilcoxon"`, `"wilcoxon.paired"`, `"brunner_munzel"` (unpaired
+#'   Brunner–Munzel), or proportion tests `"fisher"` (Fisher's exact),
+#'   `"chisq"` (`stats::chisq.test` on the 2x2 table), `"prop"`
+#'   (`stats::prop.test`)
 #' @param alpha Significance level (default 0.05)
 #' @param n_boot Bootstrap iterations (default 1000)
 #' @param max_removal_pct Maximum proportion of observations removed in the
@@ -81,6 +154,7 @@ prop_table_2x2 <- function(g1, g2) {
 robustness_analysis <- function(group1, group2,
                                 test_type = c("t.test", "paired.t.test",
                                               "wilcoxon", "wilcoxon.paired",
+                                              "brunner_munzel",
                                               "fisher", "chisq", "prop"),
                                 alpha = 0.05, n_boot = 1000,
                                 max_removal_pct = 0.30,
@@ -93,6 +167,7 @@ robustness_analysis <- function(group1, group2,
   test_type <- match.arg(test_type)
   paired <- test_type %in% c("paired.t.test", "wilcoxon.paired")
   is_prop <- test_type %in% c("fisher", "chisq", "prop")
+  is_rank <- test_type %in% c("wilcoxon", "wilcoxon.paired", "brunner_munzel")
 
   # --- validation -------------------------------------------------------------
   if (is_prop) {
@@ -133,23 +208,51 @@ robustness_analysis <- function(group1, group2,
       statistic <- if (!is.null(result$statistic)) unname(result$statistic) else NA_real_
       conf.int <- if (!is.null(result$conf.int)) result$conf.int else c(NA_real_, NA_real_)
       return(list(p.value = result$p.value, statistic = statistic,
-                  mean_diff = mean_diff, conf.int = conf.int))
+                  mean_diff = mean_diff, conf.int = conf.int,
+                  stochastic_superiority = NA_real_))
     }
     result <- switch(test_type,
       "t.test"          = t.test(g1, g2),
       "paired.t.test"   = t.test(g1, g2, paired = TRUE),
-      "wilcoxon"        = wilcox.test(g1, g2, exact = FALSE),
-      "wilcoxon.paired" = wilcox.test(g1, g2, paired = TRUE, exact = FALSE)
+      "wilcoxon"        = {
+        # conf.int can fail on tiny/degenerate jackknife or removal subsets
+        tryCatch(
+          wilcox.test(g1, g2, exact = FALSE, conf.int = TRUE),
+          error = function(e) wilcox.test(g1, g2, exact = FALSE)
+        )
+      },
+      "wilcoxon.paired" = {
+        tryCatch(
+          wilcox.test(g1, g2, paired = TRUE, exact = FALSE, conf.int = TRUE),
+          error = function(e) wilcox.test(g1, g2, paired = TRUE, exact = FALSE)
+        )
+      },
+      "brunner_munzel"  = brunner_munzel_test(g1, g2, alpha = alpha)
     )
+    # Effect sizes: mean difference for t-tests; Hodges–Lehmann for rank tests
     mean_diff <- switch(test_type,
       "t.test"          = unname(result$estimate[1] - result$estimate[2]),
       "paired.t.test"   = unname(result$estimate),
-      NA_real_  # rank tests: no mean-difference estimate
+      "wilcoxon"        = hodges_lehmann_unpaired(g1, g2),
+      "wilcoxon.paired" = hodges_lehmann_paired(g1, g2),
+      "brunner_munzel"  = hodges_lehmann_unpaired(g1, g2)
     )
+    # Wilcoxon CI is for the HL shift; BM CI is for stochastic superiority —
+    # only attach a CI to original_mean_diff when it matches that parameter
+    conf.int <- switch(test_type,
+      "brunner_munzel" = c(NA_real_, NA_real_),
+      if (!is.null(result$conf.int)) result$conf.int else c(NA_real_, NA_real_)
+    )
+    stochastic_superiority <- if (test_type == "brunner_munzel") {
+      unname(result$estimate)
+    } else {
+      NA_real_
+    }
     list(p.value  = result$p.value,
          statistic = unname(result$statistic),
          mean_diff = mean_diff,
-         conf.int  = if (!is.null(result$conf.int)) result$conf.int else c(NA, NA))
+         conf.int  = conf.int,
+         stochastic_superiority = stochastic_superiority)
   }
 
   original <- perform_test(group1, group2)
@@ -343,22 +446,36 @@ robustness_analysis <- function(group1, group2,
   )
 
   # --- sample info ------------------------------------------------------------
+  effect_type <- if (is_prop) {
+    "prop_diff"
+  } else if (is_rank) {
+    "hodges_lehmann"
+  } else {
+    "mean_diff"
+  }
   sample_info <- if (paired) {
     list(test_type = test_type, n_pairs = length(group1),
          group1_mean = mean(group1), group1_sd = sd(group1),
          group2_mean = mean(group2), group2_sd = sd(group2),
-         diff_mean = mean(group1 - group2), diff_sd = sd(group1 - group2))
+         diff_mean = mean(group1 - group2), diff_sd = sd(group1 - group2),
+         effect_type = effect_type)
   } else if (is_prop) {
     list(test_type = test_type,
          n1 = length(group1), n2 = length(group2), n_total = n_total,
          group1_prop = mean(group1), group2_prop = mean(group2),
          prop_diff = mean(group1) - mean(group2),
-         correct = if (test_type %in% c("chisq", "prop")) correct else NA)
+         correct = if (test_type %in% c("chisq", "prop")) correct else NA,
+         effect_type = effect_type)
   } else {
-    list(test_type = test_type,
+    info <- list(test_type = test_type,
          n1 = length(group1), n2 = length(group2), n_total = n_total,
          group1_mean = mean(group1), group1_sd = sd(group1), group1_median = median(group1),
-         group2_mean = mean(group2), group2_sd = sd(group2), group2_median = median(group2))
+         group2_mean = mean(group2), group2_sd = sd(group2), group2_median = median(group2),
+         effect_type = effect_type)
+    if (test_type == "brunner_munzel") {
+      info$stochastic_superiority <- original$stochastic_superiority
+    }
+    info
   }
 
   out <- list(
@@ -418,6 +535,7 @@ generate_interpretation <- function(x) {
     "paired.t.test"   = "paired t-test",
     "wilcoxon"        = "Wilcoxon rank-sum test",
     "wilcoxon.paired" = "Wilcoxon signed-rank test",
+    "brunner_munzel"  = "Brunner-Munzel test",
     "fisher"          = "Fisher's exact test",
     "chisq"           = "chi-square test of independence",
     "prop"            = "two-sample proportion test")
@@ -501,6 +619,16 @@ print.robustness_analysis <- function(x, show_interpretation = TRUE, ...) {
   if (!is.null(x$sample_info$n_pairs)) {
     cat(sprintf("  n = %d pairs; mean difference (g1 - g2): %.3f (SD %.3f)\n",
                 x$sample_info$n_pairs, x$sample_info$diff_mean, x$sample_info$diff_sd))
+    if (identical(x$sample_info$effect_type, "hodges_lehmann") &&
+        !is.na(x$original_mean_diff)) {
+      if (all(is.finite(x$original_ci))) {
+        cat(sprintf("  Hodges-Lehmann shift (g1 - g2): %.3f (95%% CI %.3f, %.3f)\n",
+                    x$original_mean_diff, x$original_ci[1], x$original_ci[2]))
+      } else {
+        cat(sprintf("  Hodges-Lehmann shift (g1 - g2): %.3f\n",
+                    x$original_mean_diff))
+      }
+    }
   } else if (!is.null(x$sample_info$group1_prop)) {
     cat(sprintf("  n1 = %d, n2 = %d\n", x$sample_info$n1, x$sample_info$n2))
     cat(sprintf("  Proportions: p1 = %.3f, p2 = %.3f (diff p1 - p2 = %.3f)\n",
@@ -508,9 +636,25 @@ print.robustness_analysis <- function(x, show_interpretation = TRUE, ...) {
                 x$sample_info$prop_diff))
   } else {
     cat(sprintf("  n1 = %d, n2 = %d\n", x$sample_info$n1, x$sample_info$n2))
-    if (!is.na(x$original_mean_diff))
-      cat(sprintf("  Mean difference (g1 - g2): %.3f (95%% CI %.3f, %.3f)\n",
-                  x$original_mean_diff, x$original_ci[1], x$original_ci[2]))
+    if (!is.na(x$original_mean_diff)) {
+      if (identical(x$sample_info$effect_type, "hodges_lehmann")) {
+        if (all(is.finite(x$original_ci))) {
+          cat(sprintf("  Hodges-Lehmann shift (g1 - g2): %.3f (95%% CI %.3f, %.3f)\n",
+                      x$original_mean_diff, x$original_ci[1], x$original_ci[2]))
+        } else {
+          cat(sprintf("  Hodges-Lehmann shift (g1 - g2): %.3f\n",
+                      x$original_mean_diff))
+        }
+        if (!is.null(x$sample_info$stochastic_superiority) &&
+            !is.na(x$sample_info$stochastic_superiority)) {
+          cat(sprintf("  Stochastic superiority P(X<Y)+.5P(X=Y): %.3f\n",
+                      x$sample_info$stochastic_superiority))
+        }
+      } else {
+        cat(sprintf("  Mean difference (g1 - g2): %.3f (95%% CI %.3f, %.3f)\n",
+                    x$original_mean_diff, x$original_ci[1], x$original_ci[2]))
+      }
+    }
   }
   if (is.na(x$original_statistic)) {
     cat(sprintf("  p = %.4f (%s)\n\n",

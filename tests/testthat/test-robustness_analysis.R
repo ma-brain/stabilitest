@@ -20,10 +20,10 @@ test_that("score is bounded and weights are validated", {
                                    weights = c(0.5, 0.5, 0.5)))
 })
 
-test_that("all four test types run", {
+test_that("all continuous test types run", {
   set.seed(42)
   x <- rnorm(20); y <- rnorm(20, 1)
-  for (tt in c("t.test", "wilcoxon")) {
+  for (tt in c("t.test", "wilcoxon", "brunner_munzel")) {
     expect_s3_class(robustness_analysis(x, y, test_type = tt, n_boot = 30),
                     "robustness_analysis")
   }
@@ -31,6 +31,36 @@ test_that("all four test types run", {
     expect_s3_class(robustness_analysis(x, y, test_type = tt, n_boot = 30),
                     "robustness_analysis")
   }
+})
+
+test_that("wilcoxon and brunner_munzel report Hodges-Lehmann shift", {
+  set.seed(42)
+  x <- rnorm(20); y <- rnorm(20, 1)
+  hl <- as.numeric(median(outer(x, y, `-`)))
+
+  rw <- robustness_analysis(x, y, test_type = "wilcoxon", n_boot = 20, seed = 1)
+  expect_equal(rw$original_mean_diff, hl)
+  expect_identical(rw$sample_info$effect_type, "hodges_lehmann")
+  expect_true(all(is.finite(rw$original_ci)))
+
+  rb <- robustness_analysis(x, y, test_type = "brunner_munzel",
+                            n_boot = 20, seed = 1)
+  expect_equal(rb$original_mean_diff, hl)
+  expect_identical(rb$sample_info$effect_type, "hodges_lehmann")
+  expect_true(is.finite(rb$sample_info$stochastic_superiority))
+  expect_true(rb$sample_info$stochastic_superiority > 0.5)
+  expect_true(all(is.na(rb$original_ci)))
+})
+
+test_that("brunner_munzel matches Neubert-Brunner pain-score reference", {
+  # Brunner & Munzel (2000) / Neubert & Brunner (2007) example
+  Y <- c(1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 1, 1)
+  N <- c(3, 3, 4, 3, 1, 2, 3, 1, 1, 5, 4)
+  res <- robustness_analysis(Y, N, test_type = "brunner_munzel",
+                             n_boot = 20, seed = 2)
+  expect_equal(unname(res$original_statistic), 3.1375, tolerance = 1e-3)
+  expect_equal(res$original_p, 0.005786, tolerance = 1e-4)
+  expect_equal(res$sample_info$stochastic_superiority, 0.788961, tolerance = 1e-5)
 })
 
 test_that("bootstrap is reproducible under a fixed seed", {

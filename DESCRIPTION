@@ -10,8 +10,9 @@ Description: Quantifies the stability of statistical conclusions in clinical
     influence perturbation of Broderick, Giordano and Meager, 2023), and
     bootstrap reproducibility probability (Goodman, 1992) into interpretable
     component metrics and a composite robustness score. Supports two-sample
-    location tests (Welch and paired t, Wilcoxon), two-group binary proportion
-    tests (Fisher exact, chi-square, prop.test), linear model / ANCOVA terms,
+    location tests (Welch and paired t, Wilcoxon, Brunner-Munzel), two-group
+    binary proportion tests (Fisher exact, chi-square, prop.test), linear model /
+    ANCOVA terms,
     GLM (binomial logit) terms, and Cox proportional hazards terms.
 License: MIT + file LICENSE
 URL: https://github.com/ma-brain/stabilitest

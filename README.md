@@ -38,6 +38,14 @@ res <- robustness_analysis(pain_treatment, pain_placebo,
 print(res)
 plot(res)
 
+# Rank-based two-sample (Wilcoxon or Brunner–Munzel)
+# Effect size is the Hodges–Lehmann location shift (g1 - g2).
+# Prefer brunner_munzel when unequal variances are plausible (unpaired only).
+res_w <- robustness_analysis(pain_treatment, pain_placebo,
+                             test_type = "wilcoxon", n_boot = 500)
+res_bm <- robustness_analysis(pain_treatment, pain_placebo,
+                              test_type = "brunner_munzel", n_boot = 500)
+
 # Two-group binary proportions (Fisher / chi-square / prop.test)
 # Individual-level 0/1 (or logical) outcomes — same jackknife / fragility /
 # bootstrap machinery as the continuous API

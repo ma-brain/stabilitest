@@ -11,6 +11,17 @@
   Barnard's exact test is not included (no light dependency / pure
   implementation in this release).
 
+* Added unpaired `test_type = "brunner_munzel"` (base-R Brunner–Munzel /
+  nonparametric Behrens–Fisher; Neubert & Brunner 2007 formulas). Prefer it
+  over `"wilcoxon"` when unequal variances are plausible; paired designs are
+  rejected (use `"wilcoxon.paired"`).
+
+* Rank tests (`"wilcoxon"`, `"wilcoxon.paired"`, `"brunner_munzel"`) now report
+  the Hodges–Lehmann location shift in `original_mean_diff` (unpaired: median
+  of all pairwise differences; paired: median of Walsh averages). Brunner–Munzel
+  also stores stochastic superiority
+  `P(X < Y) + 0.5 P(X = Y)` in `sample_info$stochastic_superiority`.
+
 # stabilitest 0.3.0
 
 ## Features

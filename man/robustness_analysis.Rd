@@ -9,8 +9,8 @@
 robustness_analysis(
   group1,
   group2,
-  test_type = c("t.test", "paired.t.test", "wilcoxon", "wilcoxon.paired", "fisher",
-    "chisq", "prop"),
+  test_type = c("t.test", "paired.t.test", "wilcoxon", "wilcoxon.paired",
+    "brunner_munzel", "fisher", "chisq", "prop"),
   alpha = 0.05,
   n_boot = 1000,
   max_removal_pct = 0.3,
@@ -33,9 +33,10 @@ tests (\code{"fisher"}, \code{"chisq"}, \code{"prop"}), binary 0/1 or logical}
 as \code{group1}}
 
 \item{test_type}{\code{"t.test"} (Welch, default), \code{"paired.t.test"},
-\code{"wilcoxon"}, \code{"wilcoxon.paired"}, or proportion tests \code{"fisher"}
-(Fisher's exact), \code{"chisq"} (\code{stats::chisq.test} on the 2x2 table),
-\code{"prop"} (\code{stats::prop.test})}
+\code{"wilcoxon"}, \code{"wilcoxon.paired"}, \code{"brunner_munzel"} (unpaired
+Brunner–Munzel), or proportion tests \code{"fisher"} (Fisher's exact),
+\code{"chisq"} (\code{stats::chisq.test} on the 2x2 table), \code{"prop"}
+(\code{stats::prop.test})}
 
 \item{alpha}{Significance level (default 0.05)}
 
@@ -75,4 +76,16 @@ Supports continuous location tests and two-group binary proportion tests
 individual-level binary outcomes (0/1 or logical) so jackknife, worst-case
 removal, and bootstrap operate on the same observation units as the
 continuous API. Barnard's exact test is not implemented in this version.
+}
+\details{
+Rank-based options: \code{"wilcoxon"} (Mann–Whitney / Wilcoxon rank-sum) assumes
+exchangeable distributions under the null (equal shapes/variances for a pure
+location interpretation); \code{"brunner_munzel"} is the unpaired nonparametric
+Behrens–Fisher alternative that allows unequal variances. Prefer
+\code{"brunner_munzel"} when heteroscedasticity is plausible; prefer \code{"wilcoxon"}
+for the classical Mann–Whitney setting. Brunner–Munzel is unpaired only.
+For \code{"wilcoxon"}, \code{"wilcoxon.paired"}, and \code{"brunner_munzel"}, the reported
+effect size is the Hodges–Lehmann location shift (median of all pairwise
+differences for unpaired tests; median of Walsh averages of within-pair
+differences for paired Wilcoxon), stored in \code{original_mean_diff}.
 }
