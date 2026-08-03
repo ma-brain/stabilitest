@@ -49,7 +49,9 @@ res_cox <- robustness_surv(survival::Surv(time, event) ~ arm, dat,
 ## Status
 
 Experimental (v0.1.0). API may change. See [NEWS.md](NEWS.md) for release
-notes. Cite with `citation("stabilitest")`. `NAMESPACE` and `man/` should be
-regenerated with `roxygen2::roxygenise()`; run `devtools::check()` before any
-submission. Not affiliated with the CRAN packages `robust`, `robustbase`, or
-`stabs`.
+notes. Cite with `citation("stabilitest")`. Browse the vignette with
+`browseVignettes("stabilitest")` or
+`vignette("pain-case-study", package = "stabilitest")`. `NAMESPACE` and `man/`
+should be regenerated with `roxygen2::roxygenise()`; run `devtools::check()`
+before any submission. Not affiliated with the CRAN packages `robust`,
+`robustbase`, or `stabs`.

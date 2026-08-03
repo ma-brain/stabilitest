@@ -4,6 +4,7 @@
 ^docs$
 ^doc$
 ^Meta$
+^manuscript$
 ^vignettes/.*\.html$
 ^vignettes/.*\.R$
 ^doc$
