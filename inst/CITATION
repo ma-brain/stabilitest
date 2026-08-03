@@ -1,0 +1,16 @@
+citHeader("To cite stabilitest in publications use:")
+
+bibentry(
+  bibtype  = "Manual",
+  title    = "stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions",
+  author   = person("Marius", "Ally"),
+  year     = "2026",
+  note     = "R package version 0.1.0",
+  url      = "https://github.com/ma-brain/stabilitest",
+  textVersion = paste(
+    "Ally M (2026).",
+    "stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions.",
+    "R package version 0.1.0.",
+    "https://github.com/ma-brain/stabilitest"
+  )
+)

@@ -13,6 +13,8 @@ Description: Quantifies the stability of statistical conclusions in clinical
     location tests (Welch and paired t, Wilcoxon), linear model / ANCOVA
     terms, and Cox proportional hazards terms.
 License: MIT + file LICENSE
+URL: https://github.com/ma-brain/stabilitest
+BugReports: https://github.com/ma-brain/stabilitest/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends:
