@@ -1,0 +1,115 @@
+---
+title: "Pain Trial Case Study: Interpreting Robustness Scores"
+author: "Marius Ally"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Pain Trial Case Study: Interpreting Robustness Scores}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 96
+)
+```
+
+```{r setup}
+library(stabilitest)
+```
+
+## What the package measures
+
+`stabilitest` asks a question that a single *p*-value cannot: **how easily could this conclusion be overturned?** For a pre-specified two-sample (or model-term) analysis it combines three complementary sensitivity views:
+
+1. **Jackknife leave-one-out** — which individual observations drive the result?
+2. **Worst-case removal** — greedy adversarial deletion in the spirit of the maximum influence perturbation of Broderick, Giordano & Meager (2023). The resulting *removal fragility index* is the size of an identified subset whose removal flips the significance conclusion (an upper bound on the minimal such set).
+3. **Bootstrap reproducibility probability** (Goodman, 1992) — would a replicate sample drawn from the observed effect likely reach the same conclusion?
+
+A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Primary interpretation should stay with the component metrics; the composite is a communication heuristic calibrated by simulation (see the accompanying manuscript).
+
+> **Status.** Experimental (v0.1.0). API and band cut-offs may evolve. Bands below apply to *significant* primary results.
+
+## Pain trial case study
+
+The package ships a fixed synthetic Phase II analgesic dataset used in the manuscript case study: change from baseline in pain score (0–100 scale; negative = improvement) at Week 12.
+
+```{r data-glimpse}
+length(pain_treatment)
+length(pain_placebo)
+summary(pain_treatment)
+summary(pain_placebo)
+```
+
+Treatment includes one extreme responder (−52.0); placebo includes one minimal responder (+3.0). These are intentional for influence diagnostics, not clinical claims.
+
+Run the Welch two-sample analysis. Bootstrap uses `n_boot = 500` here to keep vignette runtime modest; the manuscript case study used `B = 2000`. Deterministic components (jackknife, removal analyses) do not depend on `n_boot`.
+
+```{r case-study}
+res <- robustness_analysis(
+  pain_treatment, pain_placebo,
+  test_type = "t.test",
+  n_boot = 500,
+  seed = 123,
+  interpret = TRUE
+)
+print(res)
+```
+
+Key deterministic takeaways that match the manuscript case study:
+
+- Primary Welch test: mean difference (treatment − placebo) about −11.4, *p* ≈ 0.0018.
+- Jackknife conclusion stability 100% across all leave-one-out deletions (near-perfect LOO stability mostly reflects *n* ≈ 55, not invulnerability).
+- Worst-case fragility index **k = 6** (about 11% of the sample); *p* rises to ≈ 0.060 after the sixth greedy deletion.
+- Overall score lands in the **Robust** band when bootstrap reproducibility is high (manuscript: ~72.5/100 with `B = 2000`).
+
+Optional diagnostic plots (removal *p*-value trajectories and the bootstrap *p* distribution):
+
+```{r case-plots, fig.cap = "Worst-case vs extreme-value removal trajectories (top) and bootstrap p-value distribution (bottom)."}
+plot(res)
+```
+
+Set `interpret = TRUE` to attach a narrative report (`res$interpretation$report`) that restates the components and a band-based recommendation.
+
+## Interpretation bands
+
+With default weights, bands were calibrated by simulation *conditional on a significant result* (the setting in which the framework is usually consulted):
+
+| Overall score | Label | Typical simulation profile |
+|---------------|-------|----------------------------|
+| > 70 | **Robust** | True large effects (mean score ~75) |
+| 55–70 | **Moderately Robust** | True moderate effects; report components transparently |
+| ≤ 55 | **Fragile** | Chance-significant findings under H₀ (mean score ~52) |
+
+In code:
+
+```{r bands-logic, eval = FALSE}
+# As implemented in robustness_analysis():
+#   > 70  -> "Robust"
+#   > 55  -> "Moderately Robust"
+#   else  -> "Fragile"
+```
+
+Practical reading of the components alongside the label:
+
+- **Jackknife stability** near 100% is weak evidence of robustness in larger samples (single-observation influence shrinks as ~1/*n*). Review flagged observations when present.
+- **Worst-case fragility** below ~5% of the sample should trigger clinical/data-quality review of the removal set, whatever the composite says. Median *k*_frag for chance findings in simulation was 1–2 observations versus ~5–14 for larger true effects (depending on *n* and *d*).
+- **Bootstrap reproducibility** reflects strength of evidence at the *observed* effect size, not robustness to contamination: a marginal *p*-value yields low reproducibility even in clean data. That is why its default weight is only 0.2.
+- **Extreme-value removal** can look much more reassuring than worst-case removal; the gap between the two indices is informative and should not be ignored.
+
+For **non-significant** primary results the composite bands are **not** calibrated the same way — adversarial removal can manufacture significance in almost any null sample. Prefer the component metrics directly.
+
+## Brief caveats
+
+- The greedy fragility index is an *upper bound* on the size of a minimal overturning subset; a smaller set may exist.
+- Binary significance framing inherits the usual knife-edge problem near α; always inspect the *p*-value trajectory, not only *k*_frag.
+- Adversarial removal asks “could the data support the opposite conclusion?” and should complement, not replace, assumption-based sensitivity analyses (missing data, model form).
+- Calibration was performed for the Welch test under normality with directional contamination; ANCOVA / Cox engines share the same scoring logic but are not yet separately calibrated.
+- Pre-specify weights, `max_removal_pct`, and bands in the SAP when used in confirmatory work.
+
+Further methodological detail, simulation tables, and reporting templates are in the accompanying manuscript / methodological notes (development source tree and related project materials). For model-based terms see `robustness_lm()` and `robustness_surv()`.

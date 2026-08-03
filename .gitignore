@@ -25,6 +25,8 @@
 src/*.o
 src/*.so
 src/*.dll
+/doc/
+/Meta/
 
 # Dependencies / docs
 .Rlib/
@@ -39,3 +41,5 @@ credentials.json
 # OS junk
 .DS_Store
 Thumbs.db
+/doc/
+/Meta/

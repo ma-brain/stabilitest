@@ -24,8 +24,11 @@ Imports:
     ggplot2,
     stats
 Suggests:
+    knitr,
+    rmarkdown,
     survival,
     patchwork,
     testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0

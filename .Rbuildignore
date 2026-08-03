@@ -1,3 +1,10 @@
 ^data-raw$
 ^\.Rproj\.user$
 ^.*\.Rproj$
+^docs$
+^doc$
+^Meta$
+^vignettes/.*\.html$
+^vignettes/.*\.R$
+^doc$
+^Meta$
