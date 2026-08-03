@@ -1,3 +1,27 @@
+# stabilitest 0.3.0
+
+## Features
+
+* Added `robustness_glm()` for binomial logistic (`logit`) GLM terms, with
+  optional observation weights via `obs_weights` (distinct from composite
+  score `weights`).
+* Extended `print.robustness_model()` to report odds ratios for binomial GLM
+  fits.
+
+## Validation and edge cases
+
+* Validate GLM family/link (binomial logit only; redirect Gaussian to
+  `robustness_lm()`; reject quasi-families and non-logit links).
+* Cover GLM edges in tests: small *n*, bad score/`obs_weights`, missing terms,
+  separation, collinearity, and all-zero binary outcomes.
+
+## Documentation and manuscript
+
+* Documented `robustness_glm()` in README, package DESCRIPTION, vignette, and
+  roxygen/`man/` pages.
+* Manuscript Typst Springer-like PDF styling, pandoc template, `build_pdf.sh`,
+  and tighter heading spacing for the rebuilt PDF.
+
 # stabilitest 0.1.0
 
 Experimental initial release. The API may change.

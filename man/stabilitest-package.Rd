@@ -6,7 +6,15 @@
 \alias{stabilitest-package}
 \title{stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions}
 \description{
-Quantifies the stability of statistical conclusions in clinical trials and applied research. Integrates jackknife leave-one-out analysis, greedy worst-case observation removal (in the spirit of the maximum influence perturbation of Broderick, Giordano and Meager, 2023), and bootstrap reproducibility probability (Goodman, 1992) into interpretable component metrics and a composite robustness score. Supports two-sample location tests (Welch and paired t, Wilcoxon), linear model / ANCOVA terms, and Cox proportional hazards terms.
+Quantifies the stability of statistical conclusions in clinical trials and applied research. Integrates jackknife leave-one-out analysis, greedy worst-case observation removal (in the spirit of the maximum influence perturbation of Broderick, Giordano and Meager, 2023), and bootstrap reproducibility probability (Goodman, 1992) into interpretable component metrics and a composite robustness score. Supports two-sample location tests (Welch and paired t, Wilcoxon), linear model / ANCOVA terms, GLM (binomial logit) terms, and Cox proportional hazards terms.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/ma-brain/stabilitest}
+  \item Report bugs at \url{https://github.com/ma-brain/stabilitest/issues}
+}
+
 }
 \author{
 \strong{Maintainer}: Marius Ally \email{marally@gmail.com}

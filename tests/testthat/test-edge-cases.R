@@ -368,3 +368,154 @@ test_that("wilcoxon two-sample runs on overlapping distributions", {
   expect_gte(res$robustness_metrics$overall_robustness, 0)
   expect_lte(res$robustness_metrics$overall_robustness, 100)
 })
+
+# --- robustness_glm edges -----------------------------------------------------
+
+test_that("robustness_glm rejects small n, bad weights, and missing terms", {
+  set.seed(7)
+  tiny <- data.frame(
+    y = rbinom(8, 1, 0.5),
+    arm = factor(rep(c("P", "A"), each = 4), levels = c("P", "A")),
+    x = rnorm(8)
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, tiny, term = "armA", n_boot = 5),
+    "Need at least 10 rows"
+  )
+
+  ok <- data.frame(
+    y = rbinom(30, 1, 0.5),
+    arm = factor(rep(c("P", "A"), each = 15), levels = c("P", "A")),
+    x = rnorm(30)
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, ok, term = "armA",
+                   weights = c(jackknife = 0.5, fragility = 0.5, bootstrap = 0.5),
+                   n_boot = 5),
+    "weights must be 3 non-negative values summing to 1"
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, ok, term = "armZ", n_boot = 5),
+    "Model could not be fitted on the full dataset"
+  )
+})
+
+test_that("robustness_glm rejects unsupported families and links", {
+  set.seed(1)
+  dat <- data.frame(
+    y = rbinom(30, 1, 0.5),
+    arm = factor(rep(c("P", "A"), each = 15), levels = c("P", "A")),
+    x = rnorm(30)
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, dat, term = "armA",
+                   family = gaussian(), n_boot = 5),
+    "Use robustness_lm\\(\\) for Gaussian linear models"
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, dat, term = "armA",
+                   family = poisson(), n_boot = 5),
+    'robustness_glm\\(\\) currently supports binomial\\(link = "logit"\\) only'
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, dat, term = "armA",
+                   family = quasipoisson(), n_boot = 5),
+    "Quasi-families are not supported"
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, dat, term = "armA",
+                   family = binomial(link = "probit"), n_boot = 5),
+    "logit link only|binomial\\(link = \"logit\"\\) only"
+  )
+})
+
+test_that("robustness_glm rejects bad obs_weights", {
+  set.seed(2)
+  dat <- data.frame(
+    y = rbinom(20, 1, 0.5),
+    arm = factor(rep(c("P", "A"), each = 10), levels = c("P", "A")),
+    x = rnorm(20)
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, dat, term = "armA",
+                   obs_weights = runif(10), n_boot = 5),
+    "obs_weights must be NULL or a numeric vector of length nrow\\(data\\)"
+  )
+})
+
+test_that("robustness_glm handles all-zero binary outcomes", {
+  # stats::glm typically converges with a finite (non-significant) arm p for
+  # all-zero y; document that path rather than assuming a hard error.
+  set.seed(11)
+  dat <- data.frame(
+    y = rep(0L, 20),
+    arm = factor(rep(c("P", "A"), each = 10), levels = c("P", "A")),
+    x = rnorm(20)
+  )
+  result <- tryCatch(
+    list(ok = TRUE, res = suppressWarnings(
+      robustness_glm(y ~ arm + x, dat, term = "armA", n_boot = 5, seed = 11)
+    )),
+    error = function(e) list(ok = FALSE, message = conditionMessage(e))
+  )
+  if (isTRUE(result$ok)) {
+    expect_s3_class(result$res, "robustness_model")
+    expect_false(result$res$original_significant)
+  } else {
+    expect_match(result$message, "Model could not be fitted on the full dataset")
+  }
+})
+
+test_that("robustness_glm handles complete separation deterministically", {
+  # Perfect predictor: arm determines y exactly
+  dat <- data.frame(
+    y = c(rep(0L, 12), rep(1L, 12)),
+    arm = factor(rep(c("P", "A"), each = 12), levels = c("P", "A")),
+    x = rnorm(24)
+  )
+  # Documented behavior: either hard error (NA p / non-converged) or a finite
+  # extreme fit returning a robustness_model — assert one of the two.
+  result <- tryCatch(
+    list(ok = TRUE, res = robustness_glm(y ~ arm + x, dat, term = "armA",
+                                         n_boot = 10, seed = 1)),
+    error = function(e) list(ok = FALSE, message = conditionMessage(e))
+  )
+  if (isTRUE(result$ok)) {
+    expect_s3_class(result$res, "robustness_model")
+    expect_true(is.finite(result$res$original_p))
+  } else {
+    expect_match(result$message, "Model could not be fitted on the full dataset")
+  }
+})
+
+test_that("robustness_glm handles collinear covariates", {
+  set.seed(1)
+  d <- data.frame(
+    arm = factor(rep(c("P", "A"), 15), levels = c("P", "A")),
+    x1 = rnorm(30)
+  )
+  d$x2 <- d$x1
+  eta <- -0.5 + 1.8 * (d$arm == "A")
+  d$y <- rbinom(30, 1, plogis(eta))
+  res <- robustness_glm(y ~ arm + x1 + x2, d, term = "armA",
+                        family = binomial(), n_boot = 20, seed = 1)
+  expect_s3_class(res, "robustness_model")
+  expect_gte(res$metrics$overall_robustness, 0)
+  expect_lte(res$metrics$overall_robustness, 100)
+})
+
+test_that("print.robustness_model shows GLM OR", {
+  set.seed(2026)
+  n <- 50
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n)
+  )
+  eta <- -1.2 + 2.2 * (dat$arm == "A") + 0.2 * dat$x
+  dat$y <- rbinom(n, 1, plogis(eta))
+  res <- robustness_glm(y ~ arm + x, dat, term = "armA",
+                        family = binomial(), n_boot = 20, seed = 2026)
+  out <- capture.output(print(res))
+  expect_true(any(grepl("GLM \\(binomial", out)))
+  expect_true(any(grepl("OR =", out)))
+})

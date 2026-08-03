@@ -127,6 +127,77 @@ test_that("robustness_surv rejects too-small samples", {
   )
 })
 
+test_that("robustness_glm works on a binomial logit term", {
+  set.seed(2026)
+  n <- 60
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n)
+  )
+  eta <- -1.5 + 2.5 * (dat$arm == "A") + 0.3 * dat$x
+  dat$y <- rbinom(n, 1, plogis(eta))
+  res <- robustness_glm(y ~ arm + x, dat, term = "armA",
+                        family = binomial(), n_boot = 40, seed = 2026)
+  expect_s3_class(res, "robustness_model")
+  expect_identical(res$type, "GLM (binomial, logit)")
+  expect_identical(res$family, "binomial")
+  expect_identical(res$link, "logit")
+  expect_true(res$original_significant)
+  expect_gte(res$metrics$overall_robustness, 0)
+  expect_lte(res$metrics$overall_robustness, 100)
+  expect_true(res$metrics$worstcase_fragility_k >= 1)
+})
+
+test_that("robustness_glm is reproducible under a fixed seed", {
+  set.seed(7)
+  n <- 50
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n)
+  )
+  eta <- -1 + 2 * (dat$arm == "A") + 0.2 * dat$x
+  dat$y <- rbinom(n, 1, plogis(eta))
+  a <- robustness_glm(y ~ arm + x, dat, term = "armA",
+                      family = binomial(), n_boot = 30, seed = 7)
+  b <- robustness_glm(y ~ arm + x, dat, term = "armA",
+                      family = binomial(), n_boot = 30, seed = 7)
+  expect_equal(a$metrics$overall_robustness, b$metrics$overall_robustness)
+})
+
+test_that("robustness_glm handles a non-significant term", {
+  set.seed(101)
+  n <- 40
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n)
+  )
+  dat$y <- rbinom(n, 1, 0.5)
+  res <- robustness_glm(y ~ arm + x, dat, term = "armA",
+                        family = binomial(), n_boot = 30, seed = 101)
+  expect_s3_class(res, "robustness_model")
+  expect_false(res$original_significant)
+  expect_gte(res$metrics$overall_robustness, 0)
+  expect_lte(res$metrics$overall_robustness, 100)
+})
+
+test_that("robustness_glm accepts obs_weights", {
+  set.seed(3)
+  n <- 40
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n)
+  )
+  eta <- -1 + 2.2 * (dat$arm == "A")
+  dat$y <- rbinom(n, 1, plogis(eta))
+  # Integer case weights avoid the binomial "non-integer #successes" warning
+  w <- sample(1:3, n, replace = TRUE)
+  res <- robustness_glm(y ~ arm + x, dat, term = "armA",
+                        family = binomial(), obs_weights = w,
+                        n_boot = 25, seed = 3)
+  expect_s3_class(res, "robustness_model")
+  expect_identical(res$type, "GLM (binomial, logit)")
+})
+
 test_that("plot.robustness_analysis returns ggplot panels", {
   res <- robustness_analysis(pain_treatment, pain_placebo,
                              n_boot = 40, seed = 1)

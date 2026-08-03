@@ -6,8 +6,9 @@
 # robustness_surv() : time-to-event endpoints via Cox proportional hazards
 #                     (Wald p-value; with a single binary arm the score test
 #                     is asymptotically the log-rank test)
+# robustness_glm()  : binomial logistic GLM terms (logit link only in v1)
 #
-# Both reuse a common case-deletion engine: jackknife, greedy worst-case
+# All reuse a common case-deletion engine: jackknife, greedy worst-case
 # removal (AMIP-style), and case-resampling bootstrap operate on ROWS of the
 # analysis dataset, so covariate adjustment is preserved throughout.
 # Companion to robustness_analysis.R (two-sample version); see
@@ -201,10 +202,118 @@ robustness_surv <- function(formula, data, term,
 }
 
 # ------------------------------------------------------------------------------
+#' Robustness analysis for a binomial logistic GLM term
+#'
+#' @param formula Model formula, e.g. `y ~ arm + x`. Offsets may be supplied
+#'   via `offset(...)` in the formula.
+#' @param data Data frame (one row per subject)
+#' @param term Coefficient whose Wald p-value defines the conclusion,
+#'   e.g. `"armA"`. Must match a single row of
+#'   `summary(glm(...))$coefficients` (multi-df factors are out of scope).
+#' @param family A family *object*. Currently only
+#'   `binomial(link = "logit")` (the default) is supported. Gaussian models
+#'   should use [robustness_lm()]; Poisson is deferred to a follow-up.
+#' @param alpha,n_boot,max_removal_pct,weights,seed As in
+#'   [robustness_analysis()]. Note that `weights` are **composite score
+#'   weights**, not observation weights for `glm()`.
+#' @param obs_weights Optional numeric vector of observation (case) weights
+#'   of length `nrow(data)`, passed to `stats::glm(..., weights = obs_weights)`.
+#'   `NULL` (default) fits an unweighted GLM. Distinct from the composite
+#'   score `weights` argument.
+#'
+#' @details Uses the Wald `Pr(>|z|)` p-value of the named coefficient from
+#'   `summary.glm`. Case deletion / resampling acts on rows of `data`.
+#'
+#'   Complete or quasi-complete separation is handled only via `converged`
+#'   and finite p-values: failed full-data fits error; failed subsets are
+#'   skipped. Firth / bias-reduced logistic regression is not supported.
+#'   Score bands are shared with the ANCOVA / Cox engines and are not
+#'   separately calibrated for GLM.
+#'
+#' @examples
+#' # res <- robustness_glm(y ~ arm + x, dat, term = "armA", family = binomial())
+#' @export
+robustness_glm <- function(formula, data, term,
+                           family = stats::binomial(),
+                           alpha = 0.05, n_boot = 1000, max_removal_pct = 0.30,
+                           weights = c(jackknife = 0.4, fragility = 0.4,
+                                       bootstrap = 0.2),
+                           obs_weights = NULL,
+                           seed = 123) {
+
+  if (is.character(family)) {
+    stop("family must be a family object, e.g. binomial()", call. = FALSE)
+  }
+  fam_name <- family$family
+  link_name <- family$link
+
+  if (identical(fam_name, "gaussian")) {
+    stop("Use robustness_lm() for Gaussian linear models", call. = FALSE)
+  }
+  if (startsWith(fam_name, "quasi")) {
+    stop("Quasi-families are not supported (no routine Wald z p-values via summary.glm); use binomial() or analyse overdispersion separately",
+         call. = FALSE)
+  }
+  if (identical(fam_name, "binomial") && !identical(link_name, "logit")) {
+    stop('robustness_glm() currently supports the logit link only',
+         call. = FALSE)
+  }
+  if (!identical(fam_name, "binomial") || !identical(link_name, "logit")) {
+    stop('robustness_glm() currently supports binomial(link = "logit") only',
+         call. = FALSE)
+  }
+
+  if (!is.null(obs_weights)) {
+    if (!is.numeric(obs_weights) || length(obs_weights) != nrow(data)) {
+      stop("obs_weights must be NULL or a numeric vector of length nrow(data)",
+           call. = FALSE)
+    }
+  }
+
+  # Align obs_weights with engine row subsets / bootstrap replicates via a
+  # private row-id column (not referenced by typical formulas).
+  data <- as.data.frame(data)
+  data$.__row_id__ <- seq_len(nrow(data))
+
+  fit_fun <- function(d) {
+    w <- if (is.null(obs_weights)) NULL else obs_weights[d$.__row_id__]
+    # glm() evaluates `weights` via model.frame NSE; pass the arg only when
+    # non-NULL (a bare `weights = w` with w = NULL looks up `w` in `data`).
+    fit <- tryCatch({
+      if (is.null(w)) {
+        stats::glm(formula, data = d, family = family)
+      } else {
+        d$.__obs_w__ <- w
+        stats::glm(formula, data = d, family = family, weights = .__obs_w__)
+      }
+    }, error = function(e) NULL)
+    if (is.null(fit) || !isTRUE(fit$converged)) return(NULL)
+    ct <- summary(fit)$coefficients
+    if (is.null(ct) || !term %in% rownames(ct)) return(NULL)
+    p_col <- intersect(c("Pr(>|z|)", "Pr(>|t|)"), colnames(ct))[1]
+    if (is.na(p_col) || length(p_col) == 0) return(NULL)
+    p <- ct[term, p_col]
+    est <- ct[term, "Estimate"]
+    if (is.na(p) || is.na(est)) return(NULL)
+    list(p = unname(p), estimate = unname(est))
+  }
+
+  out <- robustness_engine(data, fit_fun, alpha, n_boot, max_removal_pct,
+                           weights, seed)
+  out$term <- term
+  out$model <- paste(deparse(formula), collapse = " ")
+  out$family <- fam_name
+  out$link <- link_name
+  out$type <- sprintf("GLM (%s, %s)", fam_name, link_name)
+  class(out) <- c("robustness_model", "list")
+  out
+}
+
+# ------------------------------------------------------------------------------
 #' Print a model-based robustness analysis
 #'
-#' @param x A `robustness_model` object from [robustness_lm()] or
-#'   [robustness_surv()]
+#' @param x A `robustness_model` object from [robustness_lm()],
+#'   [robustness_surv()], or [robustness_glm()]
 #' @param ... Unused
 #' @return `x`, invisibly
 #' @export
@@ -220,6 +329,9 @@ print.robustness_model <- function(x, ...) {
               ifelse(x$original_significant, "significant", "non-significant")))
   if (x$type == "Cox proportional hazards") {
     cat(sprintf("          HR = %.3f\n", exp(x$original_estimate)))
+  }
+  if (startsWith(x$type, "GLM (binomial")) {
+    cat(sprintf("          OR = %.3f\n", exp(x$original_estimate)))
   }
   cat(sprintf("\nOVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
               m$overall_robustness, x$interpretation_label))

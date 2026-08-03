@@ -41,6 +41,10 @@ plot(res)
 # ANCOVA term
 res_lm <- robustness_lm(change ~ arm + baseline, dat, term = "armActive")
 
+# Binomial logistic GLM term
+res_glm <- robustness_glm(y ~ arm + x, dat, term = "armActive",
+                          family = binomial())
+
 # Cox proportional hazards term
 res_cox <- robustness_surv(survival::Surv(time, event) ~ arm, dat,
                            term = "armActive")
@@ -48,7 +52,7 @@ res_cox <- robustness_surv(survival::Surv(time, event) ~ arm, dat,
 
 ## Status
 
-Experimental (v0.1.0). API may change. See [NEWS.md](NEWS.md) for release
+Experimental (v0.3.0). API may change. See [NEWS.md](NEWS.md) for release
 notes. Cite with `citation("stabilitest")`. Browse the vignette with
 `browseVignettes("stabilitest")` or
 `vignette("pain-case-study", package = "stabilitest")`. `NAMESPACE` and `man/`

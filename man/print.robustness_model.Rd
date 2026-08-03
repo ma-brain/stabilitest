@@ -7,8 +7,8 @@
 \method{print}{robustness_model}(x, ...)
 }
 \arguments{
-\item{x}{A \code{robustness_model} object from \code{\link[=robustness_lm]{robustness_lm()}} or
-\code{\link[=robustness_surv]{robustness_surv()}}}
+\item{x}{A \code{robustness_model} object from \code{\link[=robustness_lm]{robustness_lm()}},
+\code{\link[=robustness_surv]{robustness_surv()}}, or \code{\link[=robustness_glm]{robustness_glm()}}}
 
 \item{...}{Unused}
 }

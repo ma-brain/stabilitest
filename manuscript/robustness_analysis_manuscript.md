@@ -1,23 +1,33 @@
-# How Easily Could This Conclusion Be Overturned? A Framework for Robustness and Fragility Analysis of Statistical Tests in Clinical Trials
-
-**Version 2.0 — July 2026.** Major revision following methodological review (see `methodological_review.md`). Software: `stabilitest` R package (Ally, 2026; this repository).
-
 ---
+title: "How Easily Could This Conclusion Be Overturned? A Framework for Robustness and Fragility Analysis of Statistical Tests in Clinical Trials"
+short-title: "Robustness and fragility analysis of clinical trial tests"
+subtitle: "Version 2.0 — July 2026. Major revision following methodological review. Software: stabilitest R package (Ally, 2026)."
+author:
+  - name: Marius Ally
+    email: marally@gmail.com
+correspondence: "Correspondence: Marius Ally · marally@gmail.com"
+date: July 2026
+keywords:
+  - robustness analysis
+  - sensitivity analysis
+  - fragility index
+  - jackknife
+  - bootstrap
+  - maximum influence perturbation
+  - clinical trials
+abstract: |
+  **Background:** The reliability of statistical conclusions in clinical trials depends not only on p-values but on the stability of those conclusions under perturbation of the data. Regulatory guidance (ICH E9(R1)) calls for sensitivity analyses, yet standardized, quantitative frameworks for conclusion robustness remain limited.
 
-## Abstract
+  **Objective:** To develop, validate, and calibrate a framework for assessing the robustness of statistical test conclusions through combined jackknife, worst-case observation removal, and bootstrap resampling.
 
-**Background:** The reliability of statistical conclusions in clinical trials depends not only on p-values but on the stability of those conclusions under perturbation of the data. Regulatory guidance (ICH E9(R1)) calls for sensitivity analyses, yet standardized, quantitative frameworks for conclusion robustness remain limited.
+  **Methods:** The framework comprises: (1) jackknife leave-one-out analysis identifying influential observations; (2) a *worst-case removal analysis* — greedy adversarial deletion in the spirit of the maximum influence perturbation (Broderick, Giordano & Meager, 2023) — yielding a *removal fragility index*, a greedy upper bound on the size of a minimal overturning subset; (3) bootstrap resampling estimating the *reproducibility probability* (Goodman, 1992). A composite 0–100 score combines the components with pre-specifiable weights (default 0.4/0.4/0.2). A simulation study (12 scenarios: effect size d ∈ {0, 0.5, 0.8}; n ∈ {25, 50} per group; 0 or 2 injected outliers; 500 replications each) calibrated the interpretation bands. The framework extends to linear-model (ANCOVA) and Cox proportional-hazards terms via a common case-deletion engine.
 
-**Objective:** To develop, validate, and calibrate a framework for assessing the robustness of statistical test conclusions through combined jackknife, worst-case observation removal, and bootstrap resampling.
+  **Results:** Type I error was preserved in clean data (0.046–0.052) and inflated by contamination (up to 0.092), which the framework correctly flagged. Conditional on statistical significance, chance findings under the null averaged a robustness score of 52 with a median worst-case fragility of 1–2 observations (2% of the sample), whereas true large effects (d = 0.8, n = 50) averaged 75 with median fragility of 12–14 observations. Grand-mean-ranked removal — the usual "remove the outliers" heuristic — overstated robustness dramatically (median flipping set 13–31 observations vs 2–6 under adversarial removal in the same data). Calibrated bands: score > 70 robust; (55, 70] moderately robust; ≤ 55 fragile.
 
-**Methods:** The framework comprises: (1) jackknife leave-one-out analysis identifying influential observations; (2) a *worst-case removal analysis* — greedy adversarial deletion in the spirit of the maximum influence perturbation (Broderick, Giordano & Meager, 2023) — yielding a *removal fragility index*, a greedy upper bound on the size of a minimal overturning subset; (3) bootstrap resampling estimating the *reproducibility probability* (Goodman, 1992). A composite 0–100 score combines the components with pre-specifiable weights (default 0.4/0.4/0.2). A simulation study (12 scenarios: effect size d ∈ {0, 0.5, 0.8}; n ∈ {25, 50} per group; 0 or 2 injected outliers; 500 replications each) calibrated the interpretation bands. The framework extends to linear-model (ANCOVA) and Cox proportional-hazards terms via a common case-deletion engine.
-
-**Results:** Type I error was preserved in clean data (0.046–0.052) and inflated by contamination (up to 0.092), which the framework correctly flagged. Conditional on statistical significance, chance findings under the null averaged a robustness score of 52 with a median worst-case fragility of 1–2 observations (2% of the sample), whereas true large effects (d = 0.8, n = 50) averaged 75 with median fragility of 12–14 observations. Grand-mean-ranked removal — the usual "remove the outliers" heuristic — overstated robustness dramatically (median flipping set 13–31 observations vs 2–6 under adversarial removal in the same data). Calibrated bands: score > 70 robust; (55, 70] moderately robust; ≤ 55 fragile.
-
-**Conclusions:** The framework provides transparent, quantitative, and now empirically calibrated robustness assessment suitable for regulatory submissions, operationalizing ICH E9(R1) sensitivity-analysis principles with metrics interpretable by non-statistical audiences.
-
-**Keywords:** robustness analysis, sensitivity analysis, fragility index, jackknife, bootstrap, maximum influence perturbation, clinical trials
-
+  **Conclusions:** The framework provides transparent, quantitative, and now empirically calibrated robustness assessment suitable for regulatory submissions, operationalizing ICH E9(R1) sensitivity-analysis principles with metrics interpretable by non-statistical audiences.
+papersize: a4
+fontsize: 10pt
+page-numbering: "1"
 ---
 
 ## 1. Introduction
@@ -154,7 +164,7 @@ Treatment: mean change −19.80 (SD 13.80). Placebo: −8.40 (SD 11.88). Welch t
 
 The result is classified robust: strong primary evidence (p = 0.0018), perfect leave-one-out stability, worst-case fragility comparable to simulated true large effects, and high reproducibility. Two actions are still warranted for the CSR: clinical review of subject 14 (protocol adherence, concomitant medication) since this patient heads the worst-case removal set; and a supplementary rank-based analysis, which is less leveraged by extreme responders.
 
-Suggested reporting text (Results): "Robustness analysis (stabilitest v0.1; B = 2000, seed = 14) yielded an overall score of 72.5/100 (robust; calibrated bands from simulation). All 55 leave-one-out analyses preserved statistical significance (p ≤ 0.0034). Worst-case removal analysis identified a set of 6 patients (10.9% of the sample) whose exclusion would raise the p-value to 0.060; the corresponding median for chance-significant findings in simulation is 1–2 patients. Bootstrap reproducibility probability was 92%."
+Suggested reporting text (Results): "Robustness analysis (stabilitest v0.3; B = 2000, seed = 14) yielded an overall score of 72.5/100 (robust; calibrated bands from simulation). All 55 leave-one-out analyses preserved statistical significance (p ≤ 0.0034). Worst-case removal analysis identified a set of 6 patients (10.9% of the sample) whose exclusion would raise the p-value to 0.060; the corresponding median for chance-significant findings in simulation is 1–2 patients. Bootstrap reproducibility probability was 92%."
 
 ---
 
@@ -190,7 +200,7 @@ Statistical significance answers "is there an effect?" Robustness analysis answe
 
 ## References
 
-Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.1.0; 2026. Available from: https://github.com/ma-brain/stabilitest
+Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.3.0; 2026. Available from: https://github.com/ma-brain/stabilitest
 
 Belsley DA, Kuh E, Welsch RE. *Regression Diagnostics: Identifying Influential Data and Sources of Collinearity*. John Wiley & Sons; 1980.
 
