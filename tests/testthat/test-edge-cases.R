@@ -360,6 +360,19 @@ test_that("robustness_lm rejects samples with no removable row", {
   )
 })
 
+test_that("model robustness uses only rows from the fitted analysis", {
+  set.seed(17)
+  dat <- data.frame(y = rnorm(12), x = rnorm(12))
+  dat$x[3] <- NA_real_
+
+  fit <- stats::lm(y ~ x, data = dat)
+  res <- robustness_lm(y ~ x, dat, term = "x", n_boot = 10, seed = 17)
+
+  expect_identical(res$n, as.integer(stats::nobs(fit)))
+  expect_equal(nrow(res$jackknife), stats::nobs(fit))
+  expect_equal(res$original_p, summary(fit)$coefficients["x", "Pr(>|t|)"])
+})
+
 # --- robustness_surv edges ----------------------------------------------------
 
 test_that("robustness_surv rejects all-censored data", {
@@ -524,6 +537,30 @@ test_that("robustness_glm rejects bad obs_weights", {
                    obs_weights = runif(10), n_boot = 5),
     "obs_weights must be NULL or a numeric vector of length nrow\\(data\\)"
   )
+})
+
+test_that("weighted GLM keeps weights aligned after incomplete rows are omitted", {
+  set.seed(18)
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = 12), levels = c("P", "A")),
+    x = rnorm(24)
+  )
+  dat$y <- rbinom(24, 1, plogis(-0.4 + 0.7 * (dat$arm == "A") + 0.2 * dat$x))
+  dat$x[5] <- NA_real_
+  obs_weights <- seq(0.75, 1.9, length.out = nrow(dat))
+
+  fit <- suppressWarnings(stats::glm(
+    y ~ arm + x, data = dat, family = stats::binomial(), weights = obs_weights
+  ))
+  res <- suppressWarnings(robustness_glm(
+    y ~ arm + x, dat, term = "armA", family = binomial(),
+    obs_weights = obs_weights, n_boot = 10, seed = 18
+  ))
+
+  expect_identical(res$n, as.integer(stats::nobs(fit)))
+  expect_equal(res$original_p,
+               summary(fit)$coefficients["armA", "Pr(>|z|)"],
+               tolerance = 1e-10)
 })
 
 test_that("robustness_glm handles all-zero binary outcomes", {

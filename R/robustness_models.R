@@ -17,6 +17,12 @@
 # manuscript/methodological_review.md for the rationale behind the v2 metrics.
 # ==============================================================================
 
+analysis_data_from_fit <- function(data, fit) {
+  omitted <- fit$na.action
+  if (is.null(omitted)) return(data)
+  data[-as.integer(omitted), , drop = FALSE]
+}
+
 # ------------------------------------------------------------------------------
 # Term resolution (shared by lm / glm / surv)
 #
@@ -428,7 +434,8 @@ robustness_lm <- function(formula, data, term,
     if (is.null(fit)) return(NULL)
     lm_term_test(fit, term_spec)
   }
-  out <- robustness_engine(data, fit_fun, alpha, n_boot, max_removal_pct,
+  analysis_data <- analysis_data_from_fit(data, fit0)
+  out <- robustness_engine(analysis_data, fit_fun, alpha, n_boot, max_removal_pct,
                            weights, seed)
   out$term <- term
   out$term_info <- term_spec
@@ -526,7 +533,8 @@ robustness_surv <- function(formula, data, term,
     if (is.null(fit)) return(NULL)
     surv_term_test(fit, term_spec)
   }
-  out <- robustness_engine(data, fit_fun, alpha, n_boot, max_removal_pct,
+  analysis_data <- analysis_data_from_fit(data, fit0)
+  out <- robustness_engine(analysis_data, fit_fun, alpha, n_boot, max_removal_pct,
                            weights, seed)
   out$term <- term
   out$term_info <- term_spec
@@ -690,7 +698,8 @@ robustness_glm <- function(formula, data, term,
     glm_term_test(fit, term_spec)
   }
 
-  out <- robustness_engine(data, fit_fun, alpha, n_boot, max_removal_pct,
+  analysis_data <- analysis_data_from_fit(data, fit0)
+  out <- robustness_engine(analysis_data, fit_fun, alpha, n_boot, max_removal_pct,
                            weights, seed)
   out$term <- term
   out$term_info <- term_spec
