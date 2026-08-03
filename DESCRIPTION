@@ -1,6 +1,6 @@
 Package: stabilitest
 Title: Robustness and Fragility Analysis of Statistical Test Conclusions
-Version: 0.4.0
+Version: 0.4.1
 Authors@R:
     person("Marius", "Ally", email = "marally@gmail.com",
            role = c("aut", "cre"))

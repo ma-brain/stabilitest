@@ -1,6 +1,6 @@
-# stabilitest 0.4.0
+# stabilitest 0.4.1
 
-## Unreleased
+## Features
 
 * Extended `robustness_tost()` with `endpoint = c("mean", "prop", "or")`
   (alias `test`): **Wald risk-difference** TOST/NI for binary 0/1 outcomes
@@ -26,6 +26,8 @@
   single-coef Wald behaviour. Print reports "joint LRT" with ndf / statistic;
   `estimate` is `NA` for joint terms.
 
+# stabilitest 0.4.0
+
 ## Features
 
 * `robustness_lm()` now supports **multi-df terms** (e.g. a 3-level factor
@@ -45,8 +47,8 @@
   p-value (`p_eff = max(p_lower, p_upper)` for TOST; the NI p-value for
   non-inferiority) so jackknife / worst-case / bootstrap track the
   TOST/NI **decision**. Score bands are not separately calibrated for
-  equivalence/NI. Binary RD / OR TOST added under Unreleased (see NEWS);
-  rank TOST remains deferred.
+  equivalence/NI. Binary RD / OR TOST added in 0.4.1; rank TOST remains
+  deferred.
 
 * Extended `robustness_analysis()` with two-group binary proportion tests:
   `test_type = "fisher"` (Fisher's exact), `"chisq"` (`stats::chisq.test`),
