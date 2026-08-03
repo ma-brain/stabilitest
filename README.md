@@ -64,6 +64,17 @@ res_glm <- robustness_glm(y ~ arm + x, dat, term = "armActive",
 # Cox proportional hazards term
 res_cox <- robustness_surv(survival::Surv(time, event) ~ arm, dat,
                            term = "armActive")
+
+# TOST equivalence / non-inferiority (Welch or paired t on mean difference)
+# Conclusion is equivalence (both one-sided tests reject) or NI (one-sided
+# vs margin); robustness uses p_eff = max(p_lower, p_upper) for TOST so the
+# existing jackknife / fragility / bootstrap machinery applies unchanged.
+set.seed(1)
+g1 <- rnorm(40, 0, 1); g2 <- rnorm(40, 0.05, 1)
+res_eq <- robustness_tost(g1, g2, type = "equivalence", margin = 0.5,
+                          n_boot = 500, seed = 1)
+res_ni <- robustness_tost(g1, g2, type = "noninferiority", margin = 0.3,
+                          higher_is_better = TRUE, n_boot = 500, seed = 1)
 ```
 
 ## Status

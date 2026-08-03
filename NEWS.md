@@ -2,6 +2,17 @@
 
 ## Features
 
+* Added `robustness_tost()` for **equivalence (Schuirmann TOST)** and
+  **non-inferiority** on continuous mean differences (Welch or paired t).
+  Equivalence concludes when both one-sided tests reject at `alpha`
+  (equivalently, the `(1 - 2 * alpha)` CI lies inside
+  `[delta_L, delta_U]` / `[-margin, margin]`). Non-inferiority uses a
+  one-sided test vs `margin`, with `higher_is_better` controlling direction.
+  Robustness reuses the model-engine composite score via an effective
+  p-value (`p_eff = max(p_lower, p_upper)` for TOST; the NI p-value for
+  non-inferiority) so jackknife / worst-case / bootstrap track the
+  TOST/NI **decision**. Binary / ratio TOST deferred.
+
 * Extended `robustness_analysis()` with two-group binary proportion tests:
   `test_type = "fisher"` (Fisher's exact), `"chisq"` (`stats::chisq.test`),
   and `"prop"` (`stats::prop.test`). Inputs are individual-level binary 0/1
