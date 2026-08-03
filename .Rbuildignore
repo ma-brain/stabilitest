@@ -10,3 +10,4 @@
 ^vignettes/.*\.R$
 ^doc$
 ^Meta$
+^cran-comments\.md$
