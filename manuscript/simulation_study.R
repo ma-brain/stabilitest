@@ -14,7 +14,59 @@
 # ==============================================================================
 
 library(tidyverse)
-source("robustness_analysis.R")
+
+.simulation_script_path <- function() {
+  source_files <- vapply(
+    sys.frames(),
+    function(frame) {
+      if (is.null(frame$ofile)) NA_character_ else as.character(frame$ofile)
+    },
+    character(1)
+  )
+  source_files <- source_files[
+    !is.na(source_files) & basename(source_files) == "simulation_study.R"
+  ]
+  if (length(source_files) > 0L) {
+    return(normalizePath(
+      source_files[[length(source_files)]],
+      mustWork = TRUE
+    ))
+  }
+
+  file_args <- sub(
+    "^--file=",
+    "",
+    grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+  )
+  file_args <- file_args[basename(file_args) == "simulation_study.R"]
+  if (length(file_args) == 1L) {
+    return(normalizePath(file_args[[1L]], mustWork = TRUE))
+  }
+
+  stop("Unable to locate simulation_study.R", call. = FALSE)
+}
+
+.simulation_project_root <- function(script_path = .simulation_script_path()) {
+  root <- dirname(dirname(script_path))
+  markers <- file.path(root, c("DESCRIPTION", "R/robustness_analysis.R"))
+  if (!all(file.exists(markers))) {
+    stop("Unable to locate the stabilitest project root", call. = FALSE)
+  }
+  root
+}
+
+if (!requireNamespace("pkgload", quietly = TRUE)) {
+  stop(
+    "The pkgload package is required to run the simulation from this checkout",
+    call. = FALSE
+  )
+}
+pkgload::load_all(
+  .simulation_project_root(),
+  export_all = FALSE,
+  helpers = FALSE,
+  quiet = TRUE
+)
 
 simulate_scenario <- function(d, n_per_group, n_outliers,
                               nrep = 500, n_boot = 200, alpha = 0.05,

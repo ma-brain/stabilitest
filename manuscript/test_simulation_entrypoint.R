@@ -38,6 +38,6 @@ source_expression <- sprintf(
     "source(%s);",
     "stopifnot(is.function(simulate_scenario), is.function(run_simulation))"
   ),
-  dQuote(simulation_file)
+  encodeString(simulation_file, quote = "\"")
 )
 run_rscript(c("-e", shQuote(source_expression)), project_root)
