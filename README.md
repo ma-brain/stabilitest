@@ -59,13 +59,17 @@ res_lm <- robustness_lm(change ~ arm + baseline, dat, term = "armActive")
 # 3-level factor: joint F via drop1(..., test = "F")
 # res_lm_joint <- robustness_lm(change ~ arm + baseline, dat, term = "arm")
 
-# Binomial logistic GLM term
+# GLM term: binomial logit (OR) or Poisson log (IRR); multi-df via term label
 res_glm <- robustness_glm(y ~ arm + x, dat, term = "armActive",
                           family = binomial())
+# res_pois <- robustness_glm(count ~ arm + offset(log(exptime)), dat,
+#                            term = "arm", family = poisson())
 
-# Cox proportional hazards term
+# Cox proportional hazards term (single coef or multi-df joint LRT)
 res_cox <- robustness_surv(survival::Surv(time, event) ~ arm, dat,
                            term = "armActive")
+# res_cox_joint <- robustness_surv(survival::Surv(time, event) ~ arm + age, dat,
+#                                  term = "arm")
 
 # TOST equivalence / non-inferiority (Welch or paired t on mean difference)
 # Conclusion is equivalence (both one-sided tests reject) or NI (one-sided

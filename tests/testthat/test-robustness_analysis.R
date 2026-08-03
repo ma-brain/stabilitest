@@ -174,6 +174,8 @@ test_that("robustness_surv works on a Cox term", {
                          term = "armA", n_boot = 40, seed = 42)
   expect_s3_class(res, "robustness_model")
   expect_identical(res$type, "Cox proportional hazards")
+  expect_identical(res$term_info$type, "single")
+  expect_identical(res$term_info$test, "wald_z")
   expect_true(res$original_significant)
   expect_gte(res$metrics$overall_robustness, 0)
   expect_lte(res$metrics$overall_robustness, 100)
@@ -242,6 +244,8 @@ test_that("robustness_glm works on a binomial logit term", {
   expect_identical(res$type, "GLM (binomial, logit)")
   expect_identical(res$family, "binomial")
   expect_identical(res$link, "logit")
+  expect_identical(res$term_info$type, "single")
+  expect_identical(res$term_info$test, "wald_z")
   expect_true(res$original_significant)
   expect_gte(res$metrics$overall_robustness, 0)
   expect_lte(res$metrics$overall_robustness, 100)
@@ -296,6 +300,146 @@ test_that("robustness_glm accepts obs_weights", {
                         n_boot = 25, seed = 3)
   expect_s3_class(res, "robustness_model")
   expect_identical(res$type, "GLM (binomial, logit)")
+})
+
+test_that("robustness_glm works on a poisson log term with offset", {
+  set.seed(2026)
+  n <- 60
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n),
+    exptime = runif(n, 0.5, 2)
+  )
+  eta <- -0.3 + 1.0 * (dat$arm == "A") + 0.2 * dat$x + log(dat$exptime)
+  dat$y <- rpois(n, exp(eta))
+  res <- robustness_glm(y ~ arm + x + offset(log(exptime)), dat, term = "armA",
+                        family = poisson(), n_boot = 40, seed = 2026)
+  expect_s3_class(res, "robustness_model")
+  expect_identical(res$type, "GLM (poisson, log)")
+  expect_identical(res$family, "poisson")
+  expect_identical(res$link, "log")
+  expect_identical(res$term_info$type, "single")
+  expect_identical(res$term_info$test, "wald_z")
+  expect_true(res$original_significant)
+  expect_gte(res$metrics$overall_robustness, 0)
+  expect_lte(res$metrics$overall_robustness, 100)
+
+  fit <- glm(y ~ arm + x + offset(log(exptime)), dat, family = poisson())
+  ct <- summary(fit)$coefficients
+  expect_equal(res$original_p, unname(ct["armA", "Pr(>|z|)"]),
+               tolerance = 1e-10)
+  expect_equal(res$original_estimate, unname(ct["armA", "Estimate"]),
+               tolerance = 1e-10)
+
+  out <- capture.output(print(res))
+  expect_true(any(grepl("IRR =", out, fixed = TRUE)))
+})
+
+test_that("robustness_glm supports multi-df factor terms via joint LRT", {
+  set.seed(2026)
+  n <- 90
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A", "B"), each = n / 3), levels = c("P", "A", "B")),
+    x = rnorm(n)
+  )
+  eta <- -1.2 + 2.0 * (dat$arm == "A") + 1.2 * (dat$arm == "B") + 0.2 * dat$x
+  dat$y <- rbinom(n, 1, plogis(eta))
+
+  res <- robustness_glm(y ~ arm + x, dat, term = "arm",
+                        family = binomial(), n_boot = 35, seed = 11)
+  expect_s3_class(res, "robustness_model")
+  expect_identical(res$term_info$type, "joint")
+  expect_identical(res$term_info$test, "joint_LRT")
+  expect_identical(res$term_info$ndf, 2L)
+  expect_true(is.na(res$original_estimate))
+  expect_true(is.finite(res$original_p))
+  expect_true(res$original_significant)
+  expect_true(is.na(res$metrics$estimate_range_jackknife_lo))
+
+  fit <- glm(y ~ arm + x, dat, family = binomial())
+  d1 <- drop1(fit, scope = ~ arm, test = "Chisq")
+  expect_equal(res$original_p, unname(d1["arm", "Pr(>Chi)"]), tolerance = 1e-10)
+  expect_equal(res$term_info$statistic, unname(d1["arm", "LRT"]),
+               tolerance = 1e-10)
+
+  res1 <- robustness_glm(y ~ arm + x, dat, term = "armA",
+                         family = binomial(), n_boot = 25, seed = 11)
+  expect_identical(res1$term_info$type, "single")
+  expect_false(is.na(res1$original_estimate))
+
+  a <- robustness_glm(y ~ arm + x, dat, term = "arm",
+                      family = binomial(), n_boot = 20, seed = 99)
+  b <- robustness_glm(y ~ arm + x, dat, term = "arm",
+                      family = binomial(), n_boot = 20, seed = 99)
+  expect_equal(a$metrics$overall_robustness, b$metrics$overall_robustness)
+
+  out <- capture.output(print(res))
+  expect_true(any(grepl("joint LRT", out, fixed = TRUE)))
+  expect_true(any(grepl("ndf = 2", out, fixed = TRUE)))
+  expect_true(any(grepl("estimate = NA", out, fixed = TRUE)))
+})
+
+test_that("robustness_surv supports multi-df factor terms via joint LRT", {
+  skip_if_not_installed("survival")
+  set.seed(2026)
+  n <- 90
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A", "B"), each = n / 3), levels = c("P", "A", "B")),
+    x = rnorm(n),
+    event = 1L
+  )
+  dat$time <- rexp(n) * exp(-0.8 * (dat$arm == "A") - 0.5 * (dat$arm == "B") -
+                              0.1 * dat$x)
+
+  res <- robustness_surv(survival::Surv(time, event) ~ arm + x, dat,
+                         term = "arm", n_boot = 35, seed = 11)
+  expect_s3_class(res, "robustness_model")
+  expect_identical(res$term_info$type, "joint")
+  expect_identical(res$term_info$test, "joint_LRT")
+  expect_identical(res$term_info$ndf, 2L)
+  expect_true(is.na(res$original_estimate))
+  expect_true(is.finite(res$original_p))
+  expect_true(res$original_significant)
+  expect_true(is.na(res$metrics$estimate_range_jackknife_lo))
+
+  fit <- survival::coxph(survival::Surv(time, event) ~ arm + x, data = dat)
+  d1 <- drop1(fit, scope = ~ arm, test = "Chisq")
+  expect_equal(res$original_p, unname(d1["arm", "Pr(>Chi)"]), tolerance = 1e-10)
+  expect_equal(res$term_info$statistic, unname(d1["arm", "LRT"]),
+               tolerance = 1e-10)
+
+  res1 <- robustness_surv(survival::Surv(time, event) ~ arm + x, dat,
+                          term = "armA", n_boot = 25, seed = 11)
+  expect_identical(res1$term_info$type, "single")
+  expect_identical(res1$term_info$test, "wald_z")
+  expect_false(is.na(res1$original_estimate))
+
+  a <- robustness_surv(survival::Surv(time, event) ~ arm + x, dat,
+                       term = "arm", n_boot = 20, seed = 99)
+  b <- robustness_surv(survival::Surv(time, event) ~ arm + x, dat,
+                       term = "arm", n_boot = 20, seed = 99)
+  expect_equal(a$metrics$overall_robustness, b$metrics$overall_robustness)
+
+  out <- capture.output(print(res))
+  expect_true(any(grepl("joint LRT", out, fixed = TRUE)))
+  expect_true(any(grepl("ndf = 2", out, fixed = TRUE)))
+  expect_false(any(grepl("HR =", out, fixed = TRUE)))
+})
+
+test_that("robustness_surv binary factor term label resolves to single coef", {
+  skip_if_not_installed("survival")
+  set.seed(3)
+  n <- 40
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    time = rexp(n),
+    event = 1L
+  )
+  res <- robustness_surv(survival::Surv(time, event) ~ arm, dat,
+                         term = "arm", n_boot = 20, seed = 3)
+  expect_identical(res$term_info$type, "single")
+  expect_identical(res$term_info$coef_name, "armA")
+  expect_false(is.na(res$original_estimate))
 })
 
 test_that("plot.robustness_analysis returns ggplot panels", {

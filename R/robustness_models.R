@@ -4,10 +4,11 @@
 # robustness_lm()   : linear models / ANCOVA (single-coef Wald/t or multi-df
 #                     joint F via drop1 for factor term labels)
 # robustness_surv() : time-to-event endpoints via Cox proportional hazards
-#                     (Wald p-value; with a single binary arm the score test
-#                     is asymptotically the log-rank test)
-# robustness_glm()  : binomial logistic GLM terms (logit link only in v1;
-#                     multi-df factors still out of scope for glm)
+#                     (single-coef Wald z, or multi-df joint LRT via
+#                     drop1(..., test = "Chisq"); with a single binary arm the
+#                     score test is asymptotically the log-rank test)
+# robustness_glm()  : binomial(logit) or poisson(log) GLM terms (single-coef
+#                     Wald z, or multi-df joint LRT via drop1 test = "Chisq")
 #
 # All reuse a common case-deletion engine: jackknife, greedy worst-case
 # removal (AMIP-style), and case-resampling bootstrap operate on ROWS of the
@@ -17,10 +18,10 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# Term resolution (shared by lm now; glm / surv can reuse later)
+# Term resolution (shared by lm / glm / surv)
 #
 # Matching rules (v1):
-#   1. Exact match to one coefficient row name -> single-coef Wald/t.
+#   1. Exact match to one coefficient row name -> single-coef Wald/t/z.
 #   2. Exact match to a terms() term label with >= 2 design-matrix columns
 #      (non-aliased) -> joint multi-df test.
 #   3. Exact match to a term label with exactly 1 non-aliased column whose
@@ -42,22 +43,36 @@ resolve_model_term <- function(fit, term) {
 
   tt <- stats::terms(fit)
   term_labels <- attr(tt, "term.labels")
-  mm <- stats::model.matrix(fit)
-  assign <- attr(mm, "assign")
-  if (is.null(assign)) {
-    stop("Model matrix has no 'assign' attribute; cannot resolve multi-df terms",
-         call. = FALSE)
-  }
 
-  exact_coef <- term %in% coef_names
-  exact_tl <- length(term_labels) > 0L && term %in% term_labels
-
+  # Map a terms() label to estimable coefficient names.
+  # coxph stores assign as a named list of design-column indices (and often
+  # drops the model frame), so model.matrix(fit) can fail without the original
+  # data in scope — use fit$assign when available.
   coef_cols_for_label <- function(label) {
+    if (inherits(fit, "coxph") && is.list(fit$assign)) {
+      idx <- fit$assign[[label]]
+      if (is.null(idx) || length(idx) == 0L) return(character(0))
+      # Indices refer to the design / coefficient order used by coxph
+      all_coefs <- names(stats::coef(fit))
+      if (is.null(all_coefs)) all_coefs <- coef_names
+      cols <- all_coefs[idx]
+      return(intersect(cols[!is.na(cols)], coef_names))
+    }
+
+    mm <- stats::model.matrix(fit)
+    assign <- attr(mm, "assign")
+    if (is.null(assign)) {
+      stop("Model matrix has no 'assign' attribute; cannot resolve multi-df terms",
+           call. = FALSE)
+    }
     idx <- match(label, term_labels)
     cols <- which(assign == idx)
     # Drop aliased / NA coefficients not present in the summary table
     intersect(colnames(mm)[cols], coef_names)
   }
+
+  exact_coef <- term %in% coef_names
+  exact_tl <- length(term_labels) > 0L && term %in% term_labels
 
   if (exact_coef && exact_tl) {
     cols <- coef_cols_for_label(term)
@@ -156,6 +171,68 @@ lm_term_test <- function(fit, term_spec) {
     # RSS residual df for the full model is in the <none> row's implicit df;
     # drop1 does not always expose ddf per row — recover from the fit.
     ddf = unname(fit$df.residual)
+  )
+}
+
+# Extract p (and estimate for single-coef) from a fitted glm given a resolved
+# term. Joint multi-df terms use drop1(..., test = "Chisq") (LRT).
+glm_term_test <- function(fit, term_spec) {
+  if (identical(term_spec$type, "single")) {
+    ct <- summary(fit)$coefficients
+    cn <- term_spec$coef_name
+    if (is.null(ct) || !cn %in% rownames(ct)) return(NULL)
+    p_col <- intersect(c("Pr(>|z|)", "Pr(>|t|)"), colnames(ct))[1]
+    if (is.na(p_col) || length(p_col) == 0) return(NULL)
+    p <- ct[cn, p_col]
+    est <- ct[cn, "Estimate"]
+    if (is.na(p) || is.na(est)) return(NULL)
+    return(list(p = unname(p), estimate = unname(est)))
+  }
+
+  scope <- stats::as.formula(paste("~", term_spec$term),
+                             env = environment(formula(fit)))
+  d1 <- tryCatch(
+    stats::drop1(fit, scope = scope, test = "Chisq"),
+    error = function(e) NULL
+  )
+  if (is.null(d1) || !term_spec$term %in% rownames(d1)) return(NULL)
+  p <- d1[term_spec$term, "Pr(>Chi)"]
+  if (is.na(p)) return(NULL)
+  list(
+    p = unname(p),
+    estimate = NA_real_,
+    statistic = unname(d1[term_spec$term, "LRT"]),
+    ndf = unname(d1[term_spec$term, "Df"])
+  )
+}
+
+# Extract p (and estimate for single-coef) from a fitted coxph given a resolved
+# term. Joint multi-df terms use drop1(..., test = "Chisq") (LRT; survival S3).
+surv_term_test <- function(fit, term_spec) {
+  if (identical(term_spec$type, "single")) {
+    ct <- summary(fit)$coefficients
+    cn <- term_spec$coef_name
+    if (is.null(ct) || !cn %in% rownames(ct)) return(NULL)
+    p <- ct[cn, "Pr(>|z|)"]
+    est <- ct[cn, "coef"]
+    if (is.na(p) || is.na(est)) return(NULL)
+    return(list(p = unname(p), estimate = unname(est)))
+  }
+
+  scope <- stats::as.formula(paste("~", term_spec$term),
+                             env = environment(formula(fit)))
+  d1 <- tryCatch(
+    stats::drop1(fit, scope = scope, test = "Chisq"),
+    error = function(e) NULL
+  )
+  if (is.null(d1) || !term_spec$term %in% rownames(d1)) return(NULL)
+  p <- d1[term_spec$term, "Pr(>Chi)"]
+  if (is.na(p)) return(NULL)
+  list(
+    p = unname(p),
+    estimate = NA_real_,
+    statistic = unname(d1[term_spec$term, "LRT"]),
+    ndf = unname(d1[term_spec$term, "Df"])
   )
 }
 
@@ -357,13 +434,23 @@ robustness_lm <- function(formula, data, term,
 #'
 #' @param formula Survival formula, e.g. survival::Surv(time, event) ~ arm + age
 #' @param data Data frame (one row per subject)
-#' @param term Coefficient of interest, e.g. "armActive"
+#' @param term Term whose p-value defines the conclusion. Either:
+#'   - a single coefficient row name from `summary(coxph(...))$coefficients`
+#'     (e.g. `"armActive"`), tested with the Wald z p-value; or
+#'   - a multi-df term label from `attr(terms(coxph(...)), "term.labels")`
+#'     (e.g. a 3-level factor `"arm"`), tested jointly via
+#'     `drop1(..., test = "Chisq")` (likelihood-ratio test; survival S3 method).
+#'     For multi-df terms the stored `estimate` is `NA` and `term_info` records
+#'     the joint LRT (ndf / statistic).
 #' @param alpha,n_boot,max_removal_pct,weights,seed As in robustness_analysis()
 #'
-#' @details Uses the Wald p-value of the term. Case deletion/resampling acts on
-#'   subjects, so censoring patterns are handled naturally. Removing whole
-#'   subjects (with their follow-up) differs from the event-flip fragility of
-#'   Walsh et al.; interpret as a removal fragility index.
+#' @details Single-coefficient `term` strings keep the previous Wald behaviour.
+#'   Multi-df factors are detected when `term` matches a term label that expands
+#'   to more than one non-aliased design-matrix column (same rules as
+#'   [robustness_lm()]). Case deletion/resampling acts on subjects, so censoring
+#'   patterns are handled naturally. Removing whole subjects (with their
+#'   follow-up) differs from the event-flip fragility of Walsh et al.; interpret
+#'   as a removal fragility index.
 #' @export
 robustness_surv <- function(formula, data, term,
                             alpha = 0.05, n_boot = 1000, max_removal_pct = 0.30,
@@ -374,33 +461,70 @@ robustness_surv <- function(formula, data, term,
   if (!requireNamespace("survival", quietly = TRUE)) {
     stop("Package 'survival' is required for robustness_surv()")
   }
+
+  # coxph stores `data = <symbol>` and drop1/model.frame evaluate that symbol
+  # in the *formula* environment. Localise a copy so lookups hit this frame
+  # (or the fit_fun frame) rather than utils::data / a missing symbol.
+  fit_cox <- function(d) {
+    fml_local <- stats::as.formula(paste(deparse(formula), collapse = " "),
+                                   env = environment())
+    survival::coxph(fml_local, data = d)
+  }
+
+  fit0 <- fit_cox(data)
+  term_spec <- resolve_model_term(fit0, term)
+  full_test <- surv_term_test(fit0, term_spec)
+  if (is.null(full_test) || is.na(full_test$p)) {
+    stop("Model could not be fitted on the full dataset", call. = FALSE)
+  }
+  if (identical(term_spec$type, "joint")) {
+    term_spec$statistic <- full_test$statistic
+    term_spec$ndf <- as.integer(full_test$ndf)
+    term_spec$test <- "joint_LRT"
+  } else {
+    term_spec$test <- "wald_z"
+  }
+
   fit_fun <- function(d) {
-    fit <- survival::coxph(formula, data = d)
-    ct  <- summary(fit)$coefficients
-    if (!term %in% rownames(ct)) return(NULL)
-    list(p = ct[term, "Pr(>|z|)"], estimate = ct[term, "coef"])
+    fit <- tryCatch(fit_cox(d), error = function(e) NULL)
+    if (is.null(fit)) return(NULL)
+    surv_term_test(fit, term_spec)
   }
   out <- robustness_engine(data, fit_fun, alpha, n_boot, max_removal_pct,
                            weights, seed)
   out$term <- term
-  out$model <- deparse(formula)
+  out$term_info <- term_spec
+  out$sample_info <- list(
+    test = term_spec$test,
+    term = term,
+    coef_names = term_spec$coef_names,
+    ndf = term_spec$ndf,
+    statistic = if (is.null(term_spec$statistic)) NA_real_ else term_spec$statistic
+  )
+  out$model <- paste(deparse(formula), collapse = " ")
   out$type <- "Cox proportional hazards"
   class(out) <- c("robustness_model", "list")
   out
 }
 
 # ------------------------------------------------------------------------------
-#' Robustness analysis for a binomial logistic GLM term
+#' Robustness analysis for a GLM term (binomial logit or Poisson log)
 #'
 #' @param formula Model formula, e.g. `y ~ arm + x`. Offsets may be supplied
-#'   via `offset(...)` in the formula.
+#'   via `offset(...)` in the formula (standard `stats::glm` support).
 #' @param data Data frame (one row per subject)
-#' @param term Coefficient whose Wald p-value defines the conclusion,
-#'   e.g. `"armA"`. Must match a single row of
-#'   `summary(glm(...))$coefficients` (multi-df factors are out of scope).
-#' @param family A family *object*. Currently only
-#'   `binomial(link = "logit")` (the default) is supported. Gaussian models
-#'   should use [robustness_lm()]; Poisson is deferred to a follow-up.
+#' @param term Term whose p-value defines the conclusion. Either:
+#'   - a single coefficient row name from `summary(glm(...))$coefficients`
+#'     (e.g. `"armA"`), tested with the Wald z / t p-value; or
+#'   - a multi-df term label from `attr(terms(glm(...)), "term.labels")`
+#'     (e.g. a 3-level factor `"arm"`), tested jointly via
+#'     `drop1(..., test = "Chisq")` (likelihood-ratio test). For multi-df
+#'     terms the stored `estimate` is `NA` and `term_info` records the joint
+#'     LRT (ndf / statistic).
+#' @param family A family *object*. Supported:
+#'   `binomial(link = "logit")` (default) and `poisson(link = "log")`.
+#'   Gaussian models should use [robustness_lm()]; other links and
+#'   quasi-families are rejected.
 #' @param alpha,n_boot,max_removal_pct,weights,seed As in
 #'   [robustness_analysis()]. Note that `weights` are **composite score
 #'   weights**, not observation weights for `glm()`.
@@ -409,8 +533,9 @@ robustness_surv <- function(formula, data, term,
 #'   `NULL` (default) fits an unweighted GLM. Distinct from the composite
 #'   score `weights` argument.
 #'
-#' @details Uses the Wald `Pr(>|z|)` p-value of the named coefficient from
-#'   `summary.glm`. Case deletion / resampling acts on rows of `data`.
+#' @details Single-coefficient `term` strings keep the previous Wald behaviour.
+#'   Multi-df factors use the same `resolve_model_term()` rules as
+#'   [robustness_lm()]. Case deletion / resampling acts on rows of `data`.
 #'
 #'   Complete or quasi-complete separation is handled only via `converged`
 #'   and finite p-values: failed full-data fits error; failed subsets are
@@ -420,6 +545,8 @@ robustness_surv <- function(formula, data, term,
 #'
 #' @examples
 #' # res <- robustness_glm(y ~ arm + x, dat, term = "armA", family = binomial())
+#' # res <- robustness_glm(count ~ arm + x, dat, term = "arm",
+#' #                       family = poisson())  # joint LRT
 #' @export
 robustness_glm <- function(formula, data, term,
                            family = stats::binomial(),
@@ -439,15 +566,20 @@ robustness_glm <- function(formula, data, term,
     stop("Use robustness_lm() for Gaussian linear models", call. = FALSE)
   }
   if (startsWith(fam_name, "quasi")) {
-    stop("Quasi-families are not supported (no routine Wald z p-values via summary.glm); use binomial() or analyse overdispersion separately",
+    stop("Quasi-families are not supported (no routine Wald z p-values via summary.glm); use binomial() / poisson() or analyse overdispersion separately",
          call. = FALSE)
   }
   if (identical(fam_name, "binomial") && !identical(link_name, "logit")) {
-    stop('robustness_glm() currently supports the logit link only',
+    stop('robustness_glm() currently supports the logit link only for binomial',
          call. = FALSE)
   }
-  if (!identical(fam_name, "binomial") || !identical(link_name, "logit")) {
-    stop('robustness_glm() currently supports binomial(link = "logit") only',
+  if (identical(fam_name, "poisson") && !identical(link_name, "log")) {
+    stop('robustness_glm() currently supports the log link only for poisson',
+         call. = FALSE)
+  }
+  if (!((identical(fam_name, "binomial") && identical(link_name, "logit")) ||
+        (identical(fam_name, "poisson") && identical(link_name, "log")))) {
+    stop('robustness_glm() currently supports binomial(link = "logit") and poisson(link = "log") only',
          call. = FALSE)
   }
 
@@ -463,7 +595,7 @@ robustness_glm <- function(formula, data, term,
   data <- as.data.frame(data)
   data$.__row_id__ <- seq_len(nrow(data))
 
-  fit_fun <- function(d) {
+  fit_glm_once <- function(d) {
     w <- if (is.null(obs_weights)) NULL else obs_weights[d$.__row_id__]
     # glm() evaluates `weights` via model.frame NSE; pass the arg only when
     # non-NULL (a bare `weights = w` with w = NULL looks up `w` in `data`).
@@ -476,19 +608,43 @@ robustness_glm <- function(formula, data, term,
       }
     }, error = function(e) NULL)
     if (is.null(fit) || !isTRUE(fit$converged)) return(NULL)
-    ct <- summary(fit)$coefficients
-    if (is.null(ct) || !term %in% rownames(ct)) return(NULL)
-    p_col <- intersect(c("Pr(>|z|)", "Pr(>|t|)"), colnames(ct))[1]
-    if (is.na(p_col) || length(p_col) == 0) return(NULL)
-    p <- ct[term, p_col]
-    est <- ct[term, "Estimate"]
-    if (is.na(p) || is.na(est)) return(NULL)
-    list(p = unname(p), estimate = unname(est))
+    fit
+  }
+
+  fit0 <- fit_glm_once(data)
+  if (is.null(fit0)) {
+    stop("Model could not be fitted on the full dataset", call. = FALSE)
+  }
+  term_spec <- resolve_model_term(fit0, term)
+  full_test <- glm_term_test(fit0, term_spec)
+  if (is.null(full_test) || is.na(full_test$p)) {
+    stop("Model could not be fitted on the full dataset", call. = FALSE)
+  }
+  if (identical(term_spec$type, "joint")) {
+    term_spec$statistic <- full_test$statistic
+    term_spec$ndf <- as.integer(full_test$ndf)
+    term_spec$test <- "joint_LRT"
+  } else {
+    term_spec$test <- "wald_z"
+  }
+
+  fit_fun <- function(d) {
+    fit <- fit_glm_once(d)
+    if (is.null(fit)) return(NULL)
+    glm_term_test(fit, term_spec)
   }
 
   out <- robustness_engine(data, fit_fun, alpha, n_boot, max_removal_pct,
                            weights, seed)
   out$term <- term
+  out$term_info <- term_spec
+  out$sample_info <- list(
+    test = term_spec$test,
+    term = term,
+    coef_names = term_spec$coef_names,
+    ndf = term_spec$ndf,
+    statistic = if (is.null(term_spec$statistic)) NA_real_ else term_spec$statistic
+  )
   out$model <- paste(deparse(formula), collapse = " ")
   out$family <- fam_name
   out$link <- link_name
@@ -514,10 +670,14 @@ print.robustness_model <- function(x, ...) {
   cat(sprintf("TERM:  %s | alpha = %.2f | n = %d\n\n", x$term, x$alpha, x$n))
   ti <- x$term_info
   if (!is.null(ti) && identical(ti$type, "joint")) {
-    cat(sprintf("ORIGINAL: joint F (ndf = %d, ddf = %d",
-                ti$ndf, ti$ddf))
+    test_lab <- if (identical(ti$test, "joint_F")) "joint F" else "joint LRT"
+    cat(sprintf("ORIGINAL: %s (ndf = %d", test_lab, ti$ndf))
+    if (!is.null(ti$ddf) && !is.na(ti$ddf)) {
+      cat(sprintf(", ddf = %d", ti$ddf))
+    }
     if (!is.null(ti$statistic) && !is.na(ti$statistic)) {
-      cat(sprintf(", F = %.3f", ti$statistic))
+      stat_lab <- if (identical(ti$test, "joint_F")) "F" else "LRT"
+      cat(sprintf(", %s = %.3f", stat_lab, ti$statistic))
     }
     cat(sprintf("), p = %.4f (%s)\n",
                 x$original_p,
@@ -532,11 +692,22 @@ print.robustness_model <- function(x, ...) {
                 x$original_estimate, x$original_p,
                 ifelse(x$original_significant, "significant", "non-significant")))
   }
-  if (x$type == "Cox proportional hazards" && !is.na(x$original_estimate)) {
+  if (identical(x$type, "Cox proportional hazards") &&
+      !is.null(ti) && identical(ti$type, "single") &&
+      !is.na(x$original_estimate)) {
+    cat(sprintf("          HR = %.3f\n", exp(x$original_estimate)))
+  } else if (identical(x$type, "Cox proportional hazards") &&
+             is.null(ti) && !is.na(x$original_estimate)) {
+    # Backward-compatible objects without term_info
     cat(sprintf("          HR = %.3f\n", exp(x$original_estimate)))
   }
-  if (startsWith(x$type, "GLM (binomial") && !is.na(x$original_estimate)) {
-    cat(sprintf("          OR = %.3f\n", exp(x$original_estimate)))
+  if (!is.null(x$family) && !is.na(x$original_estimate) &&
+      (is.null(ti) || identical(ti$type, "single"))) {
+    if (identical(x$family, "binomial") && identical(x$link, "logit")) {
+      cat(sprintf("          OR = %.3f\n", exp(x$original_estimate)))
+    } else if (identical(x$family, "poisson") && identical(x$link, "log")) {
+      cat(sprintf("          IRR = %.3f\n", exp(x$original_estimate)))
+    }
   }
   cat(sprintf("\nOVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
               m$overall_robustness, x$interpretation_label))

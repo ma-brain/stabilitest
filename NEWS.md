@@ -1,5 +1,21 @@
 # stabilitest 0.4.0
 
+## Unreleased
+
+* `robustness_glm()` now supports **Poisson log-link** models
+  (`family = poisson(link = "log")`) alongside binomial logit. Print reports
+  `IRR = exp(estimate)` for Poisson (parallel to OR for binomial). Offsets via
+  `offset(...)` in the formula work as in `stats::glm`. Gaussian still
+  redirects to `robustness_lm()`; quasi-families and non-canonical links for
+  these families remain rejected.
+
+* `robustness_glm()` and `robustness_surv()` support **multi-df terms** via the
+  same `resolve_model_term()` rules as `robustness_lm()`: pass a term label
+  (e.g. `"arm"`) for a joint likelihood-ratio test
+  (`drop1(..., test = "Chisq")`), or a coefficient row name for the previous
+  single-coef Wald behaviour. Print reports "joint LRT" with ndf / statistic;
+  `estimate` is `NA` for joint terms.
+
 ## Features
 
 * `robustness_lm()` now supports **multi-df terms** (e.g. a 3-level factor

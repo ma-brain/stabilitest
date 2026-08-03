@@ -6,7 +6,7 @@
 \alias{stabilitest-package}
 \title{stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions}
 \description{
-Quantifies the stability of statistical conclusions in clinical trials and applied research. Integrates jackknife leave-one-out analysis, greedy worst-case observation removal (in the spirit of the maximum influence perturbation of Broderick, Giordano and Meager, 2023), and bootstrap reproducibility probability (Goodman, 1992) into interpretable component metrics and a composite robustness score. Supports two-sample location tests (Welch and paired t, Wilcoxon, Brunner-Munzel), two-group binary proportion tests (Fisher exact, chi-square, prop.test), TOST equivalence and non-inferiority for mean differences (Welch / paired t), linear model / ANCOVA terms, GLM (binomial logit) terms, and Cox proportional hazards terms.
+Quantifies the stability of statistical conclusions in clinical trials and applied research. Integrates jackknife leave-one-out analysis, greedy worst-case observation removal (in the spirit of the maximum influence perturbation of Broderick, Giordano and Meager, 2023), and bootstrap reproducibility probability (Goodman, 1992) into interpretable component metrics and a composite robustness score. Supports two-sample location tests (Welch and paired t, Wilcoxon, Brunner-Munzel), two-group binary proportion tests (Fisher exact, chi-square, prop.test), TOST equivalence and non-inferiority for mean differences (Welch / paired t), linear model / ANCOVA terms (including multi-df factor joint tests), GLM (binomial logit / Poisson log) terms, and Cox proportional hazards terms (single-coefficient or multi-df joint LRT).
 }
 \seealso{
 Useful links:

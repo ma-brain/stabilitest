@@ -447,7 +447,7 @@ test_that("robustness_glm rejects small n, bad weights, and missing terms", {
   )
   expect_error(
     robustness_glm(y ~ arm + x, ok, term = "armZ", n_boot = 5),
-    "Model could not be fitted on the full dataset"
+    "Term 'armZ' not found"
   )
 })
 
@@ -465,18 +465,23 @@ test_that("robustness_glm rejects unsupported families and links", {
   )
   expect_error(
     robustness_glm(y ~ arm + x, dat, term = "armA",
-                   family = poisson(), n_boot = 5),
-    'robustness_glm\\(\\) currently supports binomial\\(link = "logit"\\) only'
-  )
-  expect_error(
-    robustness_glm(y ~ arm + x, dat, term = "armA",
                    family = quasipoisson(), n_boot = 5),
     "Quasi-families are not supported"
   )
   expect_error(
     robustness_glm(y ~ arm + x, dat, term = "armA",
                    family = binomial(link = "probit"), n_boot = 5),
-    "logit link only|binomial\\(link = \"logit\"\\) only"
+    "logit link only"
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, dat, term = "armA",
+                   family = poisson(link = "identity"), n_boot = 5),
+    "log link only"
+  )
+  expect_error(
+    robustness_glm(y ~ arm + x, dat, term = "armA",
+                   family = Gamma(link = "log"), n_boot = 5),
+    'binomial\\(link = "logit"\\) and poisson\\(link = "log"\\) only'
   )
 })
 
@@ -569,4 +574,21 @@ test_that("print.robustness_model shows GLM OR", {
   out <- capture.output(print(res))
   expect_true(any(grepl("GLM \\(binomial", out)))
   expect_true(any(grepl("OR =", out)))
+})
+
+test_that("print.robustness_model shows GLM IRR for poisson", {
+  set.seed(2026)
+  n <- 50
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n)
+  )
+  eta <- -0.2 + 0.9 * (dat$arm == "A") + 0.15 * dat$x
+  dat$y <- rpois(n, exp(eta))
+  res <- robustness_glm(y ~ arm + x, dat, term = "armA",
+                        family = poisson(), n_boot = 20, seed = 2026)
+  out <- capture.output(print(res))
+  expect_true(any(grepl("GLM \\(poisson", out)))
+  expect_true(any(grepl("IRR =", out)))
+  expect_false(any(grepl("OR =", out)))
 })

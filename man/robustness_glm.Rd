@@ -2,7 +2,7 @@
 % Please edit documentation in R/robustness_models.R
 \name{robustness_glm}
 \alias{robustness_glm}
-\title{Robustness analysis for a binomial logistic GLM term}
+\title{Robustness analysis for a GLM term (binomial logit or Poisson log)}
 \usage{
 robustness_glm(
   formula,
@@ -19,17 +19,25 @@ robustness_glm(
 }
 \arguments{
 \item{formula}{Model formula, e.g. \code{y ~ arm + x}. Offsets may be supplied
-via \code{offset(...)} in the formula.}
+via \code{offset(...)} in the formula (standard \code{stats::glm} support).}
 
 \item{data}{Data frame (one row per subject)}
 
-\item{term}{Coefficient whose Wald p-value defines the conclusion,
-e.g. \code{"armA"}. Must match a single row of
-\code{summary(glm(...))$coefficients} (multi-df factors are out of scope).}
+\item{term}{Term whose p-value defines the conclusion. Either:
+\itemize{
+\item a single coefficient row name from \code{summary(glm(...))$coefficients}
+(e.g. \code{"armA"}), tested with the Wald z / t p-value; or
+\item a multi-df term label from \code{attr(terms(glm(...)), "term.labels")}
+(e.g. a 3-level factor \code{"arm"}), tested jointly via
+\code{drop1(..., test = "Chisq")} (likelihood-ratio test). For multi-df
+terms the stored \code{estimate} is \code{NA} and \code{term_info} records the joint
+LRT (ndf / statistic).
+}}
 
-\item{family}{A family \emph{object}. Currently only
-\code{binomial(link = "logit")} (the default) is supported. Gaussian models
-should use \code{\link[=robustness_lm]{robustness_lm()}}; Poisson is deferred to a follow-up.}
+\item{family}{A family \emph{object}. Supported:
+\code{binomial(link = "logit")} (default) and \code{poisson(link = "log")}.
+Gaussian models should use \code{\link[=robustness_lm]{robustness_lm()}}; other links and
+quasi-families are rejected.}
 
 \item{alpha, n_boot, max_removal_pct, weights, seed}{As in
 \code{\link[=robustness_analysis]{robustness_analysis()}}. Note that \code{weights} are \strong{composite score
@@ -41,11 +49,12 @@ of length \code{nrow(data)}, passed to \code{stats::glm(..., weights = obs_weigh
 score \code{weights} argument.}
 }
 \description{
-Robustness analysis for a binomial logistic GLM term
+Robustness analysis for a GLM term (binomial logit or Poisson log)
 }
 \details{
-Uses the Wald \verb{Pr(>|z|)} p-value of the named coefficient from
-\code{summary.glm}. Case deletion / resampling acts on rows of \code{data}.
+Single-coefficient \code{term} strings keep the previous Wald behaviour.
+Multi-df factors use the same \code{resolve_model_term()} rules as
+\code{\link[=robustness_lm]{robustness_lm()}}. Case deletion / resampling acts on rows of \code{data}.
 
 Complete or quasi-complete separation is handled only via \code{converged}
 and finite p-values: failed full-data fits error; failed subsets are
@@ -55,4 +64,6 @@ separately calibrated for GLM.
 }
 \examples{
 # res <- robustness_glm(y ~ arm + x, dat, term = "armA", family = binomial())
+# res <- robustness_glm(count ~ arm + x, dat, term = "arm",
+#                       family = poisson())  # joint LRT
 }

@@ -20,7 +20,16 @@ robustness_surv(
 
 \item{data}{Data frame (one row per subject)}
 
-\item{term}{Coefficient of interest, e.g. "armActive"}
+\item{term}{Term whose p-value defines the conclusion. Either:
+\itemize{
+\item a single coefficient row name from \code{summary(coxph(...))$coefficients}
+(e.g. \code{"armActive"}), tested with the Wald z p-value; or
+\item a multi-df term label from \code{attr(terms(coxph(...)), "term.labels")}
+(e.g. a 3-level factor \code{"arm"}), tested jointly via
+\code{drop1(..., test = "Chisq")} (likelihood-ratio test; survival S3 method).
+For multi-df terms the stored \code{estimate} is \code{NA} and \code{term_info} records
+the joint LRT (ndf / statistic).
+}}
 
 \item{alpha, n_boot, max_removal_pct, weights, seed}{As in robustness_analysis()}
 }
@@ -28,8 +37,11 @@ robustness_surv(
 Robustness analysis for a Cox proportional hazards term
 }
 \details{
-Uses the Wald p-value of the term. Case deletion/resampling acts on
-subjects, so censoring patterns are handled naturally. Removing whole
-subjects (with their follow-up) differs from the event-flip fragility of
-Walsh et al.; interpret as a removal fragility index.
+Single-coefficient \code{term} strings keep the previous Wald behaviour.
+Multi-df factors are detected when \code{term} matches a term label that expands
+to more than one non-aliased design-matrix column (same rules as
+\code{\link[=robustness_lm]{robustness_lm()}}). Case deletion/resampling acts on subjects, so censoring
+patterns are handled naturally. Removing whole subjects (with their
+follow-up) differs from the event-flip fragility of Walsh et al.; interpret
+as a removal fragility index.
 }
