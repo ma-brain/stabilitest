@@ -1,0 +1,54 @@
+# stabilitest
+
+Robustness and fragility analysis of statistical test conclusions.
+
+`stabilitest` asks a question p-values cannot answer: **how easily could this
+conclusion be overturned?** It integrates three complementary sensitivity
+analyses into interpretable metrics:
+
+- **Jackknife leave-one-out** — which individual observations drive the result?
+- **Worst-case removal** (greedy, in the spirit of the maximum influence
+  perturbation of Broderick, Giordano & Meager 2023) — what is the smallest
+  set of observations whose removal flips the conclusion? (*removal fragility
+  index*)
+- **Bootstrap reproducibility probability** (Goodman 1992) — would a replicate
+  sample likely reach the same conclusion?
+
+A composite 0–100 score summarises the components; interpretation bands were
+calibrated by simulation (chance-significant findings under H0 average ~52,
+true large effects ~75; see the accompanying manuscript).
+
+## Installation
+
+```r
+# from a local checkout
+# install.packages(c("dplyr", "purrr", "tibble", "ggplot2"))
+devtools::install_local("stabilitest")
+```
+
+## Usage
+
+```r
+library(stabilitest)
+
+# Two-sample comparison (Welch t-test) — bundled case-study data
+res <- robustness_analysis(pain_treatment, pain_placebo,
+                           test_type = "t.test", n_boot = 2000,
+                           interpret = TRUE)
+print(res)
+plot(res)
+
+# ANCOVA term
+res_lm <- robustness_lm(change ~ arm + baseline, dat, term = "armActive")
+
+# Cox proportional hazards term
+res_cox <- robustness_surv(survival::Surv(time, event) ~ arm, dat,
+                           term = "armActive")
+```
+
+## Status
+
+Experimental (v0.1.0). API may change. `NAMESPACE` and `man/` should be
+regenerated with `roxygen2::roxygenise()`; run `devtools::check()` before any
+submission. Not affiliated with the CRAN packages `robust`, `robustbase`, or
+`stabs`.

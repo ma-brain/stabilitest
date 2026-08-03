@@ -1,0 +1,41 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+.RDataTmp
+.Ruserdata
+
+# User-specific files
+.Rproj.user/
+
+# RStudio / project files (local)
+*.Rproj
+
+# knitr / R Markdown
+*_cache/
+/cache/
+*.utf8.md
+*.knit.md
+
+# Package build artifacts
+*.tar.gz
+*.Rcheck/
+src/*.o
+src/*.so
+src/*.dll
+
+# Dependencies / docs
+.Rlib/
+docs/
+inst/doc
+
+# Secrets / local env
+.env
+.env.*
+credentials.json
+
+# OS junk
+.DS_Store
+Thumbs.db
