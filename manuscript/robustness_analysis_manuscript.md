@@ -1,7 +1,7 @@
 ---
 title: "How Easily Could This Conclusion Be Overturned? A Framework for Robustness and Fragility Analysis of Statistical Tests in Clinical Trials"
 short-title: "Robustness and fragility analysis of clinical trial tests"
-subtitle: "Version 2.0 — July 2026. Major revision following methodological review. Software: stabilitest R package (Ally, 2026)."
+subtitle: "Version 2.0 — July 2026. Major revision following methodological review. Software: stabilitest R package v0.4.1 (Ally, 2026)."
 author:
   - name: Marius Ally
     email: marally@gmail.com
@@ -20,7 +20,7 @@ abstract: |
 
   **Objective:** To develop, validate, and calibrate a framework for assessing the robustness of statistical test conclusions through combined jackknife, worst-case observation removal, and bootstrap resampling.
 
-  **Methods:** The framework comprises: (1) jackknife leave-one-out analysis identifying influential observations; (2) a *worst-case removal analysis* — greedy adversarial deletion in the spirit of the maximum influence perturbation (Broderick, Giordano & Meager, 2023) — yielding a *removal fragility index*, a greedy upper bound on the size of a minimal overturning subset; (3) bootstrap resampling estimating the *reproducibility probability* (Goodman, 1992). A composite 0–100 score combines the components with pre-specifiable weights (default 0.4/0.4/0.2). A simulation study (12 scenarios: effect size d ∈ {0, 0.5, 0.8}; n ∈ {25, 50} per group; 0 or 2 injected outliers; 500 replications each) calibrated the interpretation bands. The framework extends to linear-model (ANCOVA) and Cox proportional-hazards terms via a common case-deletion engine.
+  **Methods:** The framework comprises: (1) jackknife leave-one-out analysis identifying influential observations; (2) a *worst-case removal analysis* — greedy adversarial deletion in the spirit of the maximum influence perturbation (Broderick, Giordano & Meager, 2023) — yielding a *removal fragility index*, a greedy upper bound on the size of a minimal overturning subset; (3) bootstrap resampling estimating the *reproducibility probability* (Goodman, 1992). A composite 0–100 score combines the components with pre-specifiable weights (default 0.4/0.4/0.2). A simulation study (12 scenarios: effect size d ∈ {0, 0.5, 0.8}; n ∈ {25, 50} per group; 0 or 2 injected outliers; 500 replications each) calibrated the interpretation bands. The framework extends to linear-model (ANCOVA), GLM, and Cox terms via a common case-deletion engine; the accompanying software (v0.4.1) also supports proportion tests, Brunner–Munzel, and TOST equivalence/non-inferiority.
 
   **Results:** Type I error was preserved in clean data (0.046–0.052) and inflated by contamination (up to 0.092), which the framework correctly flagged. Conditional on statistical significance, chance findings under the null averaged a robustness score of 52 with a median worst-case fragility of 1–2 observations (2% of the sample), whereas true large effects (d = 0.8, n = 50) averaged 75 with median fragility of 12–14 observations. Grand-mean-ranked removal — the usual "remove the outliers" heuristic — overstated robustness dramatically (median flipping set 13–31 observations vs 2–6 under adversarial removal in the same data). Calibrated bands: score > 70 robust; (55, 70] moderately robust; ≤ 55 fragile.
 
@@ -78,7 +78,7 @@ Bands were calibrated by the simulation in Section 3, using the score distributi
 
 ### 2.4 Statistical implementation
 
-Implemented in the `stabilitest` R package (this repository): `robustness_analysis()` for two-sample comparisons (Welch t, paired t, Wilcoxon rank-sum/signed-rank), `robustness_lm()` for linear-model terms, `robustness_surv()` for Cox terms. Computational cost is dominated by the greedy search: O(n·k_max) test evaluations, about 3,400 tests for n = 55 — under a second for closed-form tests, minutes for model refits at n of a few hundred.
+Implemented in the `stabilitest` R package (v0.4.1; this repository). `robustness_analysis()` covers two-sample location tests (Welch and paired t; Wilcoxon rank-sum/signed-rank; Brunner–Munzel) and two-group binary proportion tests (`fisher`, `chisq`, `prop`). Rank-based location analyses report the Hodges–Lehmann shift as the effect summary. Model engines: `robustness_lm()` (linear/ANCOVA), `robustness_glm()` (binomial logit / Poisson log), and `robustness_surv()` (Cox); each accepts a single coefficient or a multi-df factor term tested jointly (F for lm; LRT for glm/surv). Equivalence and non-inferiority use `robustness_tost()` (TOST / one-sided margin tests) for mean, risk-difference, and odds-ratio endpoints; score bands for TOST are not separately calibrated. Computational cost is dominated by the greedy search: O(n·k_max) test evaluations, about 3,400 tests for n = 55 — under a second for closed-form tests, minutes for model refits at n of a few hundred.
 
 ### 2.5 Application context
 
@@ -86,7 +86,7 @@ Primary use: two-arm comparisons of continuous endpoints, n ≈ 20–200 per gro
 
 ### 2.6 Model-based extensions
 
-For ANCOVA (`change ~ arm + baseline`) and Cox regression (`Surv(time, event) ~ arm + covariates`), all components operate on *rows* (subjects) of the analysis dataset, with the conclusion defined by the p-value of a pre-specified model term (Wald p for Cox; with a single binary arm the Cox score test is asymptotically the log-rank test). Deleting whole subjects — with their covariates and follow-up — preserves the adjustment structure and handles censoring naturally. Model fits that fail after deletion (e.g., a factor level vanishing) are skipped and reported.
+For ANCOVA (`change ~ arm + baseline`), GLM (`y ~ arm + covariates`; binomial logit or Poisson log), and Cox regression (`Surv(time, event) ~ arm + covariates`), all components operate on *rows* (subjects) of the analysis dataset, with the conclusion defined by the p-value of a pre-specified model term — a single coefficient, or a multi-df factor term via a joint test (`drop1` F for lm; LRT for glm/surv). For Cox with a single binary arm the score test is asymptotically the log-rank test. Deleting whole subjects — with their covariates and follow-up — preserves the adjustment structure and handles censoring naturally. Model fits that fail after deletion (e.g., a factor level vanishing) are skipped and reported.
 
 ---
 
@@ -184,11 +184,11 @@ The framework operationalizes ICH guidance on conclusion robustness. ICH E9 stat
 
 ### 5.4 Limitations
 
-(1) The binary significance framing is inherited from the fragility concept itself; a flip from p = 0.047 to 0.053 is a knife-edge event, and the p-value trajectory should always accompany the index. (2) The greedy fragility index is an upper bound on the minimal overturning subset; exact minimal sets are combinatorially hard, though greedy search is near-optimal for monotone single-deletion influence. (3) Adversarial removal answers "could the data support the opposite conclusion?", which is deliberately pessimistic; it should complement, not replace, assumption-based sensitivity analyses (missing data, model form). (4) Independence of observations is assumed. (5) Calibration was performed for the Welch test under normality with directional contamination; bands for the model-based engines are assumed transferable but not yet separately calibrated. (6) Weight choice remains a convention, now at least explicit, pre-specifiable, and calibrated as a package.
+(1) The binary significance framing is inherited from the fragility concept itself; a flip from p = 0.047 to 0.053 is a knife-edge event, and the p-value trajectory should always accompany the index. (2) The greedy fragility index is an upper bound on the minimal overturning subset; exact minimal sets are combinatorially hard, though greedy search is near-optimal for monotone single-deletion influence. (3) Adversarial removal answers "could the data support the opposite conclusion?", which is deliberately pessimistic; it should complement, not replace, assumption-based sensitivity analyses (missing data, model form). (4) Independence of observations is assumed. (5) Calibration was performed for the Welch test under normality with directional contamination; bands for model-based, proportion, Brunner–Munzel, and TOST engines are assumed transferable but not yet separately calibrated. (6) Weight choice remains a convention, now at least explicit, pre-specifiable, and calibrated as a package.
 
 ### 5.5 Future work
 
-Separate calibration for ANCOVA/Cox engines; clustered and longitudinal data; exact or certified bounds on minimal overturning subsets (integer-programming formulations); Bayesian analogues (prior-sensitivity and posterior-probability fragility); CDISC ADaM integration; interactive reporting.
+Separate calibration for ANCOVA/GLM/Cox, proportion, Brunner–Munzel, and TOST engines; clustered and longitudinal data; exact or certified bounds on minimal overturning subsets (integer-programming formulations); Bayesian analogues (prior-sensitivity and posterior-probability fragility); CDISC ADaM integration; interactive reporting.
 
 ---
 
@@ -232,7 +232,7 @@ Walsh M, Srinathan SK, McAuley DF, et al. The statistical significance of random
 
 ## Appendix A: Software
 
-Complete implementation in this repository: `robustness_analysis.R` (two-sample framework and case-study data), `robustness_models.R` (ANCOVA and Cox engines), `simulation_study.R` (Section 3 design), and the `stabilitest/` R package (functions, bundled case-study data, unit tests). The Section 4 case-study numbers (overall score ≈ 72.5; bootstrap reproducibility ≈ 92%) use `n_boot = 2000` and `seed = 14` (the package default seed is 123 and yields a slightly different bootstrap component). Reproduce the analysis by:
+Complete implementation in this repository (package v0.4.1): `robustness_analysis.R` (two-sample framework — including proportion tests, Brunner–Munzel, and Hodges–Lehmann reporting — and case-study data), `robustness_models.R` (lm/ANCOVA, GLM, Cox; multi-df joint tests), `robustness_tost.R` (equivalence / non-inferiority for mean, prop, and OR endpoints), `simulation_study.R` (Section 3 design), and the `stabilitest/` R package (functions, bundled case-study data, unit tests). The Section 4 case-study numbers (overall score ≈ 72.5; bootstrap reproducibility ≈ 92%) use `n_boot = 2000` and `seed = 14` (the package default seed is 123 and yields a slightly different bootstrap component). Reproduce the analysis by:
 
 ```r
 library(stabilitest)
@@ -241,6 +241,9 @@ res <- robustness_analysis(pain_treatment, pain_placebo,
                            seed = 14, interpret = TRUE)
 print(res)
 plot(res)
+# Also: test_type = "wilcoxon" | "brunner_munzel" | "fisher" | "chisq" | "prop"
+# Models: robustness_lm(), robustness_glm(), robustness_surv()
+# Equivalence / NI: robustness_tost(..., endpoint = "mean" | "prop" | "or")
 ```
 
 ## Appendix B: SAP/SAR template (updated)
