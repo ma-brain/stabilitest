@@ -48,7 +48,7 @@ res_cox <- robustness_surv(survival::Surv(time, event) ~ arm, dat,
 
 ## Status
 
-Experimental (v0.1.0). API may change. `NAMESPACE` and `man/` should be
-regenerated with `roxygen2::roxygenise()`; run `devtools::check()` before any
-submission. Not affiliated with the CRAN packages `robust`, `robustbase`, or
-`stabs`.
+Experimental (v0.1.0). API may change. See [NEWS.md](NEWS.md) for release
+notes. `NAMESPACE` and `man/` should be regenerated with
+`roxygen2::roxygenise()`; run `devtools::check()` before any submission. Not
+affiliated with the CRAN packages `robust`, `robustbase`, or `stabs`.
