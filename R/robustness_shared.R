@@ -112,6 +112,22 @@ annotate_bootstrap_results <- function(df, original_significant, alpha) {
     )
 }
 
+bootstrap_validity <- function(bootstrap) {
+  valid <- is.finite(bootstrap$p_value)
+  n_valid <- sum(valid)
+  if (n_valid == 0L) {
+    stop(
+      "No valid bootstrap replicates; the resampled data are too degenerate",
+      call. = FALSE
+    )
+  }
+  list(
+    valid = valid,
+    n_valid = as.integer(n_valid),
+    n_failed = as.integer(length(valid) - n_valid)
+  )
+}
+
 annotate_removal_results <- function(df, original_significant) {
   df |>
     mutate(conclusion_match = significant == original_significant)

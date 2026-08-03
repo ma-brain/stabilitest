@@ -135,6 +135,14 @@ test_that("fragility analysis requires a complete, evaluable search", {
   )
 })
 
+test_that("bootstrap validity rejects an entirely degenerate resampling run", {
+  bootstrap <- tibble::tibble(p_value = c(NA_real_, NaN, Inf))
+  expect_error(
+    stabilitest:::bootstrap_validity(bootstrap),
+    "No valid bootstrap replicates"
+  )
+})
+
 test_that("paired t and Wilcoxon signed-rank handle clear paired effects", {
   set.seed(33)
   x <- rnorm(16, 0, 1)

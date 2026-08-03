@@ -433,17 +433,24 @@ robustness_analysis <- function(group1, group2,
   # ============================================================================
   set.seed(seed)
   bootstrap <- map_dfr(seq_len(n_boot), \(i) {
-    if (paired) {
-      idx <- sample(seq_along(group1), replace = TRUE)
-      test <- perform_test(group1[idx], group2[idx])
-    } else {
-      test <- perform_test(sample(group1, replace = TRUE),
-                           sample(group2, replace = TRUE))
+    test <- tryCatch({
+      if (paired) {
+        idx <- sample(seq_along(group1), replace = TRUE)
+        perform_test(group1[idx], group2[idx])
+      } else {
+        perform_test(sample(group1, replace = TRUE),
+                     sample(group2, replace = TRUE))
+      }
+    }, error = function(e) NULL)
+    if (is.null(test)) {
+      return(tibble(iteration = i, p_value = NA_real_,
+                    statistic = NA_real_, significant = NA))
     }
     tibble(iteration = i, p_value = test$p.value,
            statistic = test$statistic, significant = test$p.value < alpha)
   }) |>
     annotate_bootstrap_results(original_significant, alpha)
+  bootstrap_info <- bootstrap_validity(bootstrap)
 
   # ============================================================================
   # COMPOSITE SCORE
@@ -451,7 +458,7 @@ robustness_analysis <- function(group1, group2,
   #   (v1's `100 - fragility%` could not fall below ~70; see review, 1.4)
   # ============================================================================
   s_jack <- mean(jackknife$conclusion_match) * 100
-  s_boot <- mean(bootstrap$conclusion_match) * 100
+  s_boot <- mean(bootstrap$conclusion_match[bootstrap_info$valid]) * 100
 
   # Shared metrics constructor (bands calibrated by simulation; see manuscript
   # Section 3). Boundaries: > 70 Robust; (55, 70] Moderately Robust; ≤ 55 Fragile.
@@ -539,9 +546,13 @@ robustness_analysis <- function(group1, group2,
     bootstrap = list(
       results = bootstrap,
       reproducibility = s_boot,
-      p_percentile_interval = quantile(bootstrap$p_value, c(0.025, 0.975)),
-      p_mean = mean(bootstrap$p_value),
-      p_sd   = sd(bootstrap$p_value)
+      n_valid = bootstrap_info$n_valid,
+      n_failed = bootstrap_info$n_failed,
+      p_percentile_interval = quantile(
+        bootstrap$p_value[bootstrap_info$valid], c(0.025, 0.975)
+      ),
+      p_mean = mean(bootstrap$p_value[bootstrap_info$valid]),
+      p_sd   = sd(bootstrap$p_value[bootstrap_info$valid])
     ),
     sample_info = sample_info
   )
@@ -607,8 +618,8 @@ generate_interpretation <- function(x) {
   }
 
   bootstrap_text <- sprintf(
-    "Bootstrap reproducibility probability: %.1f%% of %d resamples reached the same conclusion (mean p = %.4f, SD = %.4f; 2.5th-97.5th percentile interval [%.4f, %.4f]). This reflects strength of evidence at the observed effect size, not robustness to contamination: marginal p-values yield low reproducibility even in clean data.",
-    m$bootstrap_reproducibility, nrow(x$bootstrap$results),
+    "Bootstrap reproducibility probability: %.1f%% of %d valid resamples reached the same conclusion (%d failed; mean p = %.4f, SD = %.4f; 2.5th-97.5th percentile interval [%.4f, %.4f]). This reflects strength of evidence at the observed effect size, not robustness to contamination: marginal p-values yield low reproducibility even in clean data.",
+    m$bootstrap_reproducibility, x$bootstrap$n_valid, x$bootstrap$n_failed,
     m$bootstrap_p_mean, m$bootstrap_p_sd,
     x$bootstrap$p_percentile_interval[1], x$bootstrap$p_percentile_interval[2])
 
@@ -715,8 +726,9 @@ print.robustness_analysis <- function(x, show_interpretation = TRUE, ...) {
   cat(sprintf("  Extreme-value fragility:    k = %s (descriptive)\n",
               ifelse(x$extreme$fragility_index > x$max_k,
                      paste0("> ", x$max_k), x$extreme$fragility_index)))
-  cat(sprintf("  Bootstrap reproducibility:  %5.1f%%  (mean p = %.4f, PI [%.4f, %.4f])\n\n",
-              m$bootstrap_reproducibility, m$bootstrap_p_mean,
+  cat(sprintf("  Bootstrap reproducibility:  %5.1f%%  (%d/%d valid; mean p = %.4f, PI [%.4f, %.4f])\n\n",
+              m$bootstrap_reproducibility, x$bootstrap$n_valid,
+              nrow(x$bootstrap$results), m$bootstrap_p_mean,
               x$bootstrap$p_percentile_interval[1],
               x$bootstrap$p_percentile_interval[2]))
 

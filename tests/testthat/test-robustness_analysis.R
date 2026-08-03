@@ -70,6 +70,18 @@ test_that("bootstrap is reproducible under a fixed seed", {
                b$robustness_metrics$overall_robustness)
 })
 
+test_that("invalid Wilcoxon bootstrap replicates are counted and excluded", {
+  res <- suppressWarnings(robustness_analysis(
+    c(0, 0, 0, 0, 1), c(0, 0, 0, 1, 1),
+    test_type = "wilcoxon", n_boot = 500, seed = 9
+  ))
+
+  expect_true(is.finite(res$robustness_metrics$overall_robustness))
+  expect_gt(res$bootstrap$n_failed, 0L)
+  expect_equal(res$bootstrap$n_valid + res$bootstrap$n_failed, 500L)
+  expect_equal(nrow(res$bootstrap$results), 500L)
+})
+
 test_that("interpretation text generates without error", {
   res <- robustness_analysis(pain_treatment, pain_placebo,
                              n_boot = 50, interpret = TRUE)
