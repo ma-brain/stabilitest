@@ -71,16 +71,27 @@ res_cox <- robustness_surv(survival::Surv(time, event) ~ arm, dat,
 # res_cox_joint <- robustness_surv(survival::Surv(time, event) ~ arm + age, dat,
 #                                  term = "arm")
 
-# TOST equivalence / non-inferiority (Welch or paired t on mean difference)
+# TOST equivalence / non-inferiority
+# endpoint = "mean" (Welch/paired t), "prop" (Wald RD), or "or" (Wald log OR).
 # Conclusion is equivalence (both one-sided tests reject) or NI (one-sided
 # vs margin); robustness uses p_eff = max(p_lower, p_upper) for TOST so the
 # existing jackknife / fragility / bootstrap machinery applies unchanged.
+# Score bands are not separately calibrated for equivalence/NI.
 set.seed(1)
 g1 <- rnorm(40, 0, 1); g2 <- rnorm(40, 0.05, 1)
 res_eq <- robustness_tost(g1, g2, type = "equivalence", margin = 0.5,
                           n_boot = 500, seed = 1)
 res_ni <- robustness_tost(g1, g2, type = "noninferiority", margin = 0.3,
                           higher_is_better = TRUE, n_boot = 500, seed = 1)
+
+# Binary risk difference / odds ratio (individual-level 0/1 or logical)
+set.seed(2)
+b1 <- rbinom(60, 1, 0.45); b2 <- rbinom(60, 1, 0.48)
+res_rd <- robustness_tost(b1, b2, type = "equivalence", endpoint = "prop",
+                          margin = 0.15, n_boot = 200, seed = 2)
+res_or <- robustness_tost(b1, b2, type = "noninferiority", endpoint = "or",
+                          margin = 1.25, higher_is_better = TRUE,
+                          n_boot = 200, seed = 2)
 ```
 
 ## Status

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+* Extended `robustness_tost()` with `endpoint = c("mean", "prop", "or")`
+  (alias `test`): **Wald risk-difference** TOST/NI for binary 0/1 outcomes
+  and **Wald log(OR)** TOST/NI with OR-scale margins
+  (`[1/margin, margin]` when `margin > 1`; Haldane–Anscombe 0.5 continuity
+  for zero cells). Mean difference (Welch / paired t) remains the default.
+  Same `p_eff` adapter into the robustness engine. Score bands are still
+  **not** separately calibrated for equivalence/NI. Not Farrington–Manning
+  / exact unconditional; Wald can be anticonservative for sparse tables.
+  Rank TOST remains deferred.
+
 * `robustness_glm()` now supports **Poisson log-link** models
   (`family = poisson(link = "log")`) alongside binomial logit. Print reports
   `IRR = exp(estimate)` for Poisson (parallel to OR for binomial). Offsets via
@@ -34,7 +44,9 @@
   Robustness reuses the model-engine composite score via an effective
   p-value (`p_eff = max(p_lower, p_upper)` for TOST; the NI p-value for
   non-inferiority) so jackknife / worst-case / bootstrap track the
-  TOST/NI **decision**. Binary / ratio TOST deferred.
+  TOST/NI **decision**. Score bands are not separately calibrated for
+  equivalence/NI. Binary RD / OR TOST added under Unreleased (see NEWS);
+  rank TOST remains deferred.
 
 * Extended `robustness_analysis()` with two-group binary proportion tests:
   `test_type = "fisher"` (Fisher's exact), `"chisq"` (`stats::chisq.test`),

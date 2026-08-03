@@ -9,6 +9,7 @@ robustness_tost(
   group1,
   group2,
   type = c("equivalence", "noninferiority"),
+  endpoint = c("mean", "prop", "or"),
   margin = NULL,
   delta_L = NULL,
   delta_U = NULL,
@@ -18,35 +19,46 @@ robustness_tost(
   n_boot = 1000,
   max_removal_pct = 0.3,
   weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
-  seed = 123
+  seed = 123,
+  test = NULL
 )
 
 \method{print}{robustness_tost}(x, ...)
 }
 \arguments{
-\item{group1, group2}{Numeric vectors of continuous observations. For paired
-analyses (\code{paired = TRUE}) they must be equal length. Missing values are
-not allowed. Each group (or the number of pairs) must have at least 4
-observations, matching \code{\link[=robustness_analysis]{robustness_analysis()}}.}
+\item{group1, group2}{For \code{endpoint = "mean"}, numeric continuous vectors.
+For \code{"prop"} / \code{"or"}, binary 0/1 or logical vectors (same convention as
+\code{\link[=robustness_analysis]{robustness_analysis()}} proportion tests). Missing values are not
+allowed. Each group (or the number of pairs for paired mean) must have
+at least 4 observations.}
 
 \item{type}{\code{"equivalence"} (TOST) or \code{"noninferiority"}.}
 
-\item{margin}{Positive margin for symmetric equivalence bounds
-\verb{[-margin, margin]}, or the NI margin magnitude. Ignored if \code{delta_L} /
-\code{delta_U} are supplied (equivalence only).}
+\item{endpoint}{\code{"mean"} (default), \code{"prop"} (risk difference), or \code{"or"}
+(odds ratio). Alias \code{test} is accepted for the same argument.}
 
-\item{delta_L, delta_U}{Asymmetric equivalence bounds with \code{delta_L < delta_U}.
-Mutually exclusive with \code{margin}. Not used for non-inferiority.}
+\item{margin}{Positive margin. For \code{"mean"} / \code{"prop"}: symmetric
+equivalence \verb{[-margin, margin]} or NI magnitude. For \code{"or"}: must be
+\verb{> 1}; equivalence bounds are \verb{[1/margin, margin]}. Ignored if
+\code{delta_L} / \code{delta_U} are supplied (equivalence only).}
+
+\item{delta_L, delta_U}{Asymmetric equivalence bounds with \code{delta_L < delta_U}
+(OR scale for \code{endpoint = "or"}, with both bounds positive). Mutually
+exclusive with \code{margin}. Not used for non-inferiority.}
 
 \item{alpha}{One-sided significance level for each TOST/NI test
 (default 0.05). Equivalence uses level \code{alpha} in each direction
 (overall TOST level \code{alpha}).}
 
-\item{paired}{If \code{TRUE}, use a paired t-test on within-pair differences.}
+\item{paired}{If \code{TRUE}, use a paired t-test on within-pair differences
+(\code{endpoint = "mean"} only; rejected for \code{"prop"} / \code{"or"}).}
 
 \item{higher_is_better}{For non-inferiority only; see Details.}
 
 \item{n_boot, max_removal_pct, weights, seed}{As in \code{\link[=robustness_analysis]{robustness_analysis()}}.}
+
+\item{test}{Optional alias for \code{endpoint} (same choices). Prefer
+\code{endpoint} in new code.}
 
 \item{x}{A \code{robustness_tost} object}
 
@@ -55,7 +67,7 @@ Mutually exclusive with \code{margin}. Not used for non-inferiority.}
 \value{
 Object of class \code{"robustness_tost"} (also \code{"robustness_model"}),
 with the usual engine fields plus TOST/NI metadata (\code{tost_type},
-margins, one-sided p-values, \code{(1 - 2 * alpha)} CI).
+\code{endpoint}, margins, one-sided p-values, \code{(1 - 2 * alpha)} CI).
 }
 \description{
 Quantifies how stable an \strong{equivalence} (two one-sided tests, TOST) or
@@ -68,14 +80,28 @@ The decision rule differs from ordinary superiority testing:
 \describe{
 \item{Equivalence}{Conclude equivalent if both one-sided tests reject at
 \code{alpha} (Schuirmann), equivalently if the \code{(1 - 2 * alpha)} CI for the
-mean difference (group1 − group2) lies inside \verb{[delta_L, delta_U]}
-(or \verb{[-margin, margin]}).}
+effect lies inside \verb{[delta_L, delta_U]} (or the symmetric margin
+bounds).}
 \item{Non-inferiority}{Conclude NI if the one-sided test vs the margin
 rejects at \code{alpha}. With \code{higher_is_better = TRUE} (default), NI means
-the mean difference exceeds \code{-margin} (group1 is not worse than group2
+the effect exceeds the lower NI bound (group1 is not worse than group2
 by more than \code{margin}). With \code{higher_is_better = FALSE} (lower-is-better
-outcomes such as adverse-event rates or pain scores), NI means the
-difference is below \code{+margin}.}
+outcomes such as adverse-event rates), NI means the effect is below
+the upper NI bound.}
+}
+
+Endpoints (\code{endpoint}):
+\describe{
+\item{\code{"mean"}}{Welch or paired \strong{t} on mean difference (group1 − group2).
+Symmetric bounds \verb{[-margin, margin]}.}
+\item{\code{"prop"}}{Wald \strong{z} TOST/NI on risk difference RD = p1 − p2 for
+individual-level binary (0/1 or logical) outcomes. Symmetric bounds
+\verb{[-margin, margin]} on the probability scale. Not a Farrington–Manning
+score test.}
+\item{\code{"or"}}{Wald \strong{z} TOST/NI on log(OR). User margins are on the \strong{OR
+scale}: symmetric equivalence uses \verb{[1/margin, margin]} with
+\code{margin > 1}; NI with \code{higher_is_better = TRUE} tests OR > \code{1/margin},
+else OR < \code{margin}. Zero cells use Haldane–Anscombe 0.5 continuity.}
 }
 
 For the robustness engine, an \strong{effective p-value} preserves
@@ -86,16 +112,18 @@ decision, not of a two-sided superiority test.
 }
 \section{Limitations}{
 
-v1 supports Welch / paired \strong{t}-based mean differences only. Binary
-proportions, ratios, and rank-based TOST are future work. Composite score
-bands are not separately calibrated for equivalence/NI conclusions.
+Binary methods use \strong{Wald} normal approximations (RD or log OR), which can
+be anticonservative with sparse tables; Farrington–Manning score and exact
+unconditional procedures are not implemented. Rank-based TOST is still
+deferred. Composite score bands are \strong{not} separately calibrated for
+equivalence/NI conclusions (any endpoint).
 }
 
 \examples{
 set.seed(1)
 g1 <- rnorm(40, 0, 1)
 g2 <- rnorm(40, 0.05, 1)
-# Symmetric equivalence margin of 0.5
+# Symmetric equivalence margin of 0.5 (mean difference)
 res <- robustness_tost(g1, g2, type = "equivalence", margin = 0.5,
                        n_boot = 100, seed = 1)
 print(res)
@@ -103,6 +131,17 @@ print(res)
 # Non-inferiority (higher is better), margin 0.3
 res_ni <- robustness_tost(g1, g2, type = "noninferiority", margin = 0.3,
                           n_boot = 100, seed = 1)
+
+# Binary risk-difference equivalence
+set.seed(2)
+b1 <- rbinom(50, 1, 0.45)
+b2 <- rbinom(50, 1, 0.48)
+res_rd <- robustness_tost(b1, b2, type = "equivalence", endpoint = "prop",
+                          margin = 0.2, n_boot = 50, seed = 2)
+
+# Odds-ratio NI (higher success is better), OR margin 1.25
+res_or <- robustness_tost(b1, b2, type = "noninferiority", endpoint = "or",
+                          margin = 1.25, n_boot = 50, seed = 2)
 
 }
 \seealso{

@@ -217,3 +217,155 @@ test_that("print.robustness_tost works for equivalence and NI", {
   expect_output(print(res_eq), "equivalence")
   expect_output(print(res_ni), "noninferiority")
 })
+
+# ==============================================================================
+# Binary proportion (RD) and odds-ratio TOST / NI
+# ==============================================================================
+
+test_that("Wald RD TOST: similar proportions are equivalent at generous margin", {
+  # Nearly equal event rates; margin 0.25 on RD
+  g1 <- c(rep(1, 20), rep(0, 20))
+  g2 <- c(rep(1, 19), rep(0, 21))
+  detail <- stabilitest:::tost_prop_test(
+    g1, g2, type = "equivalence",
+    delta_L = -0.25, delta_U = 0.25, margin = 0.25, alpha = 0.05
+  )
+  expect_true(detail$concluded)
+  expect_equal(detail$p_eff, max(detail$p_lower, detail$p_upper))
+  expect_true(detail$ci_inside)
+  expect_equal(detail$estimate, mean(g1) - mean(g2), tolerance = 1e-12)
+
+  res <- robustness_tost(g1, g2, type = "equivalence", endpoint = "prop",
+                         margin = 0.25, n_boot = 40, seed = 1)
+  expect_identical(res$endpoint, "prop")
+  expect_true(res$original_significant)
+  expect_equal(res$original_p, detail$p_eff)
+  expect_match(res$method, "Wald RD")
+})
+
+test_that("Wald RD TOST: large RD fails tight equivalence margin", {
+  g1 <- c(rep(1, 30), rep(0, 10))
+  g2 <- c(rep(1, 10), rep(0, 30))
+  detail <- stabilitest:::tost_prop_test(
+    g1, g2, type = "equivalence",
+    delta_L = -0.1, delta_U = 0.1, margin = 0.1, alpha = 0.05
+  )
+  expect_false(detail$concluded)
+  expect_false(isTRUE(detail$ci_inside))
+
+  res <- robustness_tost(g1, g2, type = "equivalence", endpoint = "prop",
+                         margin = 0.1, n_boot = 30, seed = 2)
+  expect_false(res$original_significant)
+})
+
+test_that("Wald RD NI respects higher_is_better", {
+  # g1 success rate clearly higher
+  g1 <- c(rep(1, 35), rep(0, 5))
+  g2 <- c(rep(1, 15), rep(0, 25))
+  margin <- 0.1
+
+  ni_hi <- stabilitest:::tost_prop_test(
+    g1, g2, type = "noninferiority",
+    delta_L = NA_real_, delta_U = NA_real_, margin = margin,
+    alpha = 0.05, higher_is_better = TRUE
+  )
+  expect_true(ni_hi$concluded)
+
+  ni_lo <- stabilitest:::tost_prop_test(
+    g1, g2, type = "noninferiority",
+    delta_L = NA_real_, delta_U = NA_real_, margin = margin,
+    alpha = 0.05, higher_is_better = FALSE
+  )
+  expect_false(ni_lo$concluded)
+
+  res <- robustness_tost(g1, g2, type = "noninferiority", endpoint = "prop",
+                         margin = 0.1, higher_is_better = TRUE,
+                         n_boot = 30, seed = 3)
+  expect_true(res$original_significant)
+})
+
+test_that("Wald log(OR) TOST and NI with OR-scale margins", {
+  # Large, nearly balanced table so Wald CI sits inside [0.5, 2]
+  g1 <- c(rep(1, 50), rep(0, 50))
+  g2 <- c(rep(1, 48), rep(0, 52))
+
+  detail <- stabilitest:::tost_or_test(
+    g1, g2, type = "equivalence",
+    delta_L = 1 / 2, delta_U = 2, margin = 2,
+    alpha = 0.05, log_L = -log(2), log_U = log(2)
+  )
+  expect_true(detail$concluded)
+  expect_equal(detail$p_eff, max(detail$p_lower, detail$p_upper))
+  expect_gt(detail$estimate, 0)
+
+  res <- robustness_tost(g1, g2, type = "equivalence", endpoint = "or",
+                         margin = 2, n_boot = 40, seed = 4)
+  expect_identical(res$endpoint, "or")
+  expect_equal(res$delta_L, 0.5)
+  expect_equal(res$delta_U, 2)
+  expect_true(res$original_significant)
+  expect_match(res$method, "log\\(OR\\)")
+
+  # Logical inputs accepted; test= alias
+  res_l <- robustness_tost(as.logical(g1), as.logical(g2),
+                           type = "equivalence", test = "or",
+                           margin = 2, n_boot = 20, seed = 4)
+  expect_identical(res_l$endpoint, "or")
+  expect_equal(res_l$original_p, res$original_p)
+
+  # NI: similar rates -> NI at margin 1.5 (higher better)
+  res_ni <- robustness_tost(g1, g2, type = "noninferiority", endpoint = "or",
+                            margin = 1.5, higher_is_better = TRUE,
+                            n_boot = 30, seed = 5)
+  expect_true(res_ni$original_significant)
+})
+
+test_that("OR Haldane-Anscombe handles a zero cell", {
+  g1 <- c(rep(1, 15), rep(0, 5))
+  g2 <- rep(0, 20) # no events in group 2
+  detail <- stabilitest:::tost_or_test(
+    g1, g2, type = "equivalence",
+    delta_L = 0.01, delta_U = 100, margin = 100,
+    alpha = 0.05, log_L = log(0.01), log_U = log(100)
+  )
+  expect_true(is.finite(detail$estimate))
+  expect_true(is.finite(detail$p_eff))
+})
+
+test_that("binary TOST validation: paired, margin, non-binary, test alias", {
+  g1 <- c(1, 0, 1, 0, 1, 0, 1, 0)
+  g2 <- c(0, 1, 0, 1, 0, 1, 0, 1)
+
+  expect_error(
+    robustness_tost(g1, g2, type = "equivalence", endpoint = "prop",
+                    margin = 0.2, paired = TRUE, n_boot = 5),
+    "paired = TRUE is only supported"
+  )
+  expect_error(
+    robustness_tost(g1, g2, type = "equivalence", endpoint = "or",
+                    margin = 0.9, n_boot = 5),
+    "margin must be a single number > 1"
+  )
+  expect_error(
+    robustness_tost(g1, g2, type = "noninferiority", endpoint = "or",
+                    margin = 1, n_boot = 5),
+    "margin must be a single number > 1"
+  )
+  expect_error(
+    robustness_tost(c(0, 0.5, 1, 1, 0, 0, 1, 1), g2,
+                    type = "equivalence", endpoint = "prop",
+                    margin = 0.2, n_boot = 5),
+    "must be binary"
+  )
+  expect_error(
+    robustness_tost(g1, g2, type = "equivalence",
+                    endpoint = "mean", test = "prop",
+                    margin = 0.2, n_boot = 5),
+    "endpoint and test must agree"
+  )
+  expect_output(
+    print(robustness_tost(g1, g2, type = "equivalence", endpoint = "prop",
+                          margin = 0.5, n_boot = 15, seed = 1)),
+    "ENDPOINT: prop"
+  )
+})

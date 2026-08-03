@@ -13,6 +13,7 @@ Description: Quantifies the stability of statistical conclusions in clinical
     location tests (Welch and paired t, Wilcoxon, Brunner-Munzel), two-group
     binary proportion tests (Fisher exact, chi-square, prop.test), TOST
     equivalence and non-inferiority for mean differences (Welch / paired t),
+    risk differences (Wald), and odds ratios (Wald on log OR),
     linear model / ANCOVA terms (including multi-df factor joint tests),
     GLM (binomial logit / Poisson log) terms, and Cox proportional hazards
     terms (single-coefficient or multi-df joint LRT).
