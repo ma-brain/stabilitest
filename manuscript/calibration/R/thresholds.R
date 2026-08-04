@@ -148,7 +148,8 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
   usable <- is.finite(replicates$overall_score)
   if (!any(usable)) {
     return(list(n = 0L, balanced_ordinal_accuracy = NA_real_, false_reassurance = NA_real_,
-                robust_identification = NA_real_, median_score = NA_real_, status = "failed"))
+                robust_identification = NA_real_, false_reassurance_upper = NA_real_,
+                robust_identification_lower = NA_real_, median_score = NA_real_, status = "failed"))
   }
   score <- as.numeric(replicates$overall_score[usable])
   truth <- as.character(replicates$truth_class[usable])
@@ -197,10 +198,14 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
     training_false_reassurance_upper = if (is.null(training)) NA_real_ else training$false_reassurance_upper,
     training_robust_identification_lower = if (is.null(training)) NA_real_ else training$robust_identification_lower,
     shared_balanced_accuracy = if (is.null(shared)) NA_real_ else shared$balanced_ordinal_accuracy,
+    shared_false_reassurance = if (is.null(shared)) NA_real_ else shared$false_reassurance,
+    shared_robust_identification = if (is.null(shared)) NA_real_ else shared$robust_identification,
+    shared_false_reassurance_upper = if (is.null(shared)) NA_real_ else shared$false_reassurance_upper,
+    shared_robust_identification_lower = if (is.null(shared)) NA_real_ else shared$robust_identification_lower,
     heldout_balanced_accuracy = NA_real_, shared_heldout_accuracy = NA_real_,
     heldout_improvement = NA_real_, material_difference = NA_integer_,
     heldout_false_reassurance_upper = NA_real_, heldout_robust_identification_lower = NA_real_,
-    median_ordering_ok = NA, stratum_complete = NA,
+    median_ordering_ok = NA, stratum_complete = NA, improvement_direction_ok = NA,
     status = as.character(status), reason = as.character(reason), stringsAsFactors = FALSE
   )
 }
@@ -213,6 +218,8 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
   layers <- if ("design_layer" %in% names(data)) unique(as.character(data$design_layer)) else "all"
   for (layer in layers) {
     group <- if (identical(layer, "all")) data else data[as.character(data$design_layer) == layer, , drop = FALSE]
+    layer_counts <- table(factor(group$truth_class, levels = truths))
+    complete <- complete && all(as.numeric(layer_counts) >= as.integer(minimum_stratum_n))
     medians <- vapply(truths, function(truth) {
       values <- group$overall_score[group$truth_class == truth & is.finite(group$overall_score)]
       if (!length(values)) NA_real_ else stats::median(values)
@@ -224,10 +231,23 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
        stratum_counts = counts)
 }
 
+.threshold_stratum_accuracy <- function(data, cutoffs) {
+  truths <- c("null", "borderline", "clear")
+  observed <- .threshold_ordinal(data$overall_score, cutoffs)
+  vapply(seq_along(truths), function(i) {
+    rows <- data$truth_class == truths[[i]] & is.finite(data$overall_score)
+    if (!any(rows)) NA_real_ else mean(observed[rows] == (i - 1L))
+  }, numeric(1), USE.NAMES = TRUE) |> stats::setNames(truths)
+}
+
 # Search the finite, ordered integer grid.  Ties are resolved by minimizing
 # distance to the frozen shared pair, then lexicographically.
 fit_family_thresholds <- function(replicates, shared_cutoffs = CALIBRATION_SHARED_CUTOFFS) {
   shared_cutoffs <- .threshold_cutoffs(shared_cutoffs, "shared_cutoffs")
+  if (is.data.frame(replicates) && !nrow(replicates)) {
+    return(list(status = "uncalibrated", cutoffs = c(NA_integer_, NA_integer_),
+                reason = "no_training_replicates"))
+  }
   data <- .threshold_data(replicates, "training")
   if (!nrow(data)) return(list(status = "uncalibrated", cutoffs = c(NA_integer_, NA_integer_), reason = "no_training_replicates"))
   shared <- .threshold_metrics(data, shared_cutoffs)
@@ -261,8 +281,12 @@ fit_calibration_candidates <- function(training_replicates,
                                         shared_cutoffs = CALIBRATION_SHARED_CUTOFFS,
                                         sap = list(), training_manifest = NULL) {
   shared_cutoffs <- .threshold_cutoffs(shared_cutoffs, "shared_cutoffs")
+  if (!is.data.frame(training_replicates) || !"analysis_family" %in% names(training_replicates)) {
+    .threshold_abort("training replicates must contain analysis_family")
+  }
+  all_families <- sort(unique(as.character(training_replicates$analysis_family)))
   data <- .threshold_data(training_replicates, "training")
-  families <- sort(unique(data$analysis_family))
+  families <- all_families
   shared_by_family <- setNames(lapply(families, function(f) {
     .threshold_metrics(data[data$analysis_family == f, , drop = FALSE], shared_cutoffs)
   }), families)
@@ -354,7 +378,23 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
     out$heldout_improvement[[i]] <- candidate$balanced_ordinal_accuracy - shared$balanced_ordinal_accuracy
     out$material_difference[[i]] <- max(abs(out$lower_cutoff[[i]] - shared_cutoffs[[1L]]),
                                          abs(out$upper_cutoff[[i]] - shared_cutoffs[[2L]]))
-    accepted <- diagnostics$stratum_complete && diagnostics$median_ordering_ok &&
+    shared_by_truth <- .threshold_stratum_accuracy(group, shared_cutoffs)
+    candidate_by_truth <- .threshold_stratum_accuracy(group,
+                                                       c(out$lower_cutoff[[i]], out$upper_cutoff[[i]]))
+    direction <- candidate_by_truth - shared_by_truth
+    out$improvement_direction_ok[[i]] <- all(is.na(direction) | direction >= -1e-12)
+    shared_training_ok <- all(is.finite(c(out$shared_false_reassurance[[i]],
+                                          out$shared_robust_identification[[i]],
+                                          out$shared_false_reassurance_upper[[i]],
+                                          out$shared_robust_identification_lower[[i]]))) &&
+      out$shared_false_reassurance[[i]] <= 0.05 &&
+      out$shared_false_reassurance_upper[[i]] <= 0.10 &&
+      out$shared_robust_identification[[i]] >= 0.70 &&
+      out$shared_robust_identification_lower[[i]] >= 0.60
+    shared_policy_valid <- shared_training_ok && diagnostics$stratum_complete &&
+      diagnostics$median_ordering_ok && .threshold_constraints_ok(shared)
+    accepted <- !shared_policy_valid && diagnostics$stratum_complete && diagnostics$median_ordering_ok &&
+      isTRUE(out$improvement_direction_ok[[i]]) &&
       .threshold_constraints_ok(candidate) &&
       isTRUE(out$heldout_improvement[[i]] >= improvement) &&
       isTRUE(out$material_difference[[i]] >= material_difference)
@@ -362,8 +402,7 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
       out$status[[i]] <- "family_specific"
       out$reason[[i]] <- "heldout_improvement_and_material_difference"
     } else if (identical(out$status[[i]], "candidate")) {
-      shared_ok <- diagnostics$stratum_complete && diagnostics$median_ordering_ok &&
-        .threshold_constraints_ok(shared)
+      shared_ok <- shared_policy_valid
       if (shared_ok) {
         out$status[[i]] <- "validated"
         out$reason[[i]] <- "shared_mapping_validated"
@@ -388,6 +427,9 @@ freeze_calibration_registry <- function(registry) {
       !all(c("scenario_id", "replicate_id") %in% names(validation))) return(invisible(TRUE))
   train_keys <- paste(training$scenario_id, training$replicate_id, sep = "\u001f")
   valid_keys <- paste(validation$scenario_id, validation$replicate_id, sep = "\u001f")
+  if (any(validation$scenario_id %in% training$scenario_id)) {
+    .threshold_abort("training and held-out scenario_id values overlap")
+  }
   if (any(valid_keys %in% train_keys)) .threshold_abort("training and held-out data overlap")
   invisible(TRUE)
 }
@@ -396,6 +438,10 @@ analyse_calibration <- function(training_replicates, validation_replicates,
                                 training_manifest = NULL, validation_manifest = NULL,
                                 shared_cutoffs = CALIBRATION_SHARED_CUTOFFS,
                                 output = NULL, minimum_stratum_n = 100L, ...) {
+  if (exists("validate_calibration_replicates", mode = "function", inherits = TRUE)) {
+    validate_calibration_replicates(training_replicates)
+    validate_calibration_replicates(validation_replicates)
+  }
   training <- .threshold_data(training_replicates, "training")
   validation <- .threshold_data(validation_replicates, "validation")
   .threshold_assert_disjoint(training, validation)

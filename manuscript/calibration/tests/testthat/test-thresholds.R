@@ -44,7 +44,6 @@ testthat::test_that("family-specific mapping requires both improvement and mater
 testthat::test_that("failed families become uncalibrated rather than silently shared", {
   training <- readRDS(fixture_path("training-replicates.rds"))
   validation <- readRDS(fixture_path("validation-replicates.rds"))
-  training$overall_score[training$analysis_family == "failed_family"] <- NA_real_
   candidates <- threshold_env$fit_calibration_candidates(training)
   evaluated <- threshold_env$validate_calibration_candidates(candidates, validation)
   row <- evaluated[evaluated$analysis_family == "failed_family", , drop = FALSE]
@@ -95,4 +94,14 @@ testthat::test_that("held-out acceptance records Wilson bounds and stratum check
   short_result <- threshold_env$analyse_calibration(training, short,
                                                      minimum_stratum_n = 1L)
   testthat::expect_true(any(!short_result$registry$stratum_complete))
+})
+
+testthat::test_that("scenario-level overlap and malformed result schemas are rejected", {
+  training <- readRDS(fixture_path("training-replicates.rds"))
+  validation <- readRDS(fixture_path("validation-replicates.rds"))
+  validation$scenario_id <- sub("_heldout$", "_training", validation$scenario_id)
+  testthat::expect_error(threshold_env$analyse_calibration(training, validation), "scenario_id")
+  malformed <- readRDS(fixture_path("validation-replicates.rds"))
+  malformed$overall_score[[1L]] <- Inf
+  testthat::expect_error(threshold_env$analyse_calibration(training, malformed), "finite|overall_score")
 })
