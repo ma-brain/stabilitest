@@ -460,16 +460,25 @@ glm_model_adapter <- function(family = stats::binomial()) list(
   primary_decision = function(data, scenario, ...) {
     fam <- if (is.character(family)) family[[1L]] else family$family
     if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- fam
+    if (!is.data.frame(scenario) && is.null(.model_analysis(scenario)$link)) {
+      scenario$analysis <- utils::modifyList(scenario$analysis %||% list(), list(link = family$link))
+    }
     primary_decision_glm(data, scenario, family = NULL, ...)
   },
   run_robustness = function(data, scenario, ...) {
     fam <- if (is.character(family)) family[[1L]] else family$family
     if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- fam
+    if (!is.data.frame(scenario) && is.null(.model_analysis(scenario)$link)) {
+      scenario$analysis <- utils::modifyList(scenario$analysis %||% list(), list(link = family$link))
+    }
     run_robustness_glm(data, scenario, family = NULL, ...)
   },
   robustness_analysis = function(data, scenario, ...) {
     fam <- if (is.character(family)) family[[1L]] else family$family
     if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- fam
+    if (!is.data.frame(scenario) && is.null(.model_analysis(scenario)$link)) {
+      scenario$analysis <- utils::modifyList(scenario$analysis %||% list(), list(link = family$link))
+    }
     run_robustness_glm(data, scenario, family = NULL, ...)
   }
 )
