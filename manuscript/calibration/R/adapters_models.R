@@ -31,6 +31,19 @@
   list(data = as.data.frame(x), weights = weights)
 }
 
+.adapter_prepare_scenario <- function(scenario, family, link) {
+  if (is.data.frame(scenario)) {
+    if (nrow(scenario) != 1L) return(scenario)
+    parameters <- scenario$parameters[[1L]]
+    parameters$analysis <- utils::modifyList(parameters$analysis %||% list(), list(link = link))
+    scenario$parameters[[1L]] <- parameters
+    return(scenario)
+  }
+  if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- family
+  scenario$analysis <- utils::modifyList(scenario$analysis %||% list(), list(link = link))
+  scenario
+}
+
 .valid_alpha <- function(alpha) {
   is.numeric(alpha) && length(alpha) == 1L && is.finite(alpha) && alpha > 0 && alpha < 1
 }
@@ -459,26 +472,17 @@ glm_model_adapter <- function(family = stats::binomial()) list(
   generate_data = if (identical(if (is.character(family)) family[[1L]] else family$family, "poisson")) generate_poisson else generate_binomial,
   primary_decision = function(data, scenario, ...) {
     fam <- if (is.character(family)) family[[1L]] else family$family
-    if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- fam
-    if (!is.data.frame(scenario) && is.null(.model_analysis(scenario)$link)) {
-      scenario$analysis <- utils::modifyList(scenario$analysis %||% list(), list(link = family$link))
-    }
+    if (is.null(.model_analysis(scenario)$link)) scenario <- .adapter_prepare_scenario(scenario, fam, family$link)
     primary_decision_glm(data, scenario, family = NULL, ...)
   },
   run_robustness = function(data, scenario, ...) {
     fam <- if (is.character(family)) family[[1L]] else family$family
-    if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- fam
-    if (!is.data.frame(scenario) && is.null(.model_analysis(scenario)$link)) {
-      scenario$analysis <- utils::modifyList(scenario$analysis %||% list(), list(link = family$link))
-    }
+    if (is.null(.model_analysis(scenario)$link)) scenario <- .adapter_prepare_scenario(scenario, fam, family$link)
     run_robustness_glm(data, scenario, family = NULL, ...)
   },
   robustness_analysis = function(data, scenario, ...) {
     fam <- if (is.character(family)) family[[1L]] else family$family
-    if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- fam
-    if (!is.data.frame(scenario) && is.null(.model_analysis(scenario)$link)) {
-      scenario$analysis <- utils::modifyList(scenario$analysis %||% list(), list(link = family$link))
-    }
+    if (is.null(.model_analysis(scenario)$link)) scenario <- .adapter_prepare_scenario(scenario, fam, family$link)
     run_robustness_glm(data, scenario, family = NULL, ...)
   }
 )

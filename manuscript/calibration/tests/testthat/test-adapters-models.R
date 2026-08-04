@@ -308,4 +308,11 @@ testthat::test_that("factory links are preserved when scenarios omit link settin
   bad_p <- adapter_p$primary_decision(generated_p$data, list(analysis = list(term = "treatmentB")))
   testthat::expect_identical(bad_p$status, "failed")
   testthat::expect_identical(bad_p$failure_class, "unsupported_link")
+  row <- env$calibration_scenarios()
+  row <- row[row$scenario_id == "binomial_core_logit", , drop = FALSE]
+  row$parameters[[1L]]$analysis$link <- NULL
+  bad_row <- env$glm_model_adapter(binomial(link = "probit"))$primary_decision(
+    generated$data, row
+  )
+  testthat::expect_identical(bad_row$failure_class, "unsupported_link")
 })
