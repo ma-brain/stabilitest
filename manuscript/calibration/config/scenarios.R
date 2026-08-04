@@ -254,5 +254,50 @@ calibration_scenarios <- function() {
     )
   )
 
-  tibble::as_tibble(rbind(base, expanded, imbalance_sparse), .name_repair = "check_unique")
+  scenarios <- tibble::as_tibble(rbind(base, expanded, imbalance_sparse), .name_repair = "check_unique")
+
+  # Endpoint and stress coverage for the Cox and TOST adapters.  The original
+  # smoke IDs remain frozen; these rows add Weibull/non-PH Cox and binary
+  # TOST/NI checks without changing the common artifact schema.
+  scenarios <- tibble::add_row(
+    scenarios,
+    scenario_id = "tost_prop_equivalence", analysis_family = "tost", endpoint = "risk_difference",
+    design_layer = "validation", data_generator = "generate_tost", primary_adapter = "robustness_tost",
+    robustness_adapter = "tost_prop", truth_class = "clear", target_conclusion = "equivalent",
+    sample_size = 80L, n_boot = 1000L, max_removal_pct = .30, training_split = .7,
+    scenario_seed = 1901L,
+    parameters = list(list(generator = list(n_per_group = 40L, endpoint = "prop",
+                                            type = "equivalence", delta_L = -.15, delta_U = .15,
+                                            probability_control = .5, probability_treatment = .5),
+                            analysis = list(endpoint = "prop", type = "equivalence",
+                                             delta_L = -.15, delta_U = .15, alpha = .05))),
+    .before = Inf
+  )
+  scenarios <- tibble::add_row(
+    scenarios,
+    scenario_id = "tost_or_noninferiority", analysis_family = "tost", endpoint = "odds_ratio",
+    design_layer = "stress", data_generator = "generate_tost", primary_adapter = "robustness_tost",
+    robustness_adapter = "tost_or", truth_class = "clear", target_conclusion = "noninferior",
+    sample_size = 80L, n_boot = 1000L, max_removal_pct = .30, training_split = .7,
+    scenario_seed = 2001L,
+    parameters = list(list(generator = list(n_per_group = 40L, endpoint = "or",
+                                            type = "noninferiority", margin = 1.5,
+                                            odds_ratio = 1.2),
+                            analysis = list(endpoint = "or", type = "noninferiority",
+                                             margin = 1.5, higher_is_better = TRUE, alpha = .05))),
+    .before = Inf
+  )
+  tibble::add_row(
+    scenarios,
+    scenario_id = "cox_weibull_stress", analysis_family = "cox", endpoint = "hazard_ratio",
+    design_layer = "stress", data_generator = "generate_cox", primary_adapter = "robustness_surv",
+    robustness_adapter = "coxph", truth_class = "borderline", target_conclusion = "significant",
+    sample_size = 160L, n_boot = 1000L, max_removal_pct = .30, training_split = .7,
+    scenario_seed = 1801L,
+    parameters = list(list(generator = list(n = 160L, hazard_ratio = 1.5,
+                                            distribution = "weibull", shape = 1.3,
+                                            censoring_rate = .2, time_varying_effect = TRUE),
+                            analysis = list(term = "treatment", alpha = .05))),
+    .before = Inf
+  )
 }
