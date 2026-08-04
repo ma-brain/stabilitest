@@ -68,6 +68,118 @@ pkgload::load_all(
   quiet = TRUE
 )
 
+.simulation_usage <- function() {
+  paste(
+    "Usage: Rscript manuscript/simulation_study.R [options]",
+    "",
+    "Options:",
+    "  --nrep N       replications per scenario (default: 500)",
+    "  --n-boot B     bootstrap iterations (default: 200)",
+    "  --output PATH  destination CSV",
+    "  --smoke        run nrep=2, n_boot=10 to a separate smoke CSV",
+    "  --help         show this message without running",
+    sep = "\n"
+  )
+}
+
+.parse_positive_integer <- function(value, option) {
+  parsed <- suppressWarnings(as.numeric(value))
+  if (length(parsed) != 1L || is.na(parsed) || !is.finite(parsed) ||
+      parsed < 1 || parsed != floor(parsed)) {
+    stop(sprintf("%s must be a positive integer", option), call. = FALSE)
+  }
+  as.integer(parsed)
+}
+
+.parse_simulation_args <- function(args, script_path = .simulation_script_path()) {
+  value_options <- c("--nrep", "--n-boot", "--output")
+  flag_options <- c("--smoke", "--help")
+  known_options <- c(value_options, flag_options)
+  seen <- character()
+  values <- list()
+  index <- 1L
+
+  while (index <= length(args)) {
+    option <- args[[index]]
+    if (!option %in% known_options) {
+      stop(sprintf("Unknown option: %s", option), call. = FALSE)
+    }
+    if (option %in% seen) {
+      stop(sprintf("%s may only be supplied once", option), call. = FALSE)
+    }
+    seen <- c(seen, option)
+
+    if (option %in% value_options) {
+      if (index == length(args) || startsWith(args[[index + 1L]], "--")) {
+        stop(sprintf("%s requires a value", option), call. = FALSE)
+      }
+      values[[option]] <- args[[index + 1L]]
+      index <- index + 2L
+    } else {
+      values[[option]] <- TRUE
+      index <- index + 1L
+    }
+  }
+
+  help <- "--help" %in% seen
+  smoke <- "--smoke" %in% seen
+  if (help && length(seen) > 1L) {
+    stop("--help cannot be combined with run options", call. = FALSE)
+  }
+  if (smoke && any(c("--nrep", "--n-boot") %in% seen)) {
+    stop("--smoke cannot be combined with --nrep or --n-boot", call. = FALSE)
+  }
+
+  nrep <- if (smoke) {
+    2L
+  } else if ("--nrep" %in% seen) {
+    .parse_positive_integer(values[["--nrep"]], "--nrep")
+  } else {
+    500L
+  }
+  n_boot <- if (smoke) {
+    10L
+  } else if ("--n-boot" %in% seen) {
+    .parse_positive_integer(values[["--n-boot"]], "--n-boot")
+  } else {
+    200L
+  }
+
+  default_name <- if (smoke) {
+    "simulation_results_smoke.csv"
+  } else {
+    "simulation_results.csv"
+  }
+  if ("--output" %in% seen) {
+    output_value <- values[["--output"]]
+    if (!nzchar(output_value)) {
+      stop("--output requires a non-empty path", call. = FALSE)
+    }
+    output_directory <- dirname(output_value)
+    if (!dir.exists(output_directory)) {
+      stop("simulation output directory does not exist", call. = FALSE)
+    }
+    output <- file.path(
+      normalizePath(output_directory, mustWork = TRUE),
+      basename(output_value)
+    )
+  } else {
+    output <- file.path(dirname(script_path), default_name)
+    output_directory <- dirname(output)
+  }
+  if (file.access(output_directory, mode = 2L) != 0L) {
+    stop("simulation output directory is not writable", call. = FALSE)
+  }
+
+  list(
+    nrep = nrep,
+    n_boot = n_boot,
+    output = output,
+    smoke = smoke,
+    help = help
+  )
+}
+
 simulate_scenario <- function(d, n_per_group, n_outliers,
                               nrep = 500, n_boot = 200, alpha = 0.05,
                               seed = NULL) {
@@ -100,6 +212,7 @@ simulate_scenario <- function(d, n_per_group, n_outliers,
     summarise(
       rejection_rate = mean(significant),
       score_all      = mean(score),
+      score_all_sd   = stats::sd(score),
       # calibration is defined conditional on the significance outcome:
       score_sig      = mean(score[significant]),
       score_nonsig   = mean(score[!significant]),
@@ -110,8 +223,15 @@ simulate_scenario <- function(d, n_per_group, n_outliers,
       s_boot_sig     = mean(s_boot[significant]),
       .groups = "drop"
     ) |>
-    mutate(d = d, n_per_group = n_per_group, n_outliers = n_outliers,
-           nrep = nrep, .before = 1)
+    mutate(
+      nrep = nrep,
+      n_boot = n_boot,
+      scenario_seed = if (is.null(seed)) NA_integer_ else as.integer(seed),
+      d = d,
+      n_per_group = n_per_group,
+      n_outliers = n_outliers,
+      .before = 1
+    )
 }
 
 # --- full grid ----------------------------------------------------------------
@@ -121,23 +241,82 @@ scenarios <- expand_grid(
   n_outliers = c(0, 2)
 )
 
-run_simulation <- function(nrep = 500) {
+run_simulation <- function(nrep = 500, n_boot = 200) {
+  scenario_count <- nrow(scenarios)
   scenarios |>
     mutate(scenario = row_number()) |>
     pmap_dfr(\(d, n_per_group, n_outliers, scenario) {
-      message(sprintf("Scenario %d/12: d=%.1f, n=%d, outliers=%d",
-                      scenario, d, n_per_group, n_outliers))
+      scenario_seed <- 987000L + scenario
+      message(sprintf(
+        "Scenario %d/%d: d=%.1f, n=%d, outliers=%d",
+        scenario, scenario_count, d, n_per_group, n_outliers
+      ))
       simulate_scenario(d, n_per_group, n_outliers,
-                        nrep = nrep, seed = 987000 + scenario)
+                        nrep = nrep, n_boot = n_boot, seed = scenario_seed)
     })
 }
 
-if (interactive()) {
-  sim_results <- run_simulation(nrep = 500)   # ~1-2 h; use nrep = 25 to smoke-test
-  print(sim_results, width = Inf)
-  write_csv(sim_results, "simulation_results.csv")
+.simulation_is_direct <- function(script_path = .simulation_script_path()) {
+  file_args <- sub(
+    "^--file=",
+    "",
+    grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+  )
+  length(file_args) == 1L &&
+    identical(
+      normalizePath(file_args[[1L]], mustWork = TRUE),
+      normalizePath(script_path, mustWork = TRUE)
+    )
+}
 
-  # Headline calibration figure: score distribution for chance-significant
-  # findings (d = 0) vs true large effects (d = 0.8), conditional on p < alpha
-  # (values reported in manuscript Table 2)
+.write_simulation_results <- function(results, output) {
+  temporary <- tempfile(
+    pattern = paste0(".", basename(output), "."),
+    tmpdir = dirname(output),
+    fileext = ".tmp"
+  )
+  on.exit(unlink(temporary), add = TRUE)
+  readr::write_csv(results, temporary, na = "NA")
+
+  backup <- NULL
+  if (file.exists(output)) {
+    backup <- tempfile(
+      pattern = paste0(".", basename(output), ".backup."),
+      tmpdir = dirname(output)
+    )
+    if (!file.rename(output, backup)) {
+      stop("Unable to protect the existing simulation output", call. = FALSE)
+    }
+  }
+
+  if (!file.rename(temporary, output)) {
+    if (!is.null(backup)) file.rename(backup, output)
+    stop("Unable to install the completed simulation output", call. = FALSE)
+  }
+  if (!is.null(backup)) unlink(backup)
+  invisible(output)
+}
+
+.run_simulation_cli <- function(args = commandArgs(trailingOnly = TRUE),
+                                script_path = .simulation_script_path()) {
+  options <- .parse_simulation_args(args, script_path)
+  if (options$help) {
+    cat(.simulation_usage(), "\n")
+    return(invisible(NULL))
+  }
+
+  message(sprintf(
+    "Running simulation with nrep=%d, n_boot=%d",
+    options$nrep,
+    options$n_boot
+  ))
+  results <- run_simulation(nrep = options$nrep, n_boot = options$n_boot)
+  print(results, width = Inf)
+  .write_simulation_results(results, options$output)
+  message("Simulation results written to ", options$output)
+  invisible(results)
+}
+
+if (.simulation_is_direct()) {
+  .run_simulation_cli()
 }
