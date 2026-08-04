@@ -457,9 +457,21 @@ lm_model_adapter <- function() list(
 glm_model_adapter <- function(family = stats::binomial()) list(
   generate = if (identical(if (is.character(family)) family[[1L]] else family$family, "poisson")) generate_poisson else generate_binomial,
   generate_data = if (identical(if (is.character(family)) family[[1L]] else family$family, "poisson")) generate_poisson else generate_binomial,
-  primary_decision = function(data, scenario, ...) primary_decision_glm(data, scenario, family = NULL, ...),
-  run_robustness = function(data, scenario, ...) run_robustness_glm(data, scenario, family = NULL, ...),
-  robustness_analysis = function(data, scenario, ...) run_robustness_glm(data, scenario, family = NULL, ...)
+  primary_decision = function(data, scenario, ...) {
+    fam <- if (is.character(family)) family[[1L]] else family$family
+    if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- fam
+    primary_decision_glm(data, scenario, family = NULL, ...)
+  },
+  run_robustness = function(data, scenario, ...) {
+    fam <- if (is.character(family)) family[[1L]] else family$family
+    if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- fam
+    run_robustness_glm(data, scenario, family = NULL, ...)
+  },
+  robustness_analysis = function(data, scenario, ...) {
+    fam <- if (is.character(family)) family[[1L]] else family$family
+    if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- fam
+    run_robustness_glm(data, scenario, family = NULL, ...)
+  }
 )
 
 calibration_model_adapters <- function() list(
