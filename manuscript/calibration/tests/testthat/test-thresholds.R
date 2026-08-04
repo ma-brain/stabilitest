@@ -105,6 +105,109 @@ testthat::test_that("shared mapping validation publishes shared cutoffs, not tra
   testthat::expect_identical(row$upper_cutoff[[1L]], 70L)
 })
 
+.threshold_candidate_row <- function(family, lower, upper, status = "candidate") {
+  data.frame(
+    analysis_family = family,
+    lower_cutoff = as.integer(lower), upper_cutoff = as.integer(upper),
+    shared_lower = 55L, shared_upper = 70L,
+    training_balanced_accuracy = 0.9,
+    training_false_reassurance = 0.01,
+    training_robust_identification = 0.9,
+    training_false_reassurance_upper = 0.05,
+    training_robust_identification_lower = 0.8,
+    shared_balanced_accuracy = 0.9,
+    shared_false_reassurance = 0.01,
+    shared_robust_identification = 0.9,
+    shared_false_reassurance_upper = 0.05,
+    shared_robust_identification_lower = 0.8,
+    heldout_balanced_accuracy = NA_real_, shared_heldout_accuracy = NA_real_,
+    heldout_improvement = NA_real_, material_difference = NA_integer_,
+    heldout_false_reassurance_upper = NA_real_,
+    heldout_robust_identification_lower = NA_real_,
+    median_ordering_ok = NA, stratum_complete = NA,
+    improvement_direction_ok = NA,
+    status = status, reason = NA_character_,
+    stringsAsFactors = FALSE
+  )
+}
+
+testthat::test_that("shared acceptance requires usable ordinal discrimination, not only FR/RI", {
+  # Shared 55/70 can pass FR/RI + median ordering while mapping every borderline
+  # score into robust (balanced ordinal accuracy = 2/3). That must not count as
+  # a validated shared policy, or family-specific alternatives stay blocked.
+  n_per <- 120L
+  validation <- data.frame(
+    analysis_family = "moderate_dump",
+    truth_class = rep(c("null", "borderline", "clear"), each = n_per),
+    overall_score = c(rep(40, n_per), rep(75, n_per), rep(90, n_per)),
+    status = "completed",
+    design_layer = "core",
+    stringsAsFactors = FALSE
+  )
+  shared_metrics <- threshold_env$.threshold_metrics(validation, c(55L, 70L))
+  testthat::expect_lte(shared_metrics$false_reassurance, 0.05)
+  testthat::expect_gte(shared_metrics$robust_identification, 0.70)
+  testthat::expect_lt(shared_metrics$balanced_ordinal_accuracy, 0.70)
+  testthat::expect_identical(
+    threshold_env$classify_score_band(75, c(55L, 70L)), "robust"
+  )
+
+  candidates <- .threshold_candidate_row("moderate_dump", 55L, 70L)
+  evaluated <- threshold_env$validate_calibration_candidates(
+    candidates, validation, shared_cutoffs = c(55L, 70L), minimum_stratum_n = 100L
+  )
+  row <- evaluated[evaluated$analysis_family == "moderate_dump", , drop = FALSE]
+  testthat::expect_identical(nrow(row), 1L)
+  testthat::expect_false(identical(row$status[[1L]], "validated"))
+  testthat::expect_identical(row$status[[1L]], "uncalibrated")
+  testthat::expect_match(row$reason[[1L]], "shared|ordinal|balanced|moderate|borderline")
+})
+
+testthat::test_that("failed shared ordinal gate still allows family-specific acceptance", {
+  n_per <- 120L
+  validation <- data.frame(
+    analysis_family = "family_rescue",
+    truth_class = rep(c("null", "borderline", "clear"), each = n_per),
+    overall_score = c(rep(40, n_per), rep(75, n_per), rep(90, n_per)),
+    status = "completed",
+    design_layer = "core",
+    stringsAsFactors = FALSE
+  )
+  # Family pair keeps borderline in moderate while remaining materially different.
+  candidates <- .threshold_candidate_row("family_rescue", 55L, 85L)
+  evaluated <- threshold_env$validate_calibration_candidates(
+    candidates, validation, shared_cutoffs = c(55L, 70L), minimum_stratum_n = 100L
+  )
+  row <- evaluated[evaluated$analysis_family == "family_rescue", , drop = FALSE]
+  testthat::expect_identical(row$status[[1L]], "family_specific")
+  testthat::expect_gte(row$heldout_improvement[[1L]], 0.05)
+  testthat::expect_gte(row$material_difference[[1L]], 5L)
+})
+
+testthat::test_that("Phase 6 public status vocabulary is mapped from internal statuses", {
+  map <- threshold_env$map_calibration_status
+  testthat::expect_identical(map("validated"), "validated_shared")
+  testthat::expect_identical(map("family_specific"), "validated_family_specific")
+  testthat::expect_identical(map("uncalibrated"), "uncalibrated")
+  testthat::expect_identical(map("bands_not_applicable"), "bands_not_applicable")
+  testthat::expect_identical(
+    map(c("validated", "family_specific", "uncalibrated")),
+    c("validated_shared", "validated_family_specific", "uncalibrated")
+  )
+
+  training <- readRDS(fixture_path("training-replicates.rds"))
+  validation <- readRDS(fixture_path("validation-replicates.rds"))
+  result <- threshold_env$analyse_calibration(training, validation)
+  testthat::expect_true("status_public" %in% names(result$registry))
+  testthat::expect_identical(
+    result$registry$status_public,
+    map(result$registry$status)
+  )
+  testthat::expect_true(all(result$registry$status_public %in%
+    c("validated_shared", "validated_family_specific",
+      "uncalibrated", "bands_not_applicable")))
+})
+
 testthat::test_that("analysis is deterministic and freezes a hashed registry", {
   training <- readRDS(fixture_path("training-replicates.rds"))
   validation <- readRDS(fixture_path("validation-replicates.rds"))
