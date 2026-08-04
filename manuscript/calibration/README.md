@@ -20,22 +20,23 @@ all|two_sample|proportion|lm|binomial|poisson|cox|tost --workers <N>
 contract loaded by `R/load_calibration.R`.
 
 ```sh
-# Smoke screen: one quick replicate for every smoke scenario.
-Rscript manuscript/calibration/run_calibration.R --mode smoke --phase screen \
-  --engine all --workers 1 --output manuscript/calibration/artifacts/pilot/smoke.rds
+# Smoke: one quick replicate for every smoke scenario.
+Rscript manuscript/calibration/run_calibration.R --mode smoke --phase all \
+  --engine all --workers 1 --output /tmp/stabilitest-calibration-smoke
 
-# Pilot screen: check occupancy and Monte Carlo diagnostics.
-Rscript manuscript/calibration/run_calibration.R --mode pilot --phase screen \
-  --engine all --workers 2 --output manuscript/calibration/artifacts/pilot/pilot.rds
+# Pilot: check occupancy and Monte Carlo diagnostics.
+Rscript manuscript/calibration/run_calibration.R --mode pilot --phase all \
+  --engine all --workers 1 --output manuscript/calibration/artifacts/pilot
 
-# Full production run: B = 1000 for all scenario families.
+# Full production training run: B = 1000 for all scenario families.
 Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
-  --engine all --workers 8 --output manuscript/calibration/artifacts/raw/full.rds
+  --engine all --workers <N> --resume \
+  --output manuscript/calibration/artifacts/raw/training
 
-# Resume the same production run after an interruption.
+# Held-out validation run.
 Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
-  --engine all --workers 8 --resume \
-  --output manuscript/calibration/artifacts/raw/full.rds
+  --engine all --workers <N> --resume --validation-only \
+  --output manuscript/calibration/artifacts/raw/validation
 
 # Analyse and freeze: fit candidates from the training artifacts.
 Rscript manuscript/calibration/analyse_calibration.R \

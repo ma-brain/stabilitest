@@ -31,8 +31,9 @@ scenario may occur in both sets; resume checkpoints must preserve this split.
 
 For each score band, report the held-out calibration rate, Monte Carlo standard
 error, and a binomial confidence interval.  Production calibration of each core
-scenario starts with at least 500 attempted replicates and targets Monte Carlo
-standard error ≤ 0.02 for each reported proportion.  The approved held-out
+scenario starts with at least 500 completed full robustness analyses and targets
+Monte Carlo standard error ≤ 0.02 for each reported proportion.  Attempted,
+failed, and excluded replicates are reported separately.  The approved held-out
 stratum minimum is 100 replicates; a stratum below that minimum is diagnostic
 only and cannot support a definitive mapping.  Pilot runs are for wiring,
 occupancy, and precision checks and never freeze candidates or publish a map.
