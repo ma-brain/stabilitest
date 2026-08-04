@@ -14,9 +14,11 @@ analyses into interpretable metrics:
 - **Bootstrap reproducibility probability** (Goodman 1992) — would a replicate
   sample likely reach the same conclusion?
 
-A composite 0–100 score summarises the components; interpretation bands were
-calibrated by simulation (chance-significant findings under H0 average ~52,
-true large effects ~75; see the accompanying manuscript).
+A data-dependent composite score from 0–100 summarises the components. Fixed
+interpretation bands were calibrated using Welch-test simulations; among
+statistically significant simulated results, null false positives averaged
+about 52, while large true effects averaged 71–77 (see the accompanying
+manuscript).
 
 ## Installation
 

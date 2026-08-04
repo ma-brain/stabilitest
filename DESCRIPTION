@@ -2,7 +2,7 @@ Package: stabilitest
 Title: Robustness and Fragility Analysis of Statistical Test Conclusions
 Version: 0.5.0
 Authors@R:
-    person("Marius", "Ally", email = "marally@gmail.com",
+    person("Marius", "Ardelean", email = "marally@gmail.com",
            role = c("aut", "cre"))
 Description: Quantifies the stability of statistical conclusions in clinical
     trials and applied research. Integrates jackknife leave-one-out analysis,

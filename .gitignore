@@ -35,6 +35,7 @@ src/*.dll
 .Rlib/
 docs/
 inst/doc
+graphify-out/
 
 # Secrets / local env
 .env
