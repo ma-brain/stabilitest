@@ -50,6 +50,13 @@ NON_SIGNIFICANT_AUC_SPREAD <- 0.20
   if (length(missing)) {
     .non_significant_abort(sprintf("replicates missing required columns: %s", paste(missing, collapse = ", ")))
   }
+  # Failed artifacts may legitimately carry NA/Inf metrics.  Drop them before
+  # validating completed-row metrics; failures remain accounted for by the
+  # common calibration schema and must not make exploratory analysis abort.
+  if ("status" %in% names(data)) {
+    bad <- !is.na(data$status) & data$status != "completed"
+    data <- data[!bad, , drop = FALSE]
+  }
   for (column in c("analysis_family", "truth_class")) {
     if (!is.character(data[[column]]) || anyNA(data[[column]]) || any(!nzchar(data[[column]]))) {
       .non_significant_abort(sprintf("%s must contain non-missing character values", column))
@@ -57,10 +64,6 @@ NON_SIGNIFICANT_AUC_SPREAD <- 0.20
   }
   if (!is.numeric(data$overall_score) || any(!is.finite(data$overall_score))) {
     .non_significant_abort("overall_score must contain finite numeric values")
-  }
-  if ("status" %in% names(data)) {
-    bad <- !is.na(data$status) & data$status != "completed"
-    data <- data[!bad, , drop = FALSE]
   }
   data
 }

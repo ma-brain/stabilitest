@@ -86,6 +86,20 @@ testthat::test_that("invalid input fails explicitly", {
   testthat::expect_error(non_sig_env$analyse_non_significant(bad), "finite|overall_score")
 })
 
+testthat::test_that("failed rows with missing metrics are ignored safely", {
+  data <- non_sig_fixture()
+  data$status <- "completed"
+  failed <- data[1L, , drop = FALSE]
+  failed$status <- "failed"
+  failed$overall_score <- NA_real_
+  failed$analysis_conclusion <- NA_character_
+  failed$target_conclusion <- NA_character_
+  combined <- rbind(data, failed)
+  result <- non_sig_env$analyse_non_significant(combined)
+  testthat::expect_identical(result$diagnostics$n_rows, nrow(data))
+  testthat::expect_identical(result$diagnostics$n_non_significant, nrow(data))
+})
+
 testthat::test_that("analysis entrypoint attaches held-out exploratory policy", {
   base_result <- list(registry = data.frame(analysis_family = "lm"))
   attached <- non_sig_env$attach_non_significant_analysis(base_result, non_sig_fixture())
