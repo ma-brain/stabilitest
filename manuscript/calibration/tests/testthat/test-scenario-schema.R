@@ -36,7 +36,7 @@ testthat::test_that("calibration scenarios satisfy the frozen schema", {
 
   two_sample <- scenarios[scenarios$analysis_family == "two_sample", , drop = FALSE]
   testthat::expect_gte(nrow(two_sample), 10L)
-  testthat::expect_true(all(c("null", "moderate", "large") %in% two_sample$truth_class))
+  testthat::expect_true(all(c("null", "borderline", "clear") %in% two_sample$truth_class))
   testthat::expect_gte(length(unique(two_sample$sample_size)), 3L)
   testthat::expect_true(all(c("core", "stress", "validation") %in% two_sample$design_layer))
   validation <- two_sample$parameters[two_sample$design_layer == "validation"]

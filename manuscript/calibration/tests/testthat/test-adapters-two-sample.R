@@ -192,3 +192,54 @@ testthat::test_that("configured adapter names expose callable wrappers", {
   adapter <- adapter_env$two_sample_adapter()
   testthat::expect_equal(direct$p, adapter$primary_decision(data, scenario)$p)
 })
+
+testthat::test_that("two-sample inputs are strictly validated", {
+  adapter_path <- file.path("..", "..", "R", "adapters_two_sample.R")
+  adapter_env <- new.env(parent = globalenv())
+  sys.source(adapter_path, envir = adapter_env)
+  adapter <- adapter_env$two_sample_adapter()
+  valid_data <- list(group1 = 1:6, group2 = 2:7)
+  valid_scenario <- list(parameters = list(analysis = list(test_type = "t.test")))
+
+  for (alpha in c(0, 1, NA_real_, Inf, 0.5 + 0i)) {
+    scenario <- valid_scenario
+    scenario$parameters$analysis$alpha <- alpha
+    testthat::expect_error(adapter$primary_decision(valid_data, scenario), "alpha")
+  }
+  for (size in list(5.5, NA_real_, 0, -2)) {
+    scenario <- list(parameters = list(generator = list(n_per_group = size)))
+    testthat::expect_error(adapter_env$generate_two_sample(scenario, seed = 1L), "group size")
+  }
+  for (size_name in c("n_group1", "n_group2")) {
+    generator <- list(n_per_group = 6L)
+    generator[[size_name]] <- 4.5
+    scenario <- list(parameters = list(generator = generator))
+    testthat::expect_error(adapter_env$generate_two_sample(scenario, seed = 1L), "group size")
+  }
+  bad_boot <- valid_scenario
+  testthat::expect_error(
+    adapter$run_robustness(valid_data, bad_boot, n_boot = 5.5), "n_boot"
+  )
+  testthat::expect_error(
+    adapter$run_robustness(valid_data, bad_boot, n_boot = 5L, seed = 1.5), "seed"
+  )
+  bad_generator_settings <- list(sd = 0, sd_control = NA_real_, sd_treatment = Inf,
+                                 effect_size = NaN, contamination = 1.1)
+  for (setting_name in names(bad_generator_settings)) {
+    generator <- list(n_per_group = 6L)
+    generator[[setting_name]] <- bad_generator_settings[[setting_name]]
+    scenario <- list(parameters = list(generator = generator))
+    testthat::expect_error(adapter_env$generate_two_sample(scenario, seed = 1L))
+  }
+})
+
+testthat::test_that("degenerate Brunner-Munzel p-values fail explicitly", {
+  adapter_path <- file.path("..", "..", "R", "adapters_two_sample.R")
+  adapter_env <- new.env(parent = globalenv())
+  sys.source(adapter_path, envir = adapter_env)
+  adapter <- adapter_env$two_sample_adapter()
+  data <- list(group1 = rep(1, 6), group2 = rep(1, 6))
+  scenario <- list(parameters = list(analysis = list(test_type = "brunner_munzel")))
+  testthat::expect_error(adapter$primary_decision(data, scenario), "non-finite p")
+  testthat::expect_error(adapter$run_robustness(data, scenario, n_boot = 5L), "non-finite p")
+})

@@ -8,6 +8,24 @@
   stop(condition)
 }
 
+.two_sample_validate_numeric <- function(value, name, integer = FALSE,
+                                          positive = FALSE, lower = -Inf, upper = Inf) {
+  valid <- is.numeric(value) && length(value) == 1L && !is.na(value) && is.finite(value)
+  if (valid && integer) valid <- floor(value) == value
+  if (valid && positive) valid <- value > 0
+  if (valid) valid <- value >= lower && value <= upper
+  if (!valid) .two_sample_abort(sprintf("%s must be a valid numeric%s", name,
+                                        if (integer) " integer" else ""))
+  unname(value)
+}
+
+.two_sample_alpha <- function(analysis, scenario) {
+  value <- analysis$alpha %||% .two_sample_scenario_scalar(scenario, "alpha", 0.05)
+  value <- .two_sample_validate_numeric(value, "alpha", lower = 0, upper = 1)
+  if (!(value > 0 && value < 1)) .two_sample_abort("alpha must be strictly between 0 and 1")
+  value
+}
+
 .two_sample_analysis <- function(scenario) {
   parameters <- if (is.data.frame(scenario)) {
     if (nrow(scenario) != 1L) .two_sample_abort("scenario must contain one row")
@@ -142,7 +160,11 @@
       c(sum(g1), sum(g2)), c(length(g1), length(g2)), correct = correct
     ))
   )
-  list(p = unname(result$p.value), significant = is.finite(result$p.value) && result$p.value < alpha)
+  p <- unname(result$p.value)
+  if (!is.numeric(p) || length(p) != 1L || !is.finite(p)) {
+    .two_sample_abort(sprintf("primary %s returned non-finite p", test_type))
+  }
+  list(p = p, significant = p < alpha)
 }
 
 #' Generate one deterministic two-sample calibration replicate.
@@ -150,9 +172,7 @@
 generate_two_sample <- function(scenario, seed = NULL) {
   settings <- .two_sample_generator_settings(scenario)
   if (is.null(seed)) seed <- .two_sample_scenario_scalar(scenario, "scenario_seed", 123L)
-  if (!is.numeric(seed) || length(seed) != 1L || !is.finite(seed)) {
-    .two_sample_abort("seed must be one finite numeric value")
-  }
+  seed <- .two_sample_validate_numeric(seed, "seed", integer = TRUE, lower = 0)
   old_seed <- if (exists(".Random.seed", .GlobalEnv, inherits = FALSE)) {
     get(".Random.seed", .GlobalEnv, inherits = FALSE)
   } else NULL
@@ -161,22 +181,31 @@ generate_two_sample <- function(scenario, seed = NULL) {
       if (exists(".Random.seed", .GlobalEnv, inherits = FALSE)) rm(".Random.seed", envir = .GlobalEnv)
     } else assign(".Random.seed", old_seed, envir = .GlobalEnv)
   }, add = TRUE)
-  set.seed(as.integer(seed))
+  set.seed(seed)
 
   n_default <- settings$n_per_group %||% settings$n %||%
     .two_sample_scenario_scalar(scenario, "sample_size", 20L)
-  n1 <- as.integer(settings$n_group1 %||% settings$n_control %||% n_default)
-  n2 <- as.integer(settings$n_group2 %||% settings$n_treatment %||% n_default)
-  if (!is.finite(n1) || !is.finite(n2) || n1 < 4L || n2 < 4L) {
-    .two_sample_abort("group sizes must each be at least 4")
-  }
+  n1 <- .two_sample_validate_numeric(
+    settings$n_group1 %||% settings$n_control %||% n_default,
+    "group size", integer = TRUE, positive = TRUE
+  )
+  n2 <- .two_sample_validate_numeric(
+    settings$n_group2 %||% settings$n_treatment %||% n_default,
+    "group size", integer = TRUE, positive = TRUE
+  )
+  if (n1 < 4L || n2 < 4L) .two_sample_abort("group sizes must each be at least 4")
+  n1 <- as.integer(n1)
+  n2 <- as.integer(n2)
   paired <- isTRUE(settings$paired)
   if (paired && n1 != n2) {
     .two_sample_abort("paired designs require equal group sizes")
   }
-  effect <- as.numeric(settings$effect_size %||% settings$mean_difference %||% 0)
-  sd1 <- as.numeric(settings$sd_control %||% settings$sd %||% 1)
-  sd2 <- as.numeric(settings$sd_treatment %||% settings$sd %||% sd1)
+  effect <- .two_sample_validate_numeric(settings$effect_size %||% settings$mean_difference %||% 0,
+                                         "effect_size")
+  sd1 <- .two_sample_validate_numeric(settings$sd_control %||% settings$sd %||% 1,
+                                       "sd_control", positive = TRUE)
+  sd2 <- .two_sample_validate_numeric(settings$sd_treatment %||% settings$sd %||% sd1,
+                                       "sd_treatment", positive = TRUE)
   distribution <- settings$distribution %||% "normal"
   draw <- function(n, sd) {
     if (identical(distribution, "heavy_tailed") || identical(distribution, "t")) {
@@ -204,8 +233,9 @@ generate_two_sample <- function(scenario, seed = NULL) {
     group1 <- draw(n1, sd1)
     group2 <- effect + draw(n2, sd2)
   }
-  contamination <- as.numeric(settings$contamination %||% 0)
-  if (is.finite(contamination) && contamination > 0) {
+  contamination <- .two_sample_validate_numeric(settings$contamination %||% 0,
+                                                 "contamination", lower = 0, upper = 1)
+  if (contamination > 0) {
     n_bad <- min(n2, floor(n2 * contamination))
     if (n_bad > 0L) {
       bad <- sample.int(n2, n_bad)
@@ -221,7 +251,7 @@ two_sample_adapter <- function() {
   primary_decision <- function(data, scenario) {
     test_type <- .two_sample_test_type(scenario)
     analysis <- .two_sample_analysis(scenario)
-    alpha <- as.numeric(analysis$alpha %||% .two_sample_scenario_scalar(scenario, "alpha", 0.05))
+    alpha <- .two_sample_alpha(analysis, scenario)
     correct <- analysis$correct %||% TRUE
     groups <- .two_sample_data(data)
     tested <- tryCatch(
@@ -242,24 +272,35 @@ two_sample_adapter <- function() {
     test_type <- .two_sample_test_type(scenario)
     analysis <- .two_sample_analysis(scenario)
     groups <- .two_sample_data(data)
-    alpha <- as.numeric(analysis$alpha %||% .two_sample_scenario_scalar(scenario, "alpha", 0.05))
+    alpha <- .two_sample_alpha(analysis, scenario)
     correct <- analysis$correct %||% TRUE
     if (is.null(n_boot)) n_boot <- .two_sample_scenario_scalar(scenario, "n_boot", 1000L)
     if (is.null(seed)) seed <- .two_sample_scenario_scalar(scenario, "scenario_seed", 123L)
+    n_boot <- .two_sample_validate_numeric(n_boot, "n_boot", integer = TRUE, positive = TRUE)
+    seed <- .two_sample_validate_numeric(seed, "seed", integer = TRUE, lower = 0)
     removal <- .two_sample_scenario_scalar(scenario, "max_removal_pct", 0.30)
+    .two_sample_validate_numeric(removal, "max_removal_pct", lower = .Machine$double.eps, upper = 1)
+    # Evaluate the exact public primary test first so degenerate cases fail with
+    # the same explicit adapter condition as primary_decision().
+    .two_sample_primary_test(groups$group1, groups$group2, test_type, alpha, correct)
     args <- list(
       group1 = groups$group1, group2 = groups$group2, test_type = test_type,
-      alpha = alpha, n_boot = as.integer(n_boot), max_removal_pct = removal,
-      seed = as.integer(seed), correct = correct
+      alpha = alpha, n_boot = n_boot, max_removal_pct = removal,
+      seed = seed, correct = correct
     )
     weights <- analysis$weights
     if (!is.null(weights)) args$weights <- weights
-    tryCatch(
+    output <- tryCatch(
       do.call(stabilitest::robustness_analysis, args),
       error = function(error) .two_sample_abort(
         sprintf("robustness %s failed: %s", test_type, conditionMessage(error)), error
       )
     )
+    if (!is.numeric(output$original_p) || length(output$original_p) != 1L ||
+        !is.finite(output$original_p)) {
+      .two_sample_abort(sprintf("robustness %s returned non-finite p", test_type))
+    }
+    output
   }
 
   list(primary_decision = primary_decision, run_robustness = run_robustness)

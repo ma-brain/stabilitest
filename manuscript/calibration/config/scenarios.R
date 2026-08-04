@@ -81,11 +81,11 @@ calibration_scenarios <- function() {
   # variance, and effect) rather than merely reserving a new random seed.
   expanded <- tibble::tibble(
     scenario_id = c(
-      "two_sample_core_null_n20", "two_sample_core_moderate_n40",
-      "two_sample_core_large_n80", "two_sample_stress_null_n20",
-      "two_sample_stress_moderate_n40", "two_sample_stress_large_n80",
-      "two_sample_validation_null_n30", "two_sample_validation_moderate_n60",
-      "two_sample_validation_large_n100"
+      "two_sample_core_null_n20", "two_sample_core_borderline_n40",
+      "two_sample_core_clear_n80", "two_sample_stress_null_n20",
+      "two_sample_stress_borderline_n40", "two_sample_stress_clear_n80",
+      "two_sample_validation_null_n30", "two_sample_validation_borderline_n60",
+      "two_sample_validation_clear_n100"
     ),
     analysis_family = rep("two_sample", 9L),
     endpoint = rep("mean_difference", 9L),
@@ -96,7 +96,7 @@ calibration_scenarios <- function() {
       "t.test", "t.test", "t.test", "brunner_munzel", "wilcoxon", "t.test",
       "paired.t.test", "brunner_munzel", "wilcoxon"
     ),
-    truth_class = rep(c("null", "moderate", "large"), 3L),
+    truth_class = rep(c("null", "borderline", "clear"), 3L),
     target_conclusion = rep(c("non_significant", "significant", "significant"), 3L),
     sample_size = c(20L, 40L, 80L, 20L, 40L, 80L, 30L, 60L, 100L),
     n_boot = rep(1000L, 9L),
@@ -143,7 +143,7 @@ calibration_scenarios <- function() {
     data_generator = rep("generate_two_sample", 4L),
     primary_adapter = rep("two_sample_primary_decision", 4L),
     robustness_adapter = c("t.test", "fisher", "chisq", "prop"),
-    truth_class = c("moderate", "null", "null", "moderate"),
+    truth_class = c("borderline", "null", "null", "borderline"),
     target_conclusion = c("significant", "non_significant", "non_significant", "significant"),
     sample_size = c(28L, 42L, 54L, 60L),
     n_boot = rep(1000L, 4L),
