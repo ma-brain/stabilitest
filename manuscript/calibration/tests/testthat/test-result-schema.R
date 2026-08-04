@@ -281,6 +281,20 @@ testthat::test_that("failed rows cannot carry selected or analysis results", {
     schema_env$validate_calibration_replicates(contaminated),
     "failed.*assigned_label"
   )
+
+  invalid_seed <- failure
+  invalid_seed$replicate_seed[[1L]] <- NaN
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_seed),
+    "failed.*replicate_seed"
+  )
+  testthat::expect_error(
+    schema_env$new_calibration_failure(
+      scenarios[1L, , drop = FALSE], 9L, "analysis", simpleError("bad seed"),
+      replicate_seed = NaN
+    ),
+    "replicate_seed"
+  )
 })
 
 testthat::test_that("empty artifacts still have valid column classes", {

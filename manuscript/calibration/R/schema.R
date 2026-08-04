@@ -66,6 +66,16 @@ CALIBRATION_REPLICATE_COLUMNS <- c(
   all(missing)
 }
 
+.is_optional_nonnegative_integer <- function(value) {
+  if (length(value) != 1L) {
+    return(FALSE)
+  }
+  if (is.na(value)) {
+    return(!(is.numeric(value) && is.nan(value)))
+  }
+  .is_scalar_integer(value, positive = FALSE) && value >= 0
+}
+
 .assert_numeric_range <- function(x, name, lower = -Inf, upper = Inf,
                                   lower_open = FALSE, upper_open = FALSE,
                                   rows = seq_along(x)) {
@@ -318,9 +328,13 @@ validate_calibration_replicates <- function(x) {
     positive <- column == "n"
     if (length(values) > 0L && any(vapply(
       values,
-      function(value) !is.na(value) &&
-        (!.is_scalar_integer(value, positive = positive) ||
-         (column %in% c("replicate_seed", "bootstrap_seed") && value < 0)),
+      function(value) {
+        if (is.na(value)) {
+          return(is.numeric(value) && is.nan(value))
+        }
+        !.is_scalar_integer(value, positive = positive) ||
+          (column %in% c("replicate_seed", "bootstrap_seed") && value < 0)
+      },
       logical(1)
     ))) {
       .schema_abort(sprintf("failed %s values must be missing or valid integers", column))
@@ -403,8 +417,7 @@ new_calibration_failure <- function(scenario, replicate_id, stage, condition,
   }
   for (seed in c("replicate_seed", "bootstrap_seed")) {
     value <- get(seed)
-    if (length(value) != 1L || (!is.na(value) &&
-                               (!.is_scalar_integer(value, positive = FALSE) || value < 0))) {
+    if (!.is_optional_nonnegative_integer(value)) {
       .schema_abort(sprintf("%s must be a non-negative integer or NA", seed))
     }
   }
