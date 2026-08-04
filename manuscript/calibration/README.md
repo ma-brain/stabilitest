@@ -14,8 +14,8 @@ paths are ignored by Git; published and compact summary artifacts are
 intentionally tracked.
 
 The `run_calibration.R` and `analyse_calibration.R` commands below are the
-frozen future entry-point contract and will arrive in later tasks.  Task 1 only
-defines and tests the scenario contract; these commands are not runnable yet.
+canonical CLI entry points for screening, analysis, candidate freezing, and
+publication.  Both scripts are present and runnable from the project root.
 
 ## Canonical commands
 
