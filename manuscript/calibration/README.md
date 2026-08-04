@@ -63,6 +63,12 @@ run.  Only a production `full` run may feed candidate fitting, validation, and
 publication.  Full, analysis, and publish commands must be rerun whenever the
 scenario contract or package version changes.
 
+Train versus held-out membership is assigned by `design_layer` in the scenario
+registry: `validation` rows are held-out; `core`/`stress` rows are training
+(pilot further restricts to `core`).  Use `--validation-only` for the held-out
+run.  The schema field `training_split` is retained for contract stability but
+is unused by the current runner.
+
 ## Files
 
 - `CALIBRATION_SAP.md` is the statistical analysis plan and decision policy.

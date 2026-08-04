@@ -4,7 +4,7 @@
 
 Calibration is analysis-specific.  Each scenario in `config/scenarios.R` fixes
 the data-generating truth, endpoint, adapter, sample size, removal budget,
-training split, seed, and `n_boot = 1000`.  The estimand is the probability that
+design layer, seed, and `n_boot = 1000`.  The estimand is the probability that
 the reported robustness score leads to the correct pre-specified conclusion for
 an independent held-out replicate from the same scenario family.
 
@@ -23,11 +23,26 @@ replacement for the primary hypothesis test.
 
 ## Training and held-out evaluation
 
-The `training_split` column determines the deterministic split within each
-scenario and seed.  Training replicates are used only to fit calibration maps,
-choose any family-specific intercept/slope, and estimate uncertainty.  Held-out
-replicates are untouched until final evaluation.  No seed, replicate, or
-scenario may occur in both sets; resume checkpoints must preserve this split.
+Train versus held-out membership is assigned by the scenario `design_layer`
+column.  The runner (`.calibration_select_scenarios` in `run_calibration.R`)
+selects rows as follows:
+
+- `validation` = held-out (`--mode full --validation-only`);
+- `core` and `stress` = training for production (`--mode full` without
+  `--validation-only`);
+- pilot runs further restrict training to `core` only (stress and validation
+  rows are reserved for production or held-out runs).
+
+Training replicates are used only to fit calibration maps, choose any
+family-specific intercept/slope, and estimate uncertainty.  Held-out
+replicates are untouched until final evaluation.  No scenario may occur in
+both the training and held-out sets; resume checkpoints must preserve this
+split.
+
+The `training_split` column remains in the scenario schema (typically 0.7) for
+contract stability.  It is not read by the current runner and does not
+determine train/held-out membership.  Any future within-scenario subsampling
+would require an explicit runner change and an SAP update.
 
 For each score band, report the held-out calibration rate, Monte Carlo standard
 error, and a binomial confidence interval.  Production calibration of each core
@@ -122,11 +137,12 @@ cannot change this policy.
 
 ## Primary and sensitivity analyses
 
-The primary analysis uses the frozen adapters, score cutoffs (55, 70), training
-split, removal budget, and `n_boot = 1000` in the scenario table.  Sensitivity
-analyses vary one item at a time: the shared cutoffs, the training split, the
-removal budget, and the bootstrap seed.  Family-specific adapter substitutions
-are sensitivity analyses, never replacements for the primary adapter.
+The primary analysis uses the frozen adapters, score cutoffs (55, 70),
+design-layer train/held-out assignment, removal budget, and `n_boot = 1000` in
+the scenario table.  Sensitivity analyses vary one item at a time: the shared
+cutoffs, the removal budget, and the bootstrap seed.  Family-specific adapter
+substitutions are sensitivity analyses, never replacements for the primary
+adapter.
 
 ## Exclusions and failure reporting
 

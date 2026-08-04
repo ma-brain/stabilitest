@@ -33,6 +33,8 @@
   if (!identical(options$engine, "all")) {
     selected <- selected[selected$analysis_family == options$engine, , drop = FALSE]
   }
+  # Train/held-out authority is design_layer (not training_split): validation =
+  # held-out; core/stress = training.  Pilot further restricts to core only.
   if (isTRUE(options$validation_only)) {
     selected <- selected[selected$design_layer == "validation", , drop = FALSE]
   } else if (identical(options$mode, "pilot")) {
