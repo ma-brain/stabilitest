@@ -1,0 +1,30 @@
+list(
+  artifact_kind = "calibration-publication-manifest",
+  artifact_version = "calibration-publication-1",
+  manifest_version = "calibration-1",
+  status = "reduced_fixture",
+  mode = "full",
+  split = "validation",
+  options = list(mode = "full", phase = "all", engine = "all",
+                 validation_only = TRUE, split = "validation"),
+  scenario_manifest_hash = "f543a90c41a342497f07f1287503eb5b",
+  scenario_count = 35L,
+  scenario_ids = c("fake_family_heldout", "shared_family_heldout", "failed_family_heldout"),
+  n_boot = 1000L,
+  target_replicates = 500L,
+  minimum_heldout_stratum = 100L,
+  attempted_replicates = 900L,
+  completed_replicates = 900L,
+  failed_replicates = 0L,
+  reduced_fixture = TRUE,
+  fixture_source = "manuscript/calibration/tests/fixtures/validation-replicates.rds",
+  fixture_source_md5 = "a645588026e8f04367ace047e071498e",
+  candidate_hash = "a0a017fcb1bd8e2a6f11dcde16b4aea2",
+  registry_hash = "690467ca331d162feea16386b5921a3a",
+  validation_refit = FALSE,
+  unsupported = c(
+    "Full 35-scenario publication quotas were not executed in this environment; this deterministic fixture is reduced.",
+    "The held-out fixture is used once against the frozen candidate; no validation refit is permitted.",
+    "Unfilled production strata are unsupported for publication claims and require a full run before release."
+  )
+)

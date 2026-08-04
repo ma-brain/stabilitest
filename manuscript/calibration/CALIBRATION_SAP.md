@@ -141,3 +141,22 @@ declared.
 
 All changes to scenarios, adapters, package code, or random-number handling
 require a new calibration run and an updated audit manifest.
+
+## Task 15 execution record
+
+The publication-grade command was exercised through the locked training →
+freeze → held-out flow using the deterministic reduced fixtures under
+`tests/fixtures/`.  A full 35-scenario run with `n_boot = 1000` and the frozen
+500-completed-replicate core quotas was not computationally practical in this
+environment, so it is explicitly unsupported for publication claims here.
+The reduced run retained the frozen scenario manifest hash
+`f543a90c41a342497f07f1287503eb5b`, recorded 600 completed and 300 failed
+training rows, and evaluated 900 held-out rows once.  The frozen candidate hash
+is `a0a017fcb1bd8e2a6f11dcde16b4aea2`; held-out validation recorded
+`validation_refit = FALSE` and produced registry hash
+`690467ca331d162feea16386b5921a3a`.
+
+Compact manifests, registry tables, and their MD5 ledger are tracked under
+`published/`.  Failed rows and any unfilled production strata remain explicit
+diagnostics; a complete full run is required before these artifacts can support
+package interpretation metadata or release claims.

@@ -1,0 +1,4 @@
+d86eec336aa432956aa7828db3bea714  manuscript/calibration/published/training-manifest.dput
+e5f34706e971866b0b11f8fe09b9c8ee  manuscript/calibration/published/validation-manifest.dput
+9be7d3614bec539d78e7ee5ab6ac43e8  manuscript/calibration/published/calibration-registry.csv
+38d5ea4e90c8124bcf1bafc7d70630ef  manuscript/calibration/published/non-significant-registry.csv
