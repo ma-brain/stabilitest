@@ -70,7 +70,8 @@ generate_survival <- generate_cox
   if (sum(data$event > 0, na.rm = TRUE) == 0L) stop("no event observations", call. = FALSE)
   if (length(unique(data$event[!is.na(data$event)])) < 2L && any(data$event == 0))
     stop("all observations are censored", call. = FALSE)
-  if (any(!is.finite(stats::coef(fit)))) stop("nonconvergent Cox model", call. = FALSE)
+  if (any(!is.finite(stats::coef(fit))) || (!is.null(fit$iter) && fit$iter >= 20L))
+    stop("nonconvergent Cox model", call. = FALSE)
   spec <- stabilitest:::resolve_model_term(fit, term)
   test <- stabilitest:::surv_term_test(fit, spec)
   if (is.null(test) && identical(spec$type, "joint")) {
