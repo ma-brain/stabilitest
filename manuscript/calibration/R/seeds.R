@@ -39,7 +39,11 @@
 }
 
 .calibration_set_rng_kind <- function() {
-  RNGkind("L'Ecuyer-CMRG")
+  RNGkind(
+    kind = "L'Ecuyer-CMRG",
+    normal.kind = "Inversion",
+    sample.kind = "Rejection"
+  )
   invisible(NULL)
 }
 

@@ -64,6 +64,34 @@ checkpoint_path <- function(root, scenario_id, stratum) {
   as.integer(length(x))
 }
 
+.checkpoint_read_serialized <- function(path) {
+  # Task 3 checkpoints are uncompressed RDS streams (`X\n`) so the connection
+  # can be checked for trailing bytes. Compressed RDS envelopes are rejected
+  # explicitly; regenerate them with this writer before resuming.
+  header_connection <- file(path, open = "rb")
+  on.exit(close(header_connection), add = TRUE)
+  header <- readBin(header_connection, what = "raw", n = 2L)
+  uncompressed_header <- length(header) == 2L &&
+    identical(as.integer(header), as.integer(charToRaw("X\n")))
+  if (!uncompressed_header) {
+    .checkpoint_abort(
+      "unsupported compressed checkpoint format; regenerate as uncompressed v1"
+    )
+  }
+
+  connection <- file(path, open = "rb")
+  on.exit(close(connection), add = TRUE)
+  value <- readRDS(connection)
+  repeat {
+    trailing <- readBin(connection, what = "raw", n = 65536L)
+    if (length(trailing) == 0L) {
+      break
+    }
+    .checkpoint_abort("checkpoint contains trailing bytes")
+  }
+  value
+}
+
 .checkpoint_read_envelope <- function(path, manifest_hash) {
   path <- .checkpoint_scalar_text(path, "path")
   manifest_hash <- .checkpoint_scalar_text(manifest_hash, "manifest_hash")
@@ -71,20 +99,8 @@ checkpoint_path <- function(root, scenario_id, stratum) {
   if (!file.exists(path) || is.null(info) || isTRUE(info$isdir)) {
     .checkpoint_abort("checkpoint does not exist")
   }
-  connection <- file(path, open = "rb")
-  on.exit(close(connection), add = TRUE)
   envelope <- tryCatch(
-    {
-      value <- readRDS(connection)
-      repeat {
-        trailing <- readBin(connection, what = "raw", n = 65536L)
-        if (length(trailing) == 0L) {
-          break
-        }
-        .checkpoint_abort("checkpoint contains trailing bytes")
-      }
-      value
-    },
+    .checkpoint_read_serialized(path),
     error = function(error) {
       .checkpoint_abort(sprintf("invalid or truncated checkpoint: %s", conditionMessage(error)))
     }

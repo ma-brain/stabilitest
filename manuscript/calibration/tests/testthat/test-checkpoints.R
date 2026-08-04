@@ -47,6 +47,36 @@ testthat::test_that("checkpoints round-trip with manifest validation", {
   testthat::expect_false(checkpoint_env$checkpoint_complete(path, "manifest-v2", target_n = 1L))
 })
 
+testthat::test_that("compressed RDS envelopes are rejected with a clear format error", {
+  root <- tempfile("calibration-artifacts-")
+  path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
+  value <- data.frame(replicate_id = 1:3, score = c(70, 80, 90))
+  envelope <- list(
+    version = 1L,
+    manifest_hash = "manifest-v1",
+    complete = TRUE,
+    target_n = 3L,
+    payload = value
+  )
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  saveRDS(envelope, path, version = 3, compress = TRUE)
+
+  testthat::expect_error(
+    checkpoint_env$read_checkpoint(path, "manifest-v1"),
+    "unsupported compressed checkpoint"
+  )
+  testthat::expect_false(checkpoint_env$checkpoint_complete(path, "manifest-v1", target_n = 3L))
+
+  connection <- file(path, open = "ab")
+  writeBin(charToRaw("trailing-garbage"), connection)
+  close(connection)
+  testthat::expect_error(
+    checkpoint_env$read_checkpoint(path, "manifest-v1"),
+    "unsupported compressed checkpoint"
+  )
+  testthat::expect_false(checkpoint_env$checkpoint_complete(path, "manifest-v1", target_n = 3L))
+})
+
 testthat::test_that("truncated checkpoints are rejected and are not resumable", {
   root <- tempfile("calibration-artifacts-")
   path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
