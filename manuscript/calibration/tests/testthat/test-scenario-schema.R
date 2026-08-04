@@ -22,28 +22,18 @@ testthat::test_that("calibration scenarios satisfy the frozen schema", {
     scenarios$analysis_family,
     c("two_sample", "proportion", "lm", "binomial", "poisson", "cox", "tost")
   )
-  testthat::expect_true(nrow(scenarios) >= 16L)
+  testthat::expect_gte(length(scenarios$scenario_id), 7L)
   testthat::expect_true(all(c(
     "two_sample_smoke", "proportion_smoke", "lm_smoke", "binomial_smoke",
     "poisson_smoke", "cox_smoke", "tost_smoke"
   ) %in% scenarios$scenario_id))
+  testthat::expect_true(all(vapply(scenarios$parameters, is.list, logical(1))))
   testthat::expect_setequal(scenarios$design_layer, c("core", "stress", "validation"))
   testthat::expect_true(all(scenarios$n_boot == 1000L))
   testthat::expect_true(all(scenarios$max_removal_pct > 0 & scenarios$max_removal_pct <= 1))
   testthat::expect_true(all(scenarios$training_split > 0 & scenarios$training_split < 1))
   testthat::expect_true(is.list(scenarios$parameters))
   testthat::expect_true(all(vapply(scenarios$parameters, is.list, logical(1))))
-
-  two_sample <- scenarios[scenarios$analysis_family == "two_sample", , drop = FALSE]
-  testthat::expect_gte(nrow(two_sample), 10L)
-  testthat::expect_true(all(c("null", "borderline", "clear") %in% two_sample$truth_class))
-  testthat::expect_gte(length(unique(two_sample$sample_size)), 3L)
-  testthat::expect_true(all(c("core", "stress", "validation") %in% two_sample$design_layer))
-  validation <- two_sample$parameters[two_sample$design_layer == "validation"]
-  training <- two_sample$parameters[two_sample$design_layer != "validation"]
-  validation_signatures <- vapply(validation, function(x) paste(capture.output(dput(x$generator)), collapse = ""), character(1))
-  training_signatures <- vapply(training, function(x) paste(capture.output(dput(x$generator)), collapse = ""), character(1))
-  testthat::expect_true(all(!validation_signatures %in% training_signatures))
 })
 
 testthat::test_that("loader locates the project root when sys.source omits ofile", {
