@@ -15,6 +15,21 @@ testthat::test_that("checkpoint paths are deterministic and scoped by scenario a
   testthat::expect_false(file.exists(path))
 })
 
+testthat::test_that("checkpoint paths reject traversal and empty components", {
+  root <- tempfile("calibration-artifacts-")
+  invalid_components <- c("", ".", "..", "nested/scenario", "nested\\scenario")
+  for (invalid in invalid_components) {
+    testthat::expect_error(
+      checkpoint_env$checkpoint_path(root, invalid, "selected"),
+      "scenario_id|path"
+    )
+    testthat::expect_error(
+      checkpoint_env$checkpoint_path(root, "two_sample_smoke", invalid),
+      "stratum|path"
+    )
+  }
+})
+
 testthat::test_that("checkpoints round-trip with manifest validation", {
   root <- tempfile("calibration-artifacts-")
   path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
@@ -46,6 +61,55 @@ testthat::test_that("truncated checkpoints are rejected and are not resumable", 
     "invalid|truncated|checkpoint"
   )
   testthat::expect_false(checkpoint_env$checkpoint_complete(path, "manifest-v1", target_n = 1L))
+})
+
+testthat::test_that("checkpoints with trailing bytes are rejected and are not resumable", {
+  root <- tempfile("calibration-artifacts-")
+  path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
+  checkpoint_env$write_checkpoint(data.frame(replicate_id = 1:3), path, "manifest-v1")
+
+  connection <- file(path, open = "ab")
+  writeBin(charToRaw("trailing-garbage"), connection)
+  close(connection)
+
+  testthat::expect_error(
+    checkpoint_env$read_checkpoint(path, "manifest-v1"),
+    "invalid|trailing|checkpoint"
+  )
+  testthat::expect_false(checkpoint_env$checkpoint_complete(path, "manifest-v1", target_n = 1L))
+})
+
+testthat::test_that("even zero trailing bytes invalidate a checkpoint", {
+  root <- tempfile("calibration-artifacts-")
+  path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
+  checkpoint_env$write_checkpoint(data.frame(replicate_id = 1:3), path, "manifest-v1")
+
+  connection <- file(path, open = "ab")
+  writeBin(as.raw(c(0L, 0L)), connection)
+  close(connection)
+
+  testthat::expect_error(
+    checkpoint_env$read_checkpoint(path, "manifest-v1"),
+    "trailing|checkpoint"
+  )
+  testthat::expect_false(checkpoint_env$checkpoint_complete(path, "manifest-v1", target_n = 1L))
+})
+
+testthat::test_that("malformed target_n metadata is rejected", {
+  root <- tempfile("calibration-artifacts-")
+  path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
+  malformed <- list(target_n = "three", replicates = data.frame(replicate_id = 1:3))
+
+  testthat::expect_error(
+    checkpoint_env$write_checkpoint(malformed, path, "manifest-v1"),
+    "target_n"
+  )
+
+  inconsistent <- list(target_n = 5L, replicates = data.frame(replicate_id = 1:3))
+  testthat::expect_error(
+    checkpoint_env$write_checkpoint(inconsistent, path, "manifest-v1"),
+    "target_n|replicate"
+  )
 })
 
 testthat::test_that("failed writes clean temporary files", {

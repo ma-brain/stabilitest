@@ -12,6 +12,14 @@
   value
 }
 
+.checkpoint_component <- function(value, name) {
+  value <- .checkpoint_scalar_text(value, name)
+  if (value %in% c(".", "..") || grepl("[/\\\\]", value)) {
+    .checkpoint_abort(sprintf("%s must be one safe path component", name))
+  }
+  value
+}
+
 .checkpoint_scalar_integer <- function(value, name, nonnegative = FALSE) {
   if (!is.numeric(value) || length(value) != 1L || is.na(value) ||
       !is.finite(value) || floor(value) != value ||
@@ -25,19 +33,27 @@
 # Return the canonical checkpoint location below an artifact root.
 checkpoint_path <- function(root, scenario_id, stratum) {
   root <- .checkpoint_scalar_text(root, "root")
-  scenario_id <- .checkpoint_scalar_text(scenario_id, "scenario_id")
-  stratum <- .checkpoint_scalar_text(stratum, "stratum")
-  if (grepl("[/\\\\]", scenario_id) || grepl("[/\\\\]", stratum)) {
-    .checkpoint_abort("scenario_id and stratum cannot contain path separators")
-  }
+  scenario_id <- .checkpoint_component(scenario_id, "scenario_id")
+  stratum <- .checkpoint_component(stratum, "stratum")
   file.path(root, "checkpoints", scenario_id, paste0(stratum, ".rds"))
 }
 
 .checkpoint_target_n <- function(x) {
-  if (is.list(x) && !is.null(x$target_n) && length(x$target_n) == 1L &&
-      is.numeric(x$target_n) && is.finite(x$target_n) &&
-      floor(x$target_n) == x$target_n && x$target_n >= 0) {
-    return(as.integer(x$target_n))
+  if (is.list(x) && !is.data.frame(x) && "target_n" %in% names(x)) {
+    target_n <- x$target_n
+    if (length(target_n) != 1L || !is.numeric(target_n) || is.na(target_n) ||
+        !is.finite(target_n) || floor(target_n) != target_n || target_n < 0 ||
+        target_n > .Machine$integer.max) {
+      .checkpoint_abort("target_n metadata must be one non-negative integer")
+    }
+    target_n <- as.integer(target_n)
+    if ("replicates" %in% names(x)) {
+      replicate_n <- .checkpoint_target_n(x$replicates)
+      if (!identical(target_n, replicate_n)) {
+        .checkpoint_abort("target_n metadata does not match replicate count")
+      }
+    }
+    return(target_n)
   }
   if (is.data.frame(x)) {
     return(as.integer(nrow(x)))
@@ -55,8 +71,20 @@ checkpoint_path <- function(root, scenario_id, stratum) {
   if (!file.exists(path) || is.null(info) || isTRUE(info$isdir)) {
     .checkpoint_abort("checkpoint does not exist")
   }
+  connection <- file(path, open = "rb")
+  on.exit(close(connection), add = TRUE)
   envelope <- tryCatch(
-    readRDS(path),
+    {
+      value <- readRDS(connection)
+      repeat {
+        trailing <- readBin(connection, what = "raw", n = 65536L)
+        if (length(trailing) == 0L) {
+          break
+        }
+        .checkpoint_abort("checkpoint contains trailing bytes")
+      }
+      value
+    },
     error = function(error) {
       .checkpoint_abort(sprintf("invalid or truncated checkpoint: %s", conditionMessage(error)))
     }
@@ -106,7 +134,7 @@ write_checkpoint <- function(x, path, manifest_hash) {
     payload = x
   )
   tryCatch(
-    saveRDS(envelope, temporary, version = 3),
+    saveRDS(envelope, temporary, version = 3, compress = FALSE),
     error = function(error) {
       .checkpoint_abort(sprintf("unable to write checkpoint: %s", conditionMessage(error)))
     }
