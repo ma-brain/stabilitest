@@ -76,6 +76,113 @@ plot(res)
 
 Set `interpret = TRUE` to attach a narrative report (`res$interpretation$report`) that restates the components and a band-based recommendation.
 
+## Choosing an analysis
+
+All public entry points apply the same three-part robustness framework, but the
+primary test and the unit removed or resampled differ. Choose the function that
+matches the pre-specified analysis rather than selecting one from the resulting
+robustness score.
+
+| Analysis question | Entry point | Primary test represented in the robustness calculation |
+|-------------------|-------------|---------------------------------------------------------|
+| Independent or paired continuous groups | `robustness_analysis()` | Welch or paired *t* test |
+| Rank-based comparison | `robustness_analysis()` | Wilcoxon rank-sum/signed-rank, or unpaired Brunner–Munzel |
+| Two independent binary groups | `robustness_analysis()` | Fisher exact, chi-square, or `prop.test` |
+| Linear model / ANCOVA term | `robustness_lm()` | Coefficient *t* test or multi-df joint F test |
+| Binary or count regression term | `robustness_glm()` | Binomial-logit or Poisson-log coefficient test / joint LRT |
+| Cox proportional-hazards term | `robustness_surv()` | Coefficient Wald test or multi-df joint LRT |
+| Equivalence or non-inferiority | `robustness_tost()` | Mean difference, risk difference, or odds-ratio TOST/NI |
+
+Representative calls are shown below. They are not evaluated in this case-study
+vignette so that it remains quick to build.
+
+```{r analysis-selection, eval = FALSE}
+# Rank tests: Brunner–Munzel is unpaired and allows unequal variances.
+rank_res <- robustness_analysis(
+  group1, group2, test_type = "brunner_munzel", n_boot = 1000
+)
+
+# Individual-level binary outcomes, coded 0/1 or logical.
+binary_res <- robustness_analysis(
+  responders_active, responders_control,
+  test_type = "fisher", n_boot = 1000
+)
+
+# A coefficient name requests its usual single-df test.
+ancova_res <- robustness_lm(
+  change ~ arm + baseline, trial_data,
+  term = "armActive", n_boot = 1000
+)
+
+# A multi-level term label requests the corresponding joint test.
+ancova_joint <- robustness_lm(
+  change ~ arm + baseline, trial_data,
+  term = "arm", n_boot = 1000
+)
+
+# Supported GLMs use family objects. Composite score weights and observation
+# weights are separate arguments: weights versus obs_weights.
+glm_res <- robustness_glm(
+  response ~ arm + baseline, trial_data,
+  term = "armActive", family = binomial(),
+  obs_weights = trial_data$analysis_weight, n_boot = 1000
+)
+poisson_res <- robustness_glm(
+  events ~ arm + offset(log(exposure)), event_data,
+  term = "arm", family = poisson(), n_boot = 1000
+)
+
+cox_res <- robustness_surv(
+  survival::Surv(time, event) ~ arm + age, survival_data,
+  term = "armActive", n_boot = 1000
+)
+
+# Equivalence uses both one-sided tests; NI uses the relevant one-sided test.
+equivalence_res <- robustness_tost(
+  group1, group2, type = "equivalence", endpoint = "mean",
+  margin = 0.5, n_boot = 1000
+)
+ni_or_res <- robustness_tost(
+  responders_active, responders_control,
+  type = "noninferiority", endpoint = "or", margin = 1.25,
+  higher_is_better = TRUE, n_boot = 1000
+)
+```
+
+For rank tests, the reported location effect is the Hodges–Lehmann shift;
+Brunner–Munzel also records stochastic superiority. Binary TOST/NI currently
+uses Wald risk-difference or log-odds-ratio methods, which can be
+anticonservative with sparse tables. See each function's help page for its
+assumptions and endpoint-specific limitations.
+
+## Reliability checks and result diagnostics
+
+Current releases fail explicitly when a robustness component cannot support a
+meaningful calculation:
+
+- A removal analysis must have capacity for at least one deletion while
+  retaining the engine's minimum sample size. A no-flip value of `max_k + 1`
+  is a right-censored result and is reported only after the full configured
+  deletion horizon has been evaluated; it does not mean the conclusion can
+  never be overturned.
+- Two-sample bootstrap attempts with errors or non-finite *p*-values remain in
+  `res$bootstrap$results`. Finite replicates determine the summaries, while
+  `res$bootstrap$n_valid` and `res$bootstrap$n_failed` make the accounting
+  visible. An entirely degenerate bootstrap raises an error.
+- `robustness_lm()`, `robustness_glm()`, and `robustness_surv()` apply every
+  deletion and resample to exactly the rows retained by the full fitted model.
+  Their reported `n` therefore excludes rows omitted for missing model
+  variables; GLM `obs_weights` stay aligned with the retained original rows.
+- Composite `weights` must be a named numeric vector containing exactly
+  `jackknife`, `fragility`, and `bootstrap`, with finite non-negative values
+  that sum to one. These are distinct from GLM observation weights.
+
+The two-sample and model-based result classes expose aligned aliases for common
+fields: `metrics` / `robustness_metrics`, `interpretation_label` /
+`robustness_interpretation`, and `original_estimate` / `original_mean_diff`.
+Component objects remain class-specific, so inspect `str(result)` or the
+function's `Value` help section before writing downstream extraction code.
+
 ## Interpretation bands
 
 With default weights, bands were calibrated by simulation *conditional on a significant result* (the setting in which the framework is usually consulted):
@@ -111,7 +218,7 @@ For **non-significant** primary results the composite bands are **not** calibrat
 - The greedy fragility index is an *upper bound* on the size of a minimal overturning subset; a smaller set may exist.
 - Binary significance framing inherits the usual knife-edge problem near α; always inspect the *p*-value trajectory, not only *k*_frag.
 - Adversarial removal asks “could the data support the opposite conclusion?” and should complement, not replace, assumption-based sensitivity analyses (missing data, model form).
-- Calibration was performed for the Welch test under normality with directional contamination; ANCOVA / Cox engines share the same scoring logic but are not yet separately calibrated.
+- Calibration was performed for the Welch test under normality with directional contamination; ANCOVA, GLM, Cox, and TOST/NI engines share the same scoring logic but are not yet separately calibrated.
 - Pre-specify weights, `max_removal_pct`, and bands in the SAP when used in confirmatory work.
 
 Further methodological detail, simulation tables, and reporting templates are in the accompanying manuscript / methodological notes (development source tree and related project materials). For model-based terms see `robustness_lm()`, `robustness_glm()`, and `robustness_surv()`.
