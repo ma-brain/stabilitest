@@ -38,7 +38,7 @@ testthat::test_that("calibration scenarios satisfy the frozen schema", {
   testthat::expect_true(all(vapply(scenarios$parameters, is.list, logical(1))))
 })
 
-testthat::test_that("loader retains its source path in an isolated environment", {
+testthat::test_that("loader locates the project root when sys.source omits ofile", {
   loader_path <- normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE)
   loader_env <- new.env(parent = globalenv())
 
