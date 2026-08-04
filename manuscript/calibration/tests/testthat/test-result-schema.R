@@ -147,7 +147,9 @@ testthat::test_that("replicate validation rejects malformed completed artifacts"
     list(column = "fragility_k", value = 1.5),
     list(column = "n", value = 50.5),
     list(column = "replicate_seed", value = 1101001.5),
-    list(column = "bootstrap_seed", value = 1101001001.5)
+    list(column = "bootstrap_seed", value = 1101001001.5),
+    list(column = "replicate_seed", value = -1L),
+    list(column = "bootstrap_seed", value = -1L)
   )) {
     invalid_metric <- replicate
     invalid_metric[[invalid_integer_metric$column]][[1L]] <- invalid_integer_metric$value
