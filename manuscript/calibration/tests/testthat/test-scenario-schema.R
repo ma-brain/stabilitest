@@ -24,6 +24,8 @@ testthat::test_that("calibration scenarios satisfy the frozen schema", {
   )
   testthat::expect_setequal(scenarios$design_layer, c("core", "stress", "validation"))
   testthat::expect_true(all(scenarios$n_boot == 1000L))
+  testthat::expect_true(all(scenarios$max_removal_pct > 0 & scenarios$max_removal_pct <= 1))
+  testthat::expect_true(all(scenarios$training_split > 0 & scenarios$training_split < 1))
   testthat::expect_true(is.list(scenarios$parameters))
   testthat::expect_true(all(vapply(scenarios$parameters, is.list, logical(1))))
 })

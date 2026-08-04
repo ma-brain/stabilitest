@@ -11,6 +11,10 @@ runners must use the current checkout (via `R/load_calibration.R`), preserve the
 scenario seed, and write large intermediate files below `artifacts/` (which is
 ignored by Git).
 
+The `run_calibration.R` and `analyse_calibration.R` commands below are the
+frozen future entry-point contract and will arrive in later tasks.  Task 1 only
+defines and tests the scenario contract; these commands are not runnable yet.
+
 ## Canonical commands
 
 Run these commands from the project root.  The runner CLI is frozen as

@@ -41,7 +41,7 @@ calibration_scenarios <- function() {
     ),
     sample_size = c(50L, 80L, 80L, 120L, 120L, 160L, 80L),
     n_boot = rep(1000L, 7L),
-    max_removal_pct = rep(30, 7L),
+    max_removal_pct = rep(0.30, 7L),
     training_split = rep(0.7, 7L),
     scenario_seed = c(1101L, 1201L, 1301L, 1401L, 1501L, 1601L, 1701L),
     parameters = list(
