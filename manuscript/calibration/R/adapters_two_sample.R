@@ -1,0 +1,257 @@
+# Analysis-specific generator and adapters for two-sample calibration.
+
+.two_sample_abort <- function(message, cause = NULL) {
+  condition <- structure(
+    list(message = as.character(message), call = NULL, cause = cause),
+    class = c("two_sample_adapter_error", "error", "condition")
+  )
+  stop(condition)
+}
+
+.two_sample_analysis <- function(scenario) {
+  parameters <- if (is.data.frame(scenario)) {
+    if (nrow(scenario) != 1L) .two_sample_abort("scenario must contain one row")
+    scenario$parameters[[1L]]
+  } else if (is.list(scenario)) {
+    scenario$parameters %||% scenario
+  } else {
+    .two_sample_abort("scenario must be a list or one-row data frame")
+  }
+  if (!is.list(parameters)) parameters <- list()
+  analysis <- parameters$analysis
+  if (is.null(analysis)) analysis <- list()
+  if (!is.list(analysis)) .two_sample_abort("scenario analysis settings must be a list")
+  analysis
+}
+
+.two_sample_generator_settings <- function(scenario) {
+  parameters <- if (is.data.frame(scenario)) scenario$parameters[[1L]] else scenario$parameters
+  if (is.null(parameters) || !is.list(parameters)) return(list())
+  generator <- parameters$generator
+  if (is.null(generator)) list() else generator
+}
+
+.two_sample_scenario_scalar <- function(scenario, field, default) {
+  value <- if (is.data.frame(scenario)) {
+    if (!field %in% names(scenario)) NULL else scenario[[field]][[1L]]
+  } else if (is.list(scenario)) {
+    scenario[[field]]
+  } else NULL
+  if (is.null(value) || length(value) != 1L || is.na(value)) default else value
+}
+
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
+.two_sample_test_type <- function(scenario) {
+  analysis <- .two_sample_analysis(scenario)
+  test_type <- analysis$test_type %||% analysis$test %||% "t.test"
+  if (length(test_type) != 1L || !is.character(test_type)) {
+    .two_sample_abort("test_type must be one supported character value")
+  }
+  supported <- c("t.test", "paired.t.test", "wilcoxon", "wilcoxon.paired",
+                 "brunner_munzel", "fisher", "chisq", "prop")
+  if (!test_type %in% supported) {
+    .two_sample_abort(sprintf("unsupported test_type '%s'", test_type))
+  }
+  test_type
+}
+
+.two_sample_data <- function(data) {
+  if (is.data.frame(data)) {
+    nms <- names(data)
+    if (all(c("group1", "group2") %in% nms)) {
+      return(list(group1 = data$group1, group2 = data$group2))
+    }
+    if (all(c("x", "y") %in% nms)) {
+      return(list(group1 = data$x, group2 = data$y))
+    }
+    if (all(c("value", "group") %in% nms)) {
+      groups <- split(data$value, data$group, drop = TRUE)
+      if (length(groups) == 2L) {
+        return(list(group1 = groups[[1L]], group2 = groups[[2L]]))
+      }
+    }
+  }
+  if (is.matrix(data) && ncol(data) == 2L) {
+    return(list(group1 = data[, 1L], group2 = data[, 2L]))
+  }
+  if (is.list(data)) {
+    group1 <- data$group1 %||% data$x %||% data$control
+    group2 <- data$group2 %||% data$y %||% data$treatment
+    if (!is.null(group1) && !is.null(group2)) {
+      return(list(group1 = group1, group2 = group2))
+    }
+  }
+  .two_sample_abort("data must provide group1/group2 (or x/y) vectors")
+}
+
+.two_sample_binary <- function(x, name) {
+  if (is.logical(x)) return(as.numeric(x))
+  if (!is.numeric(x) || anyNA(x) || !all(x %in% c(0, 1))) {
+    .two_sample_abort(sprintf("%s must be binary 0/1 or logical", name))
+  }
+  as.numeric(x)
+}
+
+.two_sample_table <- function(g1, g2) {
+  matrix(c(sum(g1), length(g1) - sum(g1),
+           sum(g2), length(g2) - sum(g2)), nrow = 2L,
+         dimnames = list(outcome = c("success", "failure"),
+                         group = c("group1", "group2")))
+}
+
+.two_sample_primary_test <- function(g1, g2, test_type, alpha, correct) {
+  if (test_type %in% c("fisher", "chisq", "prop")) {
+    g1 <- .two_sample_binary(g1, "group1")
+    g2 <- .two_sample_binary(g2, "group2")
+  } else if (!is.numeric(g1) || !is.numeric(g2) || anyNA(g1) || anyNA(g2)) {
+    .two_sample_abort("continuous groups must be numeric and non-missing")
+  }
+  result <- switch(test_type,
+    "t.test" = stats::t.test(g1, g2),
+    "paired.t.test" = {
+      if (length(g1) != length(g2)) .two_sample_abort("paired tests require equal group lengths")
+      stats::t.test(g1, g2, paired = TRUE)
+    },
+    "wilcoxon" = tryCatch(
+      stats::wilcox.test(g1, g2, exact = FALSE, conf.int = TRUE),
+      error = function(e) stats::wilcox.test(g1, g2, exact = FALSE)
+    ),
+    "wilcoxon.paired" = {
+      if (length(g1) != length(g2)) .two_sample_abort("paired tests require equal group lengths")
+      tryCatch(
+        stats::wilcox.test(g1, g2, paired = TRUE, exact = FALSE, conf.int = TRUE),
+        error = function(e) stats::wilcox.test(g1, g2, paired = TRUE, exact = FALSE)
+      )
+    },
+    "brunner_munzel" = {
+      bm <- get("brunner_munzel_test", envir = asNamespace("stabilitest"), inherits = FALSE)
+      bm(g1, g2, alpha = alpha)
+    },
+    "fisher" = stats::fisher.test(.two_sample_table(g1, g2)),
+    "chisq" = suppressWarnings(stats::chisq.test(.two_sample_table(g1, g2), correct = correct)),
+    "prop" = suppressWarnings(stats::prop.test(
+      c(sum(g1), sum(g2)), c(length(g1), length(g2)), correct = correct
+    ))
+  )
+  list(p = unname(result$p.value), significant = is.finite(result$p.value) && result$p.value < alpha)
+}
+
+#' Generate one deterministic two-sample calibration replicate.
+#' @export
+generate_two_sample <- function(scenario, seed = NULL) {
+  settings <- .two_sample_generator_settings(scenario)
+  if (is.null(seed)) seed <- .two_sample_scenario_scalar(scenario, "scenario_seed", 123L)
+  if (!is.numeric(seed) || length(seed) != 1L || !is.finite(seed)) {
+    .two_sample_abort("seed must be one finite numeric value")
+  }
+  old_seed <- if (exists(".Random.seed", .GlobalEnv, inherits = FALSE)) {
+    get(".Random.seed", .GlobalEnv, inherits = FALSE)
+  } else NULL
+  on.exit({
+    if (is.null(old_seed)) {
+      if (exists(".Random.seed", .GlobalEnv, inherits = FALSE)) rm(".Random.seed", envir = .GlobalEnv)
+    } else assign(".Random.seed", old_seed, envir = .GlobalEnv)
+  }, add = TRUE)
+  set.seed(as.integer(seed))
+
+  n1 <- as.integer(settings$n_per_group %||% settings$n %||%
+                     .two_sample_scenario_scalar(scenario, "sample_size", 20L))
+  if (!is.finite(n1) || n1 < 4L) .two_sample_abort("n_per_group must be at least 4")
+  paired <- isTRUE(settings$paired)
+  effect <- as.numeric(settings$effect_size %||% settings$mean_difference %||% 0)
+  sd1 <- as.numeric(settings$sd_control %||% settings$sd %||% 1)
+  sd2 <- as.numeric(settings$sd_treatment %||% settings$sd %||% sd1)
+  distribution <- settings$distribution %||% "normal"
+  draw <- function(n, sd) {
+    if (identical(distribution, "heavy_tailed") || identical(distribution, "t")) {
+      stats::rt(n, df = 3) * sd / sqrt(3)
+    } else {
+      stats::rnorm(n, sd = sd)
+    }
+  }
+
+  is_binary <- !is.null(settings$probability_control) ||
+    !is.null(settings$probability_treatment) || identical(distribution, "binary")
+  if (is_binary) {
+    p1 <- as.numeric(settings$probability_control %||% 0.5)
+    p2 <- as.numeric(settings$probability_treatment %||% p1)
+    if (!is.finite(p1) || !is.finite(p2) || p1 < 0 || p1 > 1 || p2 < 0 || p2 > 1) {
+      .two_sample_abort("binary probabilities must be finite values in [0, 1]")
+    }
+    return(list(group1 = stats::rbinom(n1, 1L, p1), group2 = stats::rbinom(n1, 1L, p2)))
+  }
+  if (paired) {
+    baseline <- draw(n1, sd1)
+    group1 <- baseline
+    group2 <- baseline + effect + draw(n1, sd2)
+  } else {
+    group1 <- draw(n1, sd1)
+    group2 <- effect + draw(n1, sd2)
+  }
+  contamination <- as.numeric(settings$contamination %||% 0)
+  if (is.finite(contamination) && contamination > 0) {
+    n_bad <- min(n1, floor(n1 * contamination))
+    if (n_bad > 0L) {
+      bad <- sample.int(n1, n_bad)
+      group2[bad] <- group2[bad] + 8 * sd2
+    }
+  }
+  list(group1 = group1, group2 = group2)
+}
+
+#' Build the two-sample calibration adapter.
+#' @export
+two_sample_adapter <- function() {
+  primary_decision <- function(data, scenario) {
+    test_type <- .two_sample_test_type(scenario)
+    analysis <- .two_sample_analysis(scenario)
+    alpha <- as.numeric(analysis$alpha %||% .two_sample_scenario_scalar(scenario, "alpha", 0.05))
+    correct <- analysis$correct %||% TRUE
+    groups <- .two_sample_data(data)
+    tested <- tryCatch(
+      .two_sample_primary_test(groups$group1, groups$group2, test_type, alpha, correct),
+      error = function(error) .two_sample_abort(
+        sprintf("primary %s failed: %s", test_type, conditionMessage(error)), error
+      )
+    )
+    list(
+      p = tested$p, p_value = tested$p, original_p = tested$p,
+      conclusion = tested$significant, significant = tested$significant,
+      original_significant = tested$significant, test_type = test_type,
+      alpha = alpha
+    )
+  }
+
+  run_robustness <- function(data, scenario, n_boot = NULL, seed = NULL) {
+    test_type <- .two_sample_test_type(scenario)
+    analysis <- .two_sample_analysis(scenario)
+    groups <- .two_sample_data(data)
+    alpha <- as.numeric(analysis$alpha %||% .two_sample_scenario_scalar(scenario, "alpha", 0.05))
+    correct <- analysis$correct %||% TRUE
+    if (is.null(n_boot)) n_boot <- .two_sample_scenario_scalar(scenario, "n_boot", 1000L)
+    if (is.null(seed)) seed <- .two_sample_scenario_scalar(scenario, "scenario_seed", 123L)
+    removal <- .two_sample_scenario_scalar(scenario, "max_removal_pct", 0.30)
+    args <- list(
+      group1 = groups$group1, group2 = groups$group2, test_type = test_type,
+      alpha = alpha, n_boot = as.integer(n_boot), max_removal_pct = removal,
+      seed = as.integer(seed), correct = correct
+    )
+    weights <- analysis$weights
+    if (!is.null(weights)) args$weights <- weights
+    tryCatch(
+      do.call(stabilitest::robustness_analysis, args),
+      error = function(error) .two_sample_abort(
+        sprintf("robustness %s failed: %s", test_type, conditionMessage(error)), error
+      )
+    )
+  }
+
+  list(primary_decision = primary_decision, run_robustness = run_robustness)
+}
+
+# Convenience aliases used by calibration runners and downstream analyses.
+new_two_sample_adapter <- two_sample_adapter
+get_two_sample_adapter <- two_sample_adapter
+make_two_sample_adapter <- two_sample_adapter
+two_sample_adapters <- two_sample_adapter
