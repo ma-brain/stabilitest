@@ -102,3 +102,68 @@ testthat::test_that("adapter failures are explicit and do not substitute tests",
   )
   testthat::expect_match(conditionMessage(failure), "unsupported test_type")
 })
+
+testthat::test_that("generator supports imbalanced unpaired groups and rejects unequal pairs", {
+  adapter_path <- file.path("..", "..", "R", "adapters_two_sample.R")
+  adapter_env <- new.env(parent = globalenv())
+  sys.source(adapter_path, envir = adapter_env)
+
+  imbalanced <- list(parameters = list(generator = list(
+    n_group1 = 7L, n_group2 = 13L, effect_size = 0.4,
+    distribution = "normal"
+  ), analysis = list(test_type = "t.test")))
+  generated <- adapter_env$generate_two_sample(imbalanced, seed = 42L)
+  testthat::expect_length(generated$group1, 7L)
+  testthat::expect_length(generated$group2, 13L)
+
+  paired_bad <- list(parameters = list(generator = list(
+    n_group1 = 7L, n_group2 = 13L, paired = TRUE
+  ), analysis = list(test_type = "paired.t.test")))
+  testthat::expect_error(
+    adapter_env$generate_two_sample(paired_bad, seed = 42L),
+    "paired designs require equal group sizes"
+  )
+})
+
+testthat::test_that("sparse binary scenarios exercise all public proportion tests", {
+  adapter_path <- file.path("..", "..", "R", "adapters_two_sample.R")
+  adapter_env <- new.env(parent = globalenv())
+  sys.source(adapter_path, envir = adapter_env)
+  adapter <- adapter_env$two_sample_adapter()
+  settings <- list(parameters = list(generator = list(
+    n_group1 = 18L, n_group2 = 27L, probability_control = 0.08,
+    probability_treatment = 0.18, distribution = "binary"
+  )))
+  data <- adapter_env$generate_two_sample(settings, seed = 99L)
+
+  for (test_type in c("fisher", "chisq", "prop")) {
+    scenario <- list(parameters = list(analysis = list(
+      test_type = test_type, alpha = 0.05, correct = TRUE
+    )))
+    scenario$max_removal_pct <- 0.05
+    primary <- adapter$primary_decision(data, scenario)
+    robust <- suppressWarnings(adapter$run_robustness(data, scenario, n_boot = 5L, seed = 7L))
+    testthat::expect_equal(primary$p, robust$original_p, tolerance = 1e-12,
+                           info = test_type)
+    testthat::expect_identical(primary$conclusion, robust$original_significant,
+                               info = test_type)
+  }
+})
+
+testthat::test_that("scenario registry includes imbalanced and sparse binary strata", {
+  scenario_path <- file.path("..", "..", "config", "scenarios.R")
+  scenario_env <- new.env(parent = globalenv())
+  sys.source(scenario_path, envir = scenario_env)
+  scenarios <- scenario_env$calibration_scenarios()
+  two_sample <- scenarios[scenarios$analysis_family == "two_sample", , drop = FALSE]
+  testthat::expect_true(any(grepl("imbalanced", two_sample$scenario_id)))
+  testthat::expect_true(any(grepl("sparse", two_sample$scenario_id)))
+  generators <- two_sample$parameters[vapply(two_sample$parameters, function(x) {
+    !is.null(x$generator$n_group1) && !is.null(x$generator$n_group2)
+  }, logical(1))]
+  testthat::expect_true(length(generators) >= 2L)
+  testthat::expect_true(any(vapply(generators, function(x) {
+    isTRUE(x$generator$probability_control < 0.1) &&
+      isTRUE(x$generator$probability_treatment < 0.2)
+  }, logical(1))))
+})

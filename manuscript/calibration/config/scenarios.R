@@ -130,5 +130,44 @@ calibration_scenarios <- function() {
     )
   )
 
-  tibble::as_tibble(rbind(base, expanded), .name_repair = "check_unique")
+  # Imbalance and sparse binary stressors use different group sizes and are
+  # retained as explicit parameter combinations in validation.
+  imbalance_sparse <- tibble::tibble(
+    scenario_id = c(
+      "two_sample_core_imbalanced_n28", "two_sample_stress_imbalanced_binary",
+      "two_sample_validation_sparse_chisq", "two_sample_validation_sparse_prop"
+    ),
+    analysis_family = rep("two_sample", 4L),
+    endpoint = c("mean_difference", "risk_difference", "risk_difference", "risk_difference"),
+    design_layer = c("core", "stress", "validation", "validation"),
+    data_generator = rep("generate_two_sample", 4L),
+    primary_adapter = rep("two_sample_primary_decision", 4L),
+    robustness_adapter = c("t.test", "fisher", "chisq", "prop"),
+    truth_class = c("moderate", "null", "null", "moderate"),
+    target_conclusion = c("significant", "non_significant", "non_significant", "significant"),
+    sample_size = c(28L, 42L, 54L, 60L),
+    n_boot = rep(1000L, 4L),
+    max_removal_pct = c(0.30, 0.05, 0.05, 0.05),
+    training_split = rep(0.70, 4L),
+    scenario_seed = c(2401L, 2402L, 2403L, 2404L),
+    parameters = list(
+      list(generator = list(n_group1 = 8L, n_group2 = 20L, effect_size = 0.5,
+                            distribution = "normal"),
+           analysis = list(test_type = "t.test", alpha = 0.05)),
+      list(generator = list(n_group1 = 12L, n_group2 = 30L,
+                            probability_control = 0.02, probability_treatment = 0.08,
+                            distribution = "binary"),
+           analysis = list(test_type = "fisher", alpha = 0.05, correct = TRUE)),
+      list(generator = list(n_group1 = 18L, n_group2 = 36L,
+                            probability_control = 0.04, probability_treatment = 0.12,
+                            distribution = "binary"),
+           analysis = list(test_type = "chisq", alpha = 0.05, correct = TRUE)),
+      list(generator = list(n_group1 = 20L, n_group2 = 40L,
+                            probability_control = 0.05, probability_treatment = 0.20,
+                            distribution = "binary"),
+           analysis = list(test_type = "prop", alpha = 0.05, correct = TRUE))
+    )
+  )
+
+  tibble::as_tibble(rbind(base, expanded, imbalance_sparse), .name_repair = "check_unique")
 }

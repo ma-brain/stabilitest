@@ -155,10 +155,17 @@ generate_two_sample <- function(scenario, seed = NULL) {
   }, add = TRUE)
   set.seed(as.integer(seed))
 
-  n1 <- as.integer(settings$n_per_group %||% settings$n %||%
-                     .two_sample_scenario_scalar(scenario, "sample_size", 20L))
-  if (!is.finite(n1) || n1 < 4L) .two_sample_abort("n_per_group must be at least 4")
+  n_default <- settings$n_per_group %||% settings$n %||%
+    .two_sample_scenario_scalar(scenario, "sample_size", 20L)
+  n1 <- as.integer(settings$n_group1 %||% settings$n_control %||% n_default)
+  n2 <- as.integer(settings$n_group2 %||% settings$n_treatment %||% n_default)
+  if (!is.finite(n1) || !is.finite(n2) || n1 < 4L || n2 < 4L) {
+    .two_sample_abort("group sizes must each be at least 4")
+  }
   paired <- isTRUE(settings$paired)
+  if (paired && n1 != n2) {
+    .two_sample_abort("paired designs require equal group sizes")
+  }
   effect <- as.numeric(settings$effect_size %||% settings$mean_difference %||% 0)
   sd1 <- as.numeric(settings$sd_control %||% settings$sd %||% 1)
   sd2 <- as.numeric(settings$sd_treatment %||% settings$sd %||% sd1)
@@ -179,7 +186,7 @@ generate_two_sample <- function(scenario, seed = NULL) {
     if (!is.finite(p1) || !is.finite(p2) || p1 < 0 || p1 > 1 || p2 < 0 || p2 > 1) {
       .two_sample_abort("binary probabilities must be finite values in [0, 1]")
     }
-    return(list(group1 = stats::rbinom(n1, 1L, p1), group2 = stats::rbinom(n1, 1L, p2)))
+    return(list(group1 = stats::rbinom(n1, 1L, p1), group2 = stats::rbinom(n2, 1L, p2)))
   }
   if (paired) {
     baseline <- draw(n1, sd1)
@@ -187,13 +194,13 @@ generate_two_sample <- function(scenario, seed = NULL) {
     group2 <- baseline + effect + draw(n1, sd2)
   } else {
     group1 <- draw(n1, sd1)
-    group2 <- effect + draw(n1, sd2)
+    group2 <- effect + draw(n2, sd2)
   }
   contamination <- as.numeric(settings$contamination %||% 0)
   if (is.finite(contamination) && contamination > 0) {
-    n_bad <- min(n1, floor(n1 * contamination))
+    n_bad <- min(n2, floor(n2 * contamination))
     if (n_bad > 0L) {
-      bad <- sample.int(n1, n_bad)
+      bad <- sample.int(n2, n_bad)
       group2[bad] <- group2[bad] + 8 * sd2
     }
   }
