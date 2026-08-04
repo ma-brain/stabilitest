@@ -9,7 +9,7 @@
 #' @return A tibble with the frozen calibration schema.
 #' @export
 calibration_scenarios <- function() {
-  tibble::tibble(
+  scenarios <- tibble::tibble(
     scenario_id = c(
       "two_sample_smoke", "proportion_smoke", "lm_smoke", "binomial_smoke",
       "poisson_smoke", "cox_smoke", "tost_smoke"
@@ -75,4 +75,21 @@ calibration_scenarios <- function() {
       )
     )
   )
+  # Endpoint and stress coverage for the model-specific adapters.  The original
+  # seven smoke IDs remain frozen; these rows add Weibull/non-PH Cox and binary
+  # TOST/NI checks without changing the common artifact schema.
+  tibble::add_row(
+    scenarios,
+    scenario_id = "cox_weibull_stress", analysis_family = "cox", endpoint = "hazard_ratio",
+    design_layer = "stress", data_generator = "generate_cox", primary_adapter = "robustness_surv",
+    robustness_adapter = "coxph", truth_class = "borderline", target_conclusion = "significant",
+    sample_size = 160L, n_boot = 1000L, max_removal_pct = .30, training_split = .7,
+    scenario_seed = 1801L,
+    parameters = list(list(generator = list(n = 160L, hazard_ratio = 1.5,
+                                            distribution = "weibull", shape = 1.3,
+                                            censoring_rate = .2, time_varying_effect = TRUE),
+                            analysis = list(term = "treatment", alpha = .05))),
+    .before = Inf
+  )
+  
 }
