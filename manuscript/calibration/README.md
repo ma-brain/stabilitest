@@ -22,7 +22,7 @@ defines and tests the scenario contract; these commands are not runnable yet.
 Run these commands from the project root.  The runner CLI is frozen as
 `--mode smoke|pilot|full --phase screen|analyse|all --engine
 all|two_sample|proportion|lm|binomial|poisson|cox|tost --workers <N>
-[--resume] --output <path>`.  The commands below use the frozen scenario
+[--resume] [--validation-only] --output <path>`.  The commands below use the frozen scenario
 contract loaded by `R/load_calibration.R`.
 
 ```sh

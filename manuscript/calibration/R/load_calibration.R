@@ -31,16 +31,32 @@
   error = function(error) NULL
 )
 
-.calibration_project_root <- function(script_path = .calibration_script_file) {
-  if (is.null(script_path)) {
-    stop("Unable to locate load_calibration.R", call. = FALSE)
+.calibration_project_root <- function(script_path = .calibration_script_file, start = getwd()) {
+  if (!is.null(script_path)) {
+    root <- dirname(dirname(dirname(dirname(normalizePath(script_path, mustWork = TRUE)))))
+    markers <- file.path(root, c("DESCRIPTION", "R/robustness_analysis.R"))
+    if (!all(file.exists(markers))) {
+      stop("Unable to locate the stabilitest project root", call. = FALSE)
+    }
+    return(root)
   }
-  root <- dirname(dirname(dirname(dirname(normalizePath(script_path, mustWork = TRUE)))))
-  markers <- file.path(root, c("DESCRIPTION", "R/robustness_analysis.R"))
-  if (!all(file.exists(markers))) {
-    stop("Unable to locate the stabilitest project root", call. = FALSE)
+
+  # `sys.source()` does not retain an `ofile` frame.  In that case, walk only
+  # the current directory's ancestors and require both repository markers;
+  # this avoids guessing among unrelated directories.
+  candidate <- normalizePath(start, mustWork = TRUE)
+  repeat {
+    markers <- file.path(candidate, c("DESCRIPTION", "R/robustness_analysis.R"))
+    if (all(file.exists(markers))) {
+      return(candidate)
+    }
+    parent <- dirname(candidate)
+    if (identical(parent, candidate)) {
+      break
+    }
+    candidate <- parent
   }
-  root
+  stop("Unable to locate the stabilitest project root", call. = FALSE)
 }
 
 load_calibration <- function(project_root = .calibration_project_root(), envir = parent.frame()) {
@@ -55,7 +71,11 @@ load_calibration <- function(project_root = .calibration_project_root(), envir =
 
   calibration_r_dir <- file.path(project_root, "manuscript", "calibration", "R")
   calibration_files <- list.files(calibration_r_dir, pattern = "[.]R$", full.names = TRUE)
-  this_file <- normalizePath(.calibration_script_file, mustWork = TRUE)
+  this_file <- if (is.null(.calibration_script_file)) {
+    file.path(project_root, "manuscript", "calibration", "R", "load_calibration.R")
+  } else {
+    normalizePath(.calibration_script_file, mustWork = TRUE)
+  }
   calibration_files <- calibration_files[
     normalizePath(calibration_files, mustWork = TRUE) != this_file
   ]
