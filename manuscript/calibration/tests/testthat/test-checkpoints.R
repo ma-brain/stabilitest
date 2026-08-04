@@ -1,0 +1,64 @@
+checkpoint_path_file <- file.path("..", "..", "R", "checkpoints.R")
+testthat::expect_true(file.exists(checkpoint_path_file))
+
+checkpoint_env <- new.env(parent = globalenv())
+sys.source(checkpoint_path_file, envir = checkpoint_env)
+
+testthat::test_that("checkpoint paths are deterministic and scoped by scenario and stratum", {
+  root <- tempfile("calibration-artifacts-")
+  path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
+
+  testthat::expect_identical(
+    path,
+    file.path(root, "checkpoints", "two_sample_smoke", "selected.rds")
+  )
+  testthat::expect_false(file.exists(path))
+})
+
+testthat::test_that("checkpoints round-trip with manifest validation", {
+  root <- tempfile("calibration-artifacts-")
+  path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
+  value <- data.frame(replicate_id = 1:3, score = c(70, 80, 90))
+
+  checkpoint_env$write_checkpoint(value, path, manifest_hash = "manifest-v1")
+  testthat::expect_true(file.exists(path))
+  testthat::expect_identical(checkpoint_env$read_checkpoint(path, "manifest-v1"), value)
+  testthat::expect_true(checkpoint_env$checkpoint_complete(path, "manifest-v1", target_n = 3L))
+  testthat::expect_false(checkpoint_env$checkpoint_complete(path, "manifest-v1", target_n = 4L))
+  testthat::expect_error(
+    checkpoint_env$read_checkpoint(path, "manifest-v2"),
+    "manifest"
+  )
+  testthat::expect_false(checkpoint_env$checkpoint_complete(path, "manifest-v2", target_n = 1L))
+})
+
+testthat::test_that("truncated checkpoints are rejected and are not resumable", {
+  root <- tempfile("calibration-artifacts-")
+  path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
+  checkpoint_env$write_checkpoint(data.frame(replicate_id = 1:3), path, "manifest-v1")
+
+  bytes <- readBin(path, what = "raw", n = file.info(path)$size)
+  testthat::expect_gt(length(bytes), 10L)
+  writeBin(bytes[seq_len(max(1L, length(bytes) %/% 2L))], path)
+
+  testthat::expect_error(
+    checkpoint_env$read_checkpoint(path, "manifest-v1"),
+    "invalid|truncated|checkpoint"
+  )
+  testthat::expect_false(checkpoint_env$checkpoint_complete(path, "manifest-v1", target_n = 1L))
+})
+
+testthat::test_that("failed writes clean temporary files", {
+  root <- tempfile("calibration-artifacts-")
+  path <- checkpoint_env$checkpoint_path(root, "two_sample_smoke", "selected")
+  dir.create(path, recursive = TRUE, showWarnings = FALSE)
+
+  testthat::expect_error(
+    checkpoint_env$write_checkpoint(data.frame(replicate_id = 1:3), path, "manifest-v1"),
+    "rename|checkpoint|directory"
+  )
+  testthat::expect_length(
+    list.files(dirname(path), pattern = "[.]tmp", all.files = TRUE),
+    0L
+  )
+})
