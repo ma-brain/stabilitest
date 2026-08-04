@@ -23,6 +23,23 @@
   x
 }
 
+.model_input <- function(x, weights = NULL) {
+  if (is.list(x) && is.data.frame(x$data)) {
+    if (is.null(weights)) weights <- x$weights
+    x <- x$data
+  }
+  list(data = as.data.frame(x), weights = weights)
+}
+
+.valid_alpha <- function(alpha) {
+  is.numeric(alpha) && length(alpha) == 1L && is.finite(alpha) && alpha > 0 && alpha < 1
+}
+
+.valid_row_ids <- function(data) {
+  ".row_id" %in% names(data) && length(data$.row_id) == nrow(data) &&
+    !anyNA(data$.row_id) && !anyDuplicated(data$.row_id)
+}
+
 .model_arg <- function(x, names, default = NULL) {
   hit <- names[names %in% names(x)]
   if (length(hit)) x[[hit[[1L]]]] else default
@@ -40,7 +57,8 @@
     term = if (is.null(term)) a$term %||% "treatment" else term,
     alpha = as.numeric(a$alpha %||% alpha),
     formula = a$formula,
-    family = family
+    family = family,
+    link = a$link
   )
 }
 
@@ -48,6 +66,7 @@
 
 .factor_levels <- function(k) {
   k <- max(2L, as.integer(k %||% 2L))
+  if (k > 6L) stop("factor_levels must be between 2 and 6", call. = FALSE)
   head(c("A", "B", "C", "D", "E", "F"), k)
 }
 
@@ -144,6 +163,7 @@ generate_binomial <- function(scenario = list(), seed = NULL, ...) {
                      treatment = treatment, baseline = baseline)
   weights <- .model_arg(p, "weights", NULL)
   if (isTRUE(weights)) weights <- sample(1:3, n, replace = TRUE)
+  if (identical(weights, FALSE)) weights <- NULL
   if (!is.null(weights)) {
     weights <- as.numeric(weights)
     if (length(weights) != n || any(!is.finite(weights)) || any(weights <= 0)) {
@@ -189,6 +209,7 @@ generate_poisson <- function(scenario = list(), seed = NULL, ...) {
                      treatment = treatment, baseline = baseline, exposure = exposure)
   weights <- .model_arg(p, "weights", NULL)
   if (isTRUE(weights)) weights <- sample(1:3, n, replace = TRUE)
+  if (identical(weights, FALSE)) weights <- NULL
   if (!is.null(weights)) {
     weights <- as.numeric(weights)
     if (length(weights) != n || any(!is.finite(weights)) || any(weights <= 0)) {
@@ -260,6 +281,8 @@ generate_poisson <- function(scenario = list(), seed = NULL, ...) {
 .screen_lm_fit <- function(data, formula, term, alpha = 0.05) {
   data <- as.data.frame(data)
   if (!".row_id" %in% names(data)) data$.row_id <- seq_len(nrow(data))
+  if (!.valid_alpha(alpha)) return(.model_failure("invalid_alpha", "alpha must be finite and in (0, 1)", data = data))
+  if (!.valid_row_ids(data)) return(.model_failure("duplicate_row_id", "row IDs must be unique and non-missing", data = data))
   fit <- tryCatch(stats::lm(formula, data = data), error = function(e) e)
   if (inherits(fit, "error")) return(.model_failure("fit_error", conditionMessage(fit), data = data))
   if (anyNA(stats::coef(fit))) {
@@ -284,6 +307,7 @@ generate_poisson <- function(scenario = list(), seed = NULL, ...) {
 #' @export
 primary_decision_lm <- function(data, scenario = list(), term = NULL,
                                 formula = NULL, alpha = NULL) {
+  data <- .model_input(data)$data
   a <- .model_analysis(scenario, term = term, alpha = alpha %||% 0.05)
   .screen_lm_fit(data, .model_formula(data, scenario, formula, "lm"), a$term, a$alpha)
 }
@@ -313,6 +337,8 @@ primary_decision_lm <- function(data, scenario = list(), term = NULL,
                             obs_weights = NULL, control = NULL) {
   data <- as.data.frame(data)
   if (!".row_id" %in% names(data)) data$.row_id <- seq_len(nrow(data))
+  if (!.valid_alpha(alpha)) return(.model_failure("invalid_alpha", "alpha must be finite and in (0, 1)", data = data))
+  if (!.valid_row_ids(data)) return(.model_failure("duplicate_row_id", "row IDs must be unique and non-missing", data = data))
   fam <- if (is.character(family)) as.character(family[[1L]]) else family$family
   if (is.character(family)) family <- switch(fam, binomial = stats::binomial(), poisson = stats::poisson(), family)
   if (!fam %in% c("binomial", "poisson")) return(.model_failure("unsupported_family", "only binomial and poisson are supported", data = data))
@@ -353,9 +379,12 @@ primary_decision_lm <- function(data, scenario = list(), term = NULL,
 primary_decision_glm <- function(data, scenario = list(), term = NULL,
                                  family = NULL, formula = NULL,
                                  alpha = NULL, obs_weights = NULL, control = NULL) {
+  input <- .model_input(data, obs_weights)
+  data <- input$data
+  obs_weights <- input$weights
   a <- .model_analysis(scenario, term = term, alpha = alpha %||% 0.05)
   if (is.null(family)) {
-    family <- if (identical(a$family, "poisson")) stats::poisson() else stats::binomial()
+    family <- if (identical(a$family, "poisson")) stats::poisson(link = a$link %||% "log") else stats::binomial(link = a$link %||% "logit")
   }
   fam_name <- if (is.character(family)) family else family$family
   .screen_glm_fit(data, .model_formula(data, scenario, formula, fam_name),
@@ -363,6 +392,7 @@ primary_decision_glm <- function(data, scenario = list(), term = NULL,
 }
 
 run_robustness_lm <- function(data, scenario = list(), formula = NULL, term = NULL, ...) {
+  data <- .model_input(data)$data
   a <- .model_analysis(scenario, term = term)
   tryCatch(
     do.call(stabilitest::robustness_lm, c(list(
@@ -374,9 +404,12 @@ run_robustness_lm <- function(data, scenario = list(), formula = NULL, term = NU
 
 run_robustness_glm <- function(data, scenario = list(), formula = NULL, term = NULL,
                                family = NULL, obs_weights = NULL, ...) {
+  input <- .model_input(data, obs_weights)
+  data <- input$data
+  obs_weights <- input$weights
   a <- .model_analysis(scenario, term = term)
   if (is.null(family)) {
-    family <- if (identical(a$family, "poisson")) stats::poisson() else stats::binomial()
+    family <- if (identical(a$family, "poisson")) stats::poisson(link = a$link %||% "log") else stats::binomial(link = a$link %||% "logit")
   }
   fam_name <- if (is.character(family)) family[[1L]] else family$family
   if (is.character(family)) family <- switch(fam_name, binomial = stats::binomial(), poisson = stats::poisson(), family)
@@ -427,8 +460,8 @@ primary_decision <- function(data, scenario, ...) {
   family <- .model_analysis(scenario)$family %||% "lm"
   switch(as.character(family),
          lm = primary_decision_lm(data, scenario, ...),
-         binomial = primary_decision_glm(data, scenario, family = stats::binomial(), ...),
-         poisson = primary_decision_glm(data, scenario, family = stats::poisson(), ...),
+         binomial = primary_decision_glm(data, scenario, ...),
+         poisson = primary_decision_glm(data, scenario, ...),
          stop(sprintf("No model adapter for analysis family '%s'", family), call. = FALSE))
 }
 
@@ -436,7 +469,7 @@ calibration_robustness_analysis <- function(data, scenario, ...) {
   family <- .model_analysis(scenario)$family %||% "lm"
   switch(as.character(family),
          lm = run_robustness_lm(data, scenario, ...),
-         binomial = run_robustness_glm(data, scenario, family = stats::binomial(), ...),
-         poisson = run_robustness_glm(data, scenario, family = stats::poisson(), ...),
+         binomial = run_robustness_glm(data, scenario, ...),
+         poisson = run_robustness_glm(data, scenario, ...),
          stop(sprintf("No model adapter for analysis family '%s'", family), call. = FALSE))
 }

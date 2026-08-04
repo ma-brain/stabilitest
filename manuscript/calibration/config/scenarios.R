@@ -53,8 +53,8 @@ calibration_scenarios <- function() {
       "term_test", "term_test"
     ),
     truth_class = c("null", "clear", "clear", "borderline", "clear", "borderline", "clear",
-                    "large", "moderate", "large", "large", "moderate", "large",
-                    "large", "moderate", "large", "null", "null", "null"),
+                    "clear", "borderline", "clear", "clear", "borderline", "clear",
+                    "clear", "borderline", "clear", "null", "null", "null"),
     target_conclusion = c(
       "non_significant", "significant", "significant", "significant",
       "significant", "significant", "equivalent", "significant", "significant",

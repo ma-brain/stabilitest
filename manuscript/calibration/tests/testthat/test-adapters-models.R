@@ -237,3 +237,39 @@ testthat::test_that("screening rejects unsupported GLM links explicitly", {
   testthat::expect_identical(full$status, "failed")
   testthat::expect_identical(full$failure_class, "unsupported_link")
 })
+
+testthat::test_that("model generators and screeners validate weights, alpha, levels, and row ids", {
+  env <- new.env(parent = globalenv())
+  sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
+  env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
+  no_weights <- env$generate_binomial(list(n = 30L, weights = FALSE), seed = 61L)
+  testthat::expect_null(no_weights$weights)
+  testthat::expect_error(env$generate_lm(list(n = 30L, factor_levels = 7L)), "factor_levels")
+
+  dat <- no_weights$data
+  testthat::expect_identical(
+    env$primary_decision_lm(dat, list(analysis = list(term = "treatmentB", alpha = 0)),
+                            alpha = 0)$failure_class,
+    "invalid_alpha"
+  )
+  dup <- dat
+  dup$.row_id[[2L]] <- dup$.row_id[[1L]]
+  testthat::expect_identical(
+    env$primary_decision_glm(dup, list(analysis = list(term = "treatmentB")), family = binomial())$failure_class,
+    "duplicate_row_id"
+  )
+})
+
+testthat::test_that("generated weights and inferred unsupported links propagate through generic adapters", {
+  env <- new.env(parent = globalenv())
+  sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
+  env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
+  generated <- env$generate_binomial(list(n = 42L, effect = log(1.5), weights = TRUE), seed = 62L)
+  scenario <- list(analysis = list(family = "binomial", link = "logit", term = "treatmentB"))
+  screen <- env$primary_decision(generated, scenario)
+  testthat::expect_identical(screen$status, "ok")
+  testthat::expect_equal(screen$weights, generated$weights)
+  bad <- env$primary_decision(generated$data,
+                              list(analysis = list(family = "binomial", link = "probit", term = "treatmentB")))
+  testthat::expect_identical(bad$failure_class, "unsupported_link")
+})
