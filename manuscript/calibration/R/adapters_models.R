@@ -424,12 +424,7 @@ screen_glm <- primary_decision_glm
 # only model families; the two-sample and survival adapters provide their own
 # family-specific hooks in later calibration tasks.
 primary_decision <- function(data, scenario, ...) {
-  family <- if (is.list(scenario)) scenario$analysis_family else NULL
-  if (length(family) != 1L || is.na(family)) {
-    family <- if (is.list(scenario$parameters) && !is.null(scenario$parameters$analysis$family)) {
-      scenario$parameters$analysis$family
-    } else "lm"
-  }
+  family <- .model_analysis(scenario)$family %||% "lm"
   switch(as.character(family),
          lm = primary_decision_lm(data, scenario, ...),
          binomial = primary_decision_glm(data, scenario, family = stats::binomial(), ...),
@@ -438,8 +433,7 @@ primary_decision <- function(data, scenario, ...) {
 }
 
 calibration_robustness_analysis <- function(data, scenario, ...) {
-  family <- if (is.list(scenario)) scenario$analysis_family else NULL
-  if (length(family) != 1L || is.na(family)) family <- "lm"
+  family <- .model_analysis(scenario)$family %||% "lm"
   switch(as.character(family),
          lm = run_robustness_lm(data, scenario, ...),
          binomial = run_robustness_glm(data, scenario, family = stats::binomial(), ...),

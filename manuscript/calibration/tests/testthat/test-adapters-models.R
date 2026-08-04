@@ -176,6 +176,24 @@ testthat::test_that("one-row scenario data frames dispatch Poisson full adapters
   testthat::expect_identical(fit$link, "log")
 })
 
+testthat::test_that("nested list scenarios dispatch generic robustness to Poisson", {
+  env <- new.env(parent = globalenv())
+  sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
+  env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
+  scenario <- list(parameters = list(
+    generator = list(n = 42L, rate = 0.8, effect = log(1.4), exposure = TRUE),
+    analysis = list(family = "poisson", term = "treatmentB", alpha = 0.05)
+  ))
+  generated <- env$generate_poisson(scenario, seed = 32L)
+  screen <- env$primary_decision(generated$data, scenario)
+  fit <- suppressWarnings(env$calibration_robustness_analysis(
+    generated$data, scenario, n_boot = 1L, max_removal_pct = 0.10, seed = 32L
+  ))
+  testthat::expect_s3_class(fit, "robustness_model")
+  testthat::expect_identical(fit$family, "poisson")
+  testthat::expect_equal(screen$p_value, fit$original_p, tolerance = 1e-10)
+})
+
 testthat::test_that("LM and GLM aliases and non-convergence are auditable failures", {
   env <- new.env(parent = globalenv())
   sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
