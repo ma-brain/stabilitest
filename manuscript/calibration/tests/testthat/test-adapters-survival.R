@@ -59,3 +59,14 @@ testthat::test_that("Cox generator interprets censoring_rate as the censored fra
   testthat::expect_identical(same, same_again)
   testthat::expect_false(identical(same$event, different$event))
 })
+
+testthat::test_that("Cox generator rejects malformed shape, size, and seed inputs", {
+  testthat::skip_if_not_installed("survival")
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  testthat::expect_error(env$generate_cox(shape = 0), "shape must be positive")
+  testthat::expect_error(env$generate_cox(n = NA_integer_), "integer >= 10")
+  testthat::expect_error(env$generate_cox(seed = -1), "non-negative integer")
+  testthat::expect_error(env$generate_cox(censoring_seed = 1.5), "non-negative integer")
+})

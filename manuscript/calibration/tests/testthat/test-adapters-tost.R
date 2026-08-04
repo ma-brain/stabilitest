@@ -59,3 +59,16 @@ testthat::test_that("degenerate proportion TOSTs have an explicit sparse failure
   testthat::expect_error(env$screen_tost(dat, n_boot = 5, max_removal_pct = .1),
                          "sparse_degenerate")
 })
+
+testthat::test_that("TOST generator rejects malformed bounds, sizes, seeds, and scalars", {
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  testthat::expect_error(env$generate_tost(endpoint = "mean"), "requires margin")
+  testthat::expect_error(env$generate_tost(endpoint = "or", margin = 1), "margin must be > 1")
+  testthat::expect_error(env$generate_tost(endpoint = "mean", delta_L = .2, delta_U = -.2), "strictly less")
+  testthat::expect_error(env$generate_tost(endpoint = "mean", margin = .5, n = 15), "even integer")
+  testthat::expect_error(env$generate_tost(endpoint = "mean", margin = .5, seed = -1), "non-negative integer")
+  testthat::expect_error(env$generate_tost(endpoint = "prop", margin = .2,
+                                           probability_control = NA_real_), "finite numeric")
+})
