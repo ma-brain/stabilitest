@@ -8,8 +8,10 @@ TOST.  The contract is defined by `config/scenarios.R`; each row has one nested
 
 The scenario table is deliberately independent of generated data.  Calibration
 runners must use the current checkout (via `R/load_calibration.R`), preserve the
-scenario seed, and write large intermediate files below `artifacts/` (which is
-ignored by Git).
+scenario seed, and write intermediate files below `artifacts/`.  Only the
+designated `artifacts/checkpoints/`, `artifacts/raw/`, and `artifacts/pilot/`
+paths are ignored by Git; published and compact summary artifacts are
+intentionally tracked.
 
 The `run_calibration.R` and `analyse_calibration.R` commands below are the
 frozen future entry-point contract and will arrive in later tasks.  Task 1 only
