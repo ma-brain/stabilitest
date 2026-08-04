@@ -52,6 +52,16 @@ CALIBRATION_REPLICATE_COLUMNS <- c(
     floor(x) == x && (!positive || x > 0)
 }
 
+.is_missing_value <- function(value) {
+  if (is.null(value)) {
+    return(TRUE)
+  }
+  if (is.list(value)) {
+    return(all(vapply(value, .is_missing_value, logical(1))))
+  }
+  all(is.na(value))
+}
+
 .assert_numeric_range <- function(x, name, lower = -Inf, upper = Inf,
                                   lower_open = FALSE, upper_open = FALSE,
                                   rows = seq_along(x)) {
@@ -166,15 +176,28 @@ validate_calibration_scenarios <- function(x) {
 #' Validate completed and failed calibration replicate artifacts.
 validate_calibration_replicates <- function(x) {
   .require_exact_columns(x, CALIBRATION_REPLICATE_COLUMNS, "replicate")
-  if (nrow(x) == 0L) {
-    return(TRUE)
-  }
 
   if (!is.character(x$scenario_id) || anyNA(x$scenario_id) || any(!nzchar(x$scenario_id))) {
     .schema_abort("replicate scenario_id must contain non-empty character values")
   }
-  if (anyNA(x$replicate_id) || anyDuplicated(data.frame(x$scenario_id, x$replicate_id))) {
+  if (!is.numeric(x$replicate_id) ||
+      any(!vapply(x$replicate_id, .is_scalar_integer, logical(1), positive = TRUE))) {
+    .schema_abort("replicate_id must contain positive integer values")
+  }
+  if (anyDuplicated(data.frame(x$scenario_id, x$replicate_id))) {
     .schema_abort("scenario_id/replicate_id pairs must be unique and non-missing")
+  }
+
+  metadata_columns <- c(
+    "analysis_family", "endpoint", "design_layer", "truth_class", "target_conclusion"
+  )
+  for (column in metadata_columns) {
+    if (!is.character(x[[column]]) || anyNA(x[[column]]) || any(!nzchar(x[[column]]))) {
+      .schema_abort(sprintf("%s must contain non-empty character values", column))
+    }
+  }
+  if (any(!x$design_layer %in% c("core", "stress", "validation"))) {
+    .schema_abort("design_layer must be one of core, stress, or validation")
   }
 
   valid_statuses <- c("completed", "failed")
@@ -183,6 +206,37 @@ validate_calibration_replicates <- function(x) {
   }
   if (!is.logical(x$selected)) {
     .schema_abort("selected must be logical")
+  }
+  if (!is.character(x$screening_conclusion)) {
+    .schema_abort("screening_conclusion must be character")
+  }
+  if (any(!is.na(x$screening_conclusion) & !nzchar(x$screening_conclusion))) {
+    .schema_abort("screening_conclusion must be non-empty when present")
+  }
+  if (!is.character(x$assigned_label)) {
+    .schema_abort("assigned_label must be character")
+  }
+  if (any(!is.na(x$assigned_label) & !nzchar(x$assigned_label))) {
+    .schema_abort("assigned_label must be non-empty when present")
+  }
+  if (!is.list(x$analysis_conclusion) &&
+      !is.character(x$analysis_conclusion) &&
+      !is.logical(x$analysis_conclusion)) {
+    .schema_abort("analysis_conclusion must be a list, character, or logical column")
+  }
+  if (is.list(x$analysis_conclusion) && any(!vapply(
+    x$analysis_conclusion,
+    function(value) is.null(value) || is.list(value) || .is_missing_value(value),
+    logical(1)
+  ))) {
+    .schema_abort("analysis_conclusion list values must be lists or missing")
+  }
+
+  failure_fields <- c("failure_stage", "failure_class", "failure_message")
+  for (column in failure_fields) {
+    if (!is.character(x[[column]])) {
+      .schema_abort(sprintf("%s must be character", column))
+    }
   }
 
   completed <- x$status == "completed"
@@ -203,6 +257,15 @@ validate_calibration_replicates <- function(x) {
 
   if (any(completed & is.na(x$selected))) {
     .schema_abort("selected must be non-missing for completed replicates")
+  }
+  integer_metrics <- c("fragility_k", "n", "replicate_seed", "bootstrap_seed")
+  for (column in integer_metrics) {
+    values <- x[[column]][completed]
+    positive <- column == "n"
+    if (length(values) > 0L &&
+        any(!vapply(values, .is_scalar_integer, logical(1), positive = positive))) {
+      .schema_abort(sprintf("successful %s values must be integers", column))
+    }
   }
   .assert_numeric_range(x$original_p, "original_p", 0, 1, rows = which(completed))
   .assert_numeric_range(x$effective_p, "effective_p", 0, 1, rows = which(completed))
@@ -227,7 +290,39 @@ validate_calibration_replicates <- function(x) {
     .schema_abort("completed replicates cannot contain failure details")
   }
   failed <- !completed
-  failure_fields <- c("failure_stage", "failure_class", "failure_message")
+  if (any(failed & !is.na(x$selected))) {
+    .schema_abort("failed replicates must have selected set to NA")
+  }
+  failed_analysis_columns <- c(
+    "original_p", "effective_p", "jackknife_stability", "fragility_component",
+    "fragility_k", "fragility_pct", "bootstrap_reproducibility", "overall_score",
+    "assigned_label", "analysis_conclusion"
+  )
+  for (column in failed_analysis_columns) {
+    values <- x[[column]][failed]
+    if (length(values) > 0L && any(!vapply(values, .is_missing_value, logical(1)))) {
+      .schema_abort(sprintf("failed replicates cannot contain %s", column))
+    }
+  }
+  for (column in integer_metrics) {
+    values <- x[[column]][failed]
+    positive <- column == "n"
+    if (length(values) > 0L && any(vapply(
+      values,
+      function(value) !is.na(value) && !.is_scalar_integer(value, positive = positive),
+      logical(1)
+    ))) {
+      .schema_abort(sprintf("failed %s values must be missing or valid integers", column))
+    }
+  }
+  failed_runtime <- x$runtime_seconds[failed]
+  if (length(failed_runtime) > 0L && any(vapply(
+    failed_runtime,
+    function(value) !is.na(value) && (!is.finite(value) || value < 0),
+    logical(1)
+  ))) {
+    .schema_abort("failed runtime_seconds values must be missing or finite non-negative values")
+  }
   for (column in failure_fields) {
     values <- x[[column]][failed]
     if (length(values) > 0L && (!is.character(values) || anyNA(values) || any(!nzchar(values)))) {
@@ -251,7 +346,9 @@ validate_calibration_replicates <- function(x) {
 }
 
 #' Construct an auditable failed-replicate row from a scenario and condition.
-new_calibration_failure <- function(scenario, replicate_id, stage, condition) {
+new_calibration_failure <- function(scenario, replicate_id, stage, condition,
+                                    replicate_seed = NA_integer_,
+                                    bootstrap_seed = NA_integer_) {
   scenario_values <- .scenario_row_values(scenario)
   missing <- setdiff(
     c("scenario_id", "analysis_family", "endpoint", "design_layer",
@@ -261,8 +358,21 @@ new_calibration_failure <- function(scenario, replicate_id, stage, condition) {
   if (length(missing) > 0L) {
     .schema_abort(sprintf("scenario is missing required fields: %s", paste(missing, collapse = ", ")))
   }
-  if (length(replicate_id) != 1L || is.na(replicate_id)) {
-    .schema_abort("replicate_id must be a single non-missing value")
+  required_metadata <- c(
+    "scenario_id", "analysis_family", "endpoint", "design_layer",
+    "truth_class", "target_conclusion"
+  )
+  for (field in required_metadata) {
+    value <- scenario_values[[field]]
+    if (!is.character(value) || length(value) != 1L || is.na(value) || !nzchar(value)) {
+      .schema_abort(sprintf("scenario %s must be a non-empty character value", field))
+    }
+  }
+  if (!scenario_values$design_layer %in% c("core", "stress", "validation")) {
+    .schema_abort("scenario design_layer must be one of core, stress, or validation")
+  }
+  if (!.is_scalar_integer(replicate_id, positive = TRUE)) {
+    .schema_abort("replicate_id must be a positive integer")
   }
   if (!is.character(stage) || length(stage) != 1L || is.na(stage) || !nzchar(stage)) {
     .schema_abort("failure stage must be a non-empty character value")
@@ -279,6 +389,13 @@ new_calibration_failure <- function(scenario, replicate_id, stage, condition) {
   }
   if (!nzchar(failure_message)) {
     failure_message <- failure_class
+  }
+  for (seed in c("replicate_seed", "bootstrap_seed")) {
+    value <- get(seed)
+    if (length(value) != 1L || (!is.na(value) &&
+                               !.is_scalar_integer(value, positive = FALSE))) {
+      .schema_abort(sprintf("%s must be a non-negative integer or NA", seed))
+    }
   }
 
   new_calibration_replicate(
@@ -302,8 +419,8 @@ new_calibration_failure <- function(scenario, replicate_id, stage, condition) {
     overall_score = NA_real_,
     assigned_label = NA_character_,
     n = if (!is.null(scenario_values$sample_size)) scenario_values$sample_size else NA_real_,
-    replicate_seed = NA_real_,
-    bootstrap_seed = NA_real_,
+    replicate_seed = replicate_seed,
+    bootstrap_seed = bootstrap_seed,
     runtime_seconds = NA_real_,
     status = "failed",
     failure_stage = stage,

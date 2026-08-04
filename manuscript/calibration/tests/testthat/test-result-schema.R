@@ -142,6 +142,146 @@ testthat::test_that("replicate validation rejects malformed completed artifacts"
     schema_env$validate_calibration_replicates(non_finite_metric),
     "finite"
   )
+
+  for (invalid_integer_metric in list(
+    list(column = "fragility_k", value = 1.5),
+    list(column = "n", value = 50.5),
+    list(column = "replicate_seed", value = 1101001.5),
+    list(column = "bootstrap_seed", value = 1101001001.5)
+  )) {
+    invalid_metric <- replicate
+    invalid_metric[[invalid_integer_metric$column]][[1L]] <- invalid_integer_metric$value
+    testthat::expect_error(
+      schema_env$validate_calibration_replicates(invalid_metric),
+      invalid_integer_metric$column
+    )
+  }
+})
+
+testthat::test_that("replicate validation enforces ID, metadata, and conclusion types", {
+  replicate <- completed_replicate_fixture()
+
+  invalid_character_id <- replicate
+  invalid_character_id$replicate_id[[1L]] <- "1"
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_character_id),
+    "replicate_id"
+  )
+
+  invalid_fractional_id <- replicate
+  invalid_fractional_id$replicate_id[[1L]] <- 1.5
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_fractional_id),
+    "replicate_id"
+  )
+
+  invalid_negative_id <- replicate
+  invalid_negative_id$replicate_id[[1L]] <- -1L
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_negative_id),
+    "replicate_id"
+  )
+
+  invalid_list_id <- replicate
+  invalid_list_id$replicate_id <- list(1L)
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_list_id),
+    "replicate_id"
+  )
+
+  invalid_metadata <- replicate
+  invalid_metadata$analysis_family[[1L]] <- NA_character_
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_metadata),
+    "analysis_family"
+  )
+
+  invalid_metadata <- replicate
+  invalid_metadata$endpoint[[1L]] <- ""
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_metadata),
+    "endpoint"
+  )
+
+  invalid_metadata <- replicate
+  invalid_metadata$design_layer[[1L]] <- "other"
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_metadata),
+    "design_layer"
+  )
+
+  invalid_screening_type <- replicate
+  invalid_screening_type$screening_conclusion <- 1
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_screening_type),
+    "screening_conclusion"
+  )
+
+  invalid_analysis_type <- replicate
+  invalid_analysis_type$analysis_conclusion <- list(1)
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_analysis_type),
+    "analysis_conclusion"
+  )
+
+  invalid_label_type <- replicate
+  invalid_label_type$assigned_label <- factor("Robust")
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_label_type),
+    "assigned_label"
+  )
+})
+
+testthat::test_that("failed rows cannot carry selected or analysis results", {
+  scenarios <- scenario_fixture()
+  failure <- schema_env$new_calibration_failure(
+    scenarios[1L, , drop = FALSE],
+    replicate_id = 7L,
+    stage = "analysis",
+    condition = simpleError("bootstrap failed"),
+    replicate_seed = 701L,
+    bootstrap_seed = 702L
+  )
+  testthat::expect_identical(failure$replicate_seed, 701L)
+  testthat::expect_identical(failure$bootstrap_seed, 702L)
+
+  contaminated <- failure
+  contaminated$selected[[1L]] <- FALSE
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(contaminated),
+    "selected"
+  )
+
+  contaminated <- failure
+  contaminated$overall_score[[1L]] <- 50
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(contaminated),
+    "failed.*overall_score"
+  )
+
+  contaminated <- failure
+  contaminated$analysis_conclusion <- list(list(significant = FALSE))
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(contaminated),
+    "failed.*analysis_conclusion"
+  )
+
+  contaminated <- failure
+  contaminated$assigned_label[[1L]] <- "Fragile"
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(contaminated),
+    "failed.*assigned_label"
+  )
+})
+
+testthat::test_that("empty artifacts still have valid column classes", {
+  empty <- completed_replicate_fixture()[FALSE, , drop = FALSE]
+  invalid_empty <- empty
+  invalid_empty$replicate_id <- character()
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_empty),
+    "replicate_id"
+  )
 })
 
 testthat::test_that("failure constructor records an auditable failure row", {
@@ -163,4 +303,13 @@ testthat::test_that("failure constructor records an auditable failure row", {
   testthat::expect_true(is.na(failure$overall_score))
   testthat::expect_true(is.na(failure$bootstrap_reproducibility))
   testthat::expect_true(schema_env$validate_calibration_replicates(failure))
+
+  invalid_scenario <- scenarios[1L, , drop = FALSE]
+  invalid_scenario$endpoint[[1L]] <- ""
+  testthat::expect_error(
+    schema_env$new_calibration_failure(
+      invalid_scenario, 8L, "analysis", simpleError("bad metadata")
+    ),
+    "scenario endpoint"
+  )
 })
