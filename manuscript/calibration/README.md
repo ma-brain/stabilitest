@@ -13,45 +13,48 @@ ignored by Git).
 
 ## Canonical commands
 
-Run these commands from the project root.  They are the reproducible entry
-points for the calibration runner and use the frozen scenario IDs and schema.
+Run these commands from the project root.  The runner CLI is frozen as
+`--mode smoke|pilot|full --phase screen|analyse|all --engine
+all|two_sample|proportion|lm|binomial|poisson|cox|tost --workers <N>
+[--resume] --output <path>`.  The commands below use the frozen scenario
+contract loaded by `R/load_calibration.R`.
 
 ```sh
-# Smoke: one quick replicate for every smoke scenario.
-Rscript manuscript/calibration/run_calibration.R --mode smoke \
-  --scenarios manuscript/calibration/config/scenarios.R \
-  --output manuscript/calibration/artifacts/pilot/smoke.rds
+# Smoke screen: one quick replicate for every smoke scenario.
+Rscript manuscript/calibration/run_calibration.R --mode smoke --phase screen \
+  --engine all --workers 1 --output manuscript/calibration/artifacts/pilot/smoke.rds
 
-# Pilot: estimate calibration strata and Monte Carlo diagnostics.
-Rscript manuscript/calibration/run_calibration.R --mode pilot \
-  --scenarios manuscript/calibration/config/scenarios.R \
-  --output manuscript/calibration/artifacts/pilot/pilot.rds
+# Pilot screen: check occupancy and Monte Carlo diagnostics.
+Rscript manuscript/calibration/run_calibration.R --mode pilot --phase screen \
+  --engine all --workers 2 --output manuscript/calibration/artifacts/pilot/pilot.rds
 
-# Full: run the preregistered B = 1000 calibration for all scenarios.
-Rscript manuscript/calibration/run_calibration.R --mode full \
-  --scenarios manuscript/calibration/config/scenarios.R \
-  --output manuscript/calibration/artifacts/checkpoints/full.rds
+# Full production run: B = 1000 for all scenario families.
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine all --workers 8 --output manuscript/calibration/artifacts/raw/full.rds
 
-# Resume: continue an interrupted full run from its last checkpoint.
-Rscript manuscript/calibration/run_calibration.R --mode full --resume \
-  --checkpoint manuscript/calibration/artifacts/checkpoints/full.rds \
-  --output manuscript/calibration/artifacts/checkpoints/full.rds
+# Resume the same production run after an interruption.
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine all --workers 8 --resume \
+  --output manuscript/calibration/artifacts/raw/full.rds
 
-# Analysis: fit the frozen mappings using held-out calibration results.
-Rscript manuscript/calibration/analyze_calibration.R \
-  --input manuscript/calibration/artifacts/checkpoints/full.rds \
-  --output manuscript/calibration/artifacts/analysis
+# Analyse and freeze: fit candidates from the training artifacts.
+Rscript manuscript/calibration/analyse_calibration.R \
+  --training manuscript/calibration/artifacts/raw/training \
+  --freeze-candidate manuscript/calibration/artifacts/raw/candidate-registry.rds
 
-# Artifact generation: render tables, figures, and the audit manifest.
-Rscript manuscript/calibration/generate_artifacts.R \
-  --input manuscript/calibration/artifacts/analysis \
-  --output manuscript/calibration/artifacts/analysis
+# Validate and publish the frozen candidate map; --publish writes compact
+# tables, figures, and the audit manifest.
+Rscript manuscript/calibration/analyse_calibration.R \
+  --candidate manuscript/calibration/artifacts/raw/candidate-registry.rds \
+  --validation manuscript/calibration/artifacts/raw/validation \
+  --publish manuscript/calibration/published
 ```
 
 The smoke command is intended for wiring checks only; the pilot command is for
 checking stratum occupancy and Monte Carlo precision before committing a full
-run.  Full, analysis, and artifact-generation commands must be rerun whenever
-the scenario contract or package version changes.
+run.  Only a production `full` run may feed candidate fitting, validation, and
+publication.  Full, analysis, and publish commands must be rerun whenever the
+scenario contract or package version changes.
 
 ## Files
 

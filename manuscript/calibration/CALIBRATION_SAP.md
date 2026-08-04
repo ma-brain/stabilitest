@@ -30,10 +30,18 @@ replicates are untouched until final evaluation.  No seed, replicate, or
 scenario may occur in both sets; resume checkpoints must preserve this split.
 
 For each score band, report the held-out calibration rate, Monte Carlo standard
-error, and a binomial confidence interval.  The minimum accepted stratum size is
-100 held-out replicates.  A reported proportion must have Monte Carlo standard
-error ≤ 0.02 (otherwise the stratum is flagged as underpowered and is not used
-for a definitive mapping).
+error, and a binomial confidence interval.  Production calibration of each core
+scenario starts with at least 500 attempted replicates and targets Monte Carlo
+standard error ≤ 0.02 for each reported proportion.  The approved held-out
+stratum minimum is 100 replicates; a stratum below that minimum is diagnostic
+only and cannot support a definitive mapping.  Pilot runs are for wiring,
+occupancy, and precision checks and never freeze candidates or publish a map.
+
+Use one-sided 95% Wilson bounds for the acceptance decisions below.  When rates
+are aggregated across scenarios, retain scenario identity and report
+scenario-cluster uncertainty (a scenario-cluster bootstrap or equivalent
+cluster-robust interval); do not treat replicates from one scenario as
+independent evidence about another scenario.
 
 ## Decision criteria
 
@@ -41,7 +49,19 @@ False reassurance is a held-out false-positive conclusion: the calibrated score
 is moderate/robust while the truth class is `null` or the target conclusion is
 not supported.  Robust identification is a held-out correct conclusion in the
 direction specified by `target_conclusion`, with the score band consistent with
-that conclusion.  Both rates are reported by family and truth class.
+that conclusion.  Both rates are reported by family and truth class.  The
+frozen decision thresholds are:
+
+- false reassurance is acceptable only when its point estimate is ≤ 5% **and**
+  its one-sided 95% Wilson upper bound is ≤ 10%;
+- robust identification is acceptable only when its point estimate is ≥ 70%
+  **and** its one-sided 95% Wilson lower bound is ≥ 60%.
+
+In addition, the median score ordering must agree with the truth ordering in
+core scenarios (`null` ≤ `borderline` ≤ `clear`).  Stress scenarios must show no
+material reversal of that ordering.  A failed threshold or ordering criterion
+marks the candidate indeterminate, even when the shared score band looks
+favorable.
 
 The family-specific rule is frozen as a five-point and 0.05 rule.  A mapping is
 accepted only when its held-out conclusion rate is at least five percentage
