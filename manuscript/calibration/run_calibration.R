@@ -35,6 +35,11 @@
   }
   if (isTRUE(options$validation_only)) {
     selected <- selected[selected$design_layer == "validation", , drop = FALSE]
+  } else if (identical(options$mode, "pilot")) {
+    # Pilot occupancy and runtime projections are based on the pre-specified
+    # core shape set.  Stress and validation rows are reserved for production
+    # or held-out runs and must not silently inflate pilot quotas.
+    selected <- selected[selected$design_layer == "core", , drop = FALSE]
   } else if (identical(options$mode, "full")) {
     selected <- selected[selected$design_layer != "validation", , drop = FALSE]
   }

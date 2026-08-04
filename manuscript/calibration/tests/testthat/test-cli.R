@@ -67,6 +67,22 @@ testthat::test_that("mode plans freeze smoke, pilot, and full quotas", {
   testthat::expect_true(is.null(full$replicates_per_stratum))
 })
 
+testthat::test_that("pilot selection is restricted to core scenario shapes", {
+  runner_env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "run_calibration.R"), envir = runner_env)
+  scenarios <- data.frame(
+    scenario_id = c("core-a", "stress-a", "core-b"),
+    analysis_family = c("lm", "lm", "cox"),
+    design_layer = c("core", "stress", "core"),
+    stringsAsFactors = FALSE
+  )
+  options <- list(mode = "pilot", engine = "all", scenario = NULL,
+                  validation_only = FALSE)
+  selected <- runner_env$.calibration_select_scenarios(scenarios, options)
+  testthat::expect_setequal(selected$scenario_id, c("core-a", "core-b"))
+  testthat::expect_true(all(selected$design_layer == "core"))
+})
+
 testthat::test_that("manifest hashes and records provenance", {
   manifest_env <- new.env(parent = globalenv())
   sys.source(file.path("..", "..", "R", "manifest.R"), envir = manifest_env)
