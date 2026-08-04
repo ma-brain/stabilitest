@@ -177,6 +177,13 @@ generate_tost <- function(endpoint = c("mean", "prop", "or"),
   }, logical(1L)))
 }
 
+.validate_calibration_alpha <- function(alpha) {
+  if (!is.numeric(alpha) || length(alpha) != 1L || is.na(alpha) ||
+      !is.finite(alpha) || alpha <= 0 || alpha >= 1)
+    stop("alpha must be a single finite number in (0, 1)", call. = FALSE)
+  invisible(alpha)
+}
+
 #' Run the configured TOST/NI test for screening.
 #' @export
 screen_tost <- function(data, endpoint = c("mean", "prop", "or"),
@@ -194,16 +201,29 @@ screen_tost <- function(data, endpoint = c("mean", "prop", "or"),
     if (is.null(delta_U)) delta_U <- data$delta_U
   }
   endpoint <- match.arg(endpoint); type <- match.arg(type)
+  .validate_calibration_alpha(alpha)
   if (endpoint == "prop" && .tost_prop_degenerate(data)) {
     stop("sparse_degenerate: proportion endpoint has a constant arm", call. = FALSE)
   }
   a <- .tost_args(data, endpoint, type, margin, delta_L, delta_U, paired,
                   higher_is_better, alpha, n_boot, max_removal_pct, seed, list(...))
-  res <- tryCatch(do.call(stabilitest::robustness_tost, c(a[setdiff(names(a), "dots")], a$dots)),
-                  error = function(e) stop(e))
-  list(p_eff = res$original_p, original_p = res$original_p,
-       conclusion = if (res$original_p < alpha) if (type == "equivalence") "equivalent" else "noninferior" else if (type == "equivalence") "not_equivalent" else "inferior",
-       significant = res$original_p < alpha, analysis = res, status = "completed")
+  bounds <- if (endpoint == "or") {
+    stabilitest:::.resolve_tost_or_margins(type, a$margin, a$delta_L, a$delta_U)
+  } else {
+    stabilitest:::.resolve_tost_margins(type, a$margin, a$delta_L, a$delta_U)
+  }
+  detail <- stabilitest:::.tost_dispatch(endpoint, a$group1, a$group2, type,
+                                         bounds, alpha, a$paired,
+                                         a$higher_is_better)
+  if (is.null(detail) || !is.finite(detail$p_eff))
+    stop("TOST/NI test could not be computed on the full dataset", call. = FALSE)
+  # Keep the analysis shape consumed by run_tost_adapter while avoiding any
+  # jackknife/worst-case/bootstrap work during primary screening.
+  detail$original_p <- detail$p_eff
+  detail$effective_p <- detail$p_eff
+  list(p_eff = detail$p_eff, original_p = detail$p_eff,
+       conclusion = if (detail$p_eff < alpha) if (type == "equivalence") "equivalent" else "noninferior" else if (type == "equivalence") "not_equivalent" else "inferior",
+       significant = detail$p_eff < alpha, analysis = detail, status = "completed")
 }
 
 #' Execute a complete TOST/NI calibration replicate.
@@ -226,8 +246,12 @@ run_tost_adapter <- function(data, endpoint = c("mean", "prop", "or"),
   tryCatch({
     screening <- screen_tost(data, endpoint, type, margin, delta_L, delta_U,
                              paired, higher_is_better, alpha, n_boot, max_removal_pct, seed, ...)
-    list(status = "completed", screening = screening, analysis = screening$analysis,
-         original_p = screening$analysis$original_p, effective_p = screening$analysis$original_p,
+    a <- .tost_args(data, endpoint, type, margin, delta_L, delta_U, paired,
+                    higher_is_better, alpha, n_boot, max_removal_pct, seed, list(...))
+    analysis <- do.call(stabilitest::robustness_tost,
+                        c(a[setdiff(names(a), "dots")], a$dots))
+    list(status = "completed", screening = screening, analysis = analysis,
+         original_p = analysis$original_p, effective_p = analysis$original_p,
          failure_stage = NA_character_, failure_class = NA_character_, failure_message = NA_character_)
   }, error = function(e) {
     cls <- if (endpoint == "prop" && .tost_prop_degenerate(data)) {

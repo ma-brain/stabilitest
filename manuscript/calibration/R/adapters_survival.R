@@ -121,6 +121,9 @@ generate_survival <- generate_cox
 #' @export
 screen_cox <- function(data, term = "treatment", formula = NULL, alpha = 0.05) {
   if (!requireNamespace("survival", quietly = TRUE)) stop("Package 'survival' is required", call. = FALSE)
+  if (!is.numeric(alpha) || length(alpha) != 1L || is.na(alpha) ||
+      !is.finite(alpha) || alpha <= 0 || alpha >= 1)
+    stop("alpha must be a single finite number in (0, 1)", call. = FALSE)
   if (is.null(formula)) formula <- .cox_default_formula()
   resolved <- .cox_resolve(formula, data, term)
   spec <- resolved$spec

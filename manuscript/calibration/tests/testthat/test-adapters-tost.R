@@ -20,6 +20,22 @@ testthat::test_that("TOST adapter preserves p_eff and conclusion parity", {
   }
 })
 
+testthat::test_that("TOST screening is primary-test only and validates alpha", {
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  dat <- env$generate_tost(endpoint = "mean", type = "equivalence",
+                           margin = .5, n_per_group = 30, seed = 17)
+  screened <- env$screen_tost(dat, n_boot = 0, max_removal_pct = 0, seed = 99)
+  testthat::expect_true(is.finite(screened$p_eff))
+  testthat::expect_false("score" %in% names(screened$analysis))
+  full <- env$run_tost_adapter(dat, n_boot = 2, max_removal_pct = .1, seed = 99)
+  testthat::expect_true("bootstrap" %in% names(full$analysis))
+  testthat::expect_equal(screened$p_eff, full$analysis$original_p, tolerance = 1e-12)
+  testthat::expect_error(env$screen_tost(dat, alpha = 0), "alpha")
+  testthat::expect_error(env$screen_tost(dat, alpha = NA_real_), "alpha")
+})
+
 testthat::test_that("TOST truth uses configured margins rather than realized estimates", {
   env <- new.env(parent = globalenv())
   sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
