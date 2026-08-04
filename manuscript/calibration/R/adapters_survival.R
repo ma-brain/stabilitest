@@ -44,14 +44,21 @@ generate_cox <- function(n = 160, hazard_ratio = 1.5, censoring_rate = 0.2,
     censor_time <- rep.int(Inf, n)
     observed_time <- event_time
   } else {
-    # Use the empirical (1 - censoring_rate) event-time quantile.  This makes
-    # the configured rate mean what it says: approximately that fraction of
-    # observations are censored, rather than accidentally reversing the rate
-    # through an exponential censoring-time parameterization.
-    censor_time <- stats::quantile(event_time, probs = 1 - censoring_rate,
-                                   names = FALSE, type = 7)
-    event <- as.integer(event_time <= censor_time)
-    observed_time <- pmin(event_time, censor_time)
+    # Draw an exact (up to rounding) number of censored records, with the
+    # censoring seed controlling both the selected records and their times.
+    # This preserves the configured fraction while avoiding the old reversed
+    # exponential-rate parameterization and keeps censoring_seed meaningful.
+    n_censored <- as.integer(round(censoring_rate * n))
+    censored <- rep.int(FALSE, n)
+    if (n_censored > 0L) censored[sample.int(n, n_censored)] <- TRUE
+    event <- as.integer(!censored)
+    censor_time <- rep.int(Inf, n)
+    if (n_censored > 0L) {
+      censor_time[censored] <- event_time[censored] * stats::runif(
+        n_censored, min = .05, max = .95
+      )
+    }
+    observed_time <- ifelse(censored, censor_time, event_time)
   }
   dat <- data.frame(time = pmax(observed_time, .Machine$double.eps),
                     event = event, treatment = treatment)

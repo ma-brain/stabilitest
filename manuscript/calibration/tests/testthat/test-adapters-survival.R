@@ -49,4 +49,13 @@ testthat::test_that("Cox generator interprets censoring_rate as the censored fra
   metadata <- attr(dat, "calibration_metadata")
   testthat::expect_equal(mean(dat$event == 0L), .2, tolerance = 1 / nrow(dat))
   testthat::expect_equal(metadata$realized_censoring_rate, mean(dat$event == 0L))
+
+  same <- env$generate_cox(n = 80, censoring_rate = .2, seed = 41,
+                           censoring_seed = 99)
+  same_again <- env$generate_cox(n = 80, censoring_rate = .2, seed = 41,
+                                 censoring_seed = 99)
+  different <- env$generate_cox(n = 80, censoring_rate = .2, seed = 41,
+                                censoring_seed = 100)
+  testthat::expect_identical(same, same_again)
+  testthat::expect_false(identical(same$event, different$event))
 })
