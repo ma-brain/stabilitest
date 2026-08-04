@@ -78,7 +78,12 @@
 .calibration_adapter_for_scenario <- function(scenario, envir = parent.frame()) {
   family <- as.character(scenario$analysis_family[[1L]])
   lookup <- function(name) get(name, envir = envir, inherits = TRUE)
-  if (family %in% c("two_sample", "proportion")) return(lookup("two_sample_adapter")())
+  if (family %in% c("two_sample", "proportion")) {
+    adapter <- lookup("two_sample_adapter")()
+    adapter$generate <- function(scenario, seed = NULL) lookup("generate_two_sample")(scenario, seed = seed)
+    adapter$generate_data <- adapter$generate
+    return(adapter)
+  }
   if (family %in% c("lm", "binomial", "poisson") && exists("calibration_model_adapters", envir = envir, inherits = TRUE)) {
     return(lookup("calibration_model_adapters")()[[family]])
   }
@@ -132,7 +137,7 @@
   }
   truth <- as.character(scenario$truth_class[[1L]])
   target_conclusion <- as.character(scenario$target_conclusion[[1L]])
-  conclusions <- switch(
+  conclusions <- if (identical(plan$scenario_selector, "one_per_engine")) target_conclusion else switch(
     target_conclusion,
     significant = c("significant", "non_significant"),
     non_significant = c("significant", "non_significant"),
@@ -222,8 +227,19 @@ run_calibration <- function(args = commandArgs(trailingOnly = TRUE), project_roo
   analyse_hook <- hooks$analyse %||% hooks$analyze %||%
     if (exists("run_full_scenario", envir = runner_env, inherits = TRUE)) {
       .calibration_default_analyse
-    } else NULL
+  } else NULL
   results <- list()
+  if (identical(options$phase, "analyse")) {
+    prior_results_path <- file.path(output, "run-results.rds")
+    if (!file.exists(prior_results_path)) {
+      stop("--phase analyse requires a prior run-results.rds with screening results", call. = FALSE)
+    }
+    prior_results <- readRDS(prior_results_path)
+    if (!is.list(prior_results$screen) || length(prior_results$screen) != nrow(selected)) {
+      stop("prior run-results.rds has no matching screening results", call. = FALSE)
+    }
+    results$screen <- prior_results$screen
+  }
   if (options$phase %in% c("screen", "all")) {
     results$screen <- lapply(seq_len(nrow(selected)), function(index) {
       scenario <- selected[index, , drop = FALSE]
@@ -245,9 +261,11 @@ run_calibration <- function(args = commandArgs(trailingOnly = TRUE), project_roo
   manifest$start_time <- as.POSIXct(start, tz = "UTC")
   manifest$selected_scenario_ids <- selected$scenario_id
   manifest$mode_plan <- plan
+  output_files <- list.files(output, full.names = TRUE, recursive = TRUE)
+  output_files <- output_files[!basename(output_files) %in% c("manifest.rds", "manifest.dput")]
   manifest_path <- write_calibration_manifest(
     manifest, output,
-    output_files = list.files(output, full.names = TRUE, recursive = TRUE)
+    output_files = output_files
   )
   invisible(readRDS(manifest_path))
 }

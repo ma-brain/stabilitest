@@ -151,7 +151,7 @@ calibration_run_plan <- function(options) {
   if (identical(mode, "smoke")) {
     return(utils::modifyList(options, list(
       n_boot = 5L, replicates_per_stratum = 2L,
-      scenario_selector = "one_per_engine", max_screen_draws = 2L
+      scenario_selector = "one_per_engine", max_screen_draws = 20L
     )))
   }
   if (identical(mode, "pilot")) {
@@ -163,7 +163,10 @@ calibration_run_plan <- function(options) {
   utils::modifyList(options, list(
     n_boot = 1000L, replicates_per_stratum = NULL,
     scenario_selector = if (isTRUE(options$validation_only)) "validation" else "frozen",
-    max_screen_draws = Inf
+    # Screening is finite at runtime even though the frozen plan does not
+    # impose a small production cap; this budget is large enough to fill both
+    # conclusion strata while remaining resumable and auditable.
+    max_screen_draws = 10000L
   ))
 }
 

@@ -46,6 +46,10 @@ if (!exists("%||%", mode = "function")) `%||%` <- function(x, y) if (is.null(x))
   condition
 }
 
+.executor_nonempty <- function(value, default) {
+  if (is.character(value) && length(value) == 1L && !is.na(value) && nzchar(value)) value else default
+}
+
 .executor_run_call <- function(fun, data, scenario, n_boot, seed) {
   if (!is.function(fun)) .executor_abort("adapter robustness function is missing")
   formals <- names(formals(fun))
@@ -168,9 +172,9 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
     }
     screen_status <- .executor_value(screening, list(c("status")), "completed")
     if (!identical(screen_status, "completed")) {
-      cls <- .executor_value(screening, list(c("failure_class")), "screening_failure")
-      msg <- .executor_value(screening, list(c("failure_message")), "screening did not complete")
-      stage <- .executor_value(screening, list(c("failure_stage")), "screening")
+      cls <- .executor_nonempty(.executor_value(screening, list(c("failure_class"))), "screening_failure")
+      msg <- .executor_nonempty(.executor_value(screening, list(c("failure_message"))), "screening did not complete")
+      stage <- .executor_nonempty(.executor_value(screening, list(c("failure_stage"))), "screening")
       return(.executor_failure_row(values, replicate_id, as.character(stage),
                                    .executor_condition(as.character(cls), msg),
                                    replicate_seed, bootstrap_seed,
@@ -183,9 +187,9 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
     full <- .executor_run_call(adapter$run_robustness, data, scenario, n_boot_value, bootstrap_seed)
     full_status <- .executor_value(full, list(c("status")), "completed")
     if (!identical(full_status, "completed")) {
-      cls <- .executor_value(full, list(c("failure_class")), as.character(full_status))
-      msg <- .executor_value(full, list(c("failure_message")), "robustness analysis did not complete")
-      stage <- .executor_value(full, list(c("failure_stage")), "robustness")
+      cls <- .executor_nonempty(.executor_value(full, list(c("failure_class"))), .executor_nonempty(as.character(full_status), "analysis_failure"))
+      msg <- .executor_nonempty(.executor_value(full, list(c("failure_message"))), "robustness analysis did not complete")
+      stage <- .executor_nonempty(.executor_value(full, list(c("failure_stage"))), "robustness")
       return(.executor_failure_row(values, replicate_id, as.character(stage),
                                    .executor_condition(as.character(cls), msg),
                                    replicate_seed, bootstrap_seed,
