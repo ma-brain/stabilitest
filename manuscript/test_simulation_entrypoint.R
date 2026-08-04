@@ -18,15 +18,25 @@ simulation_file <- file.path(
 )
 rscript <- file.path(R.home("bin"), "Rscript")
 
-run_rscript <- function(arguments, working_directory) {
+run_rscript <- function(arguments, working_directory, expected_status = 0L) {
   old_directory <- setwd(working_directory)
   on.exit(setwd(old_directory), add = TRUE)
 
-  output <- system2(rscript, arguments, stdout = TRUE, stderr = TRUE)
+  output <- suppressWarnings(
+    system2(rscript, arguments, stdout = TRUE, stderr = TRUE)
+  )
   status <- attr(output, "status")
   if (is.null(status)) status <- 0L
-  if (status != 0L) {
-    stop(paste(output, collapse = "\n"), call. = FALSE)
+  if (status != expected_status) {
+    stop(
+      sprintf(
+        "Expected Rscript status %d, got %d:\n%s",
+        expected_status,
+        status,
+        paste(output, collapse = "\n")
+      ),
+      call. = FALSE
+    )
   }
   invisible(output)
 }
@@ -114,6 +124,13 @@ expect_parse_error(
   "output directory does not exist"
 )
 
+required_result_columns <- c(
+  "nrep", "n_boot", "scenario_seed", "d", "n_per_group", "n_outliers",
+  "rejection_rate", "score_all", "score_all_sd", "score_sig",
+  "score_nonsig", "k_wc_med_sig", "frag_wc_med_sig", "k_ex_med_sig",
+  "s_jack_sig", "s_boot_sig"
+)
+
 test_simulation_schema <- function() {
   simulation_environment <- environment(run_simulation)
   full_scenarios <- get("scenarios", envir = simulation_environment)
@@ -128,14 +145,8 @@ test_simulation_schema <- function() {
   )
 
   result <- run_simulation(nrep = 1L, n_boot = 2L)
-  required <- c(
-    "nrep", "n_boot", "scenario_seed", "d", "n_per_group", "n_outliers",
-    "rejection_rate", "score_all", "score_all_sd", "score_sig",
-    "score_nonsig", "k_wc_med_sig", "frag_wc_med_sig", "k_ex_med_sig",
-    "s_jack_sig", "s_boot_sig"
-  )
   stopifnot(
-    identical(names(result), required),
+    identical(names(result), required_result_columns),
     all(result$nrep == 1L),
     all(result$n_boot == 2L),
     identical(result$scenario_seed, 987001:987002)
@@ -144,7 +155,38 @@ test_simulation_schema <- function() {
 
 test_simulation_schema()
 
-run_rscript(shQuote(simulation_file), tempdir())
+help_output <- run_rscript(
+  c(shQuote(simulation_file), "--help"),
+  tempdir()
+)
+stopifnot(any(grepl("Usage:", help_output, fixed = TRUE)))
+
+invalid_output <- run_rscript(
+  c(shQuote(simulation_file), "--nrep", "0"),
+  tempdir(),
+  expected_status = 1L
+)
+stopifnot(any(grepl("--nrep must be a positive integer", invalid_output)))
+
+reduced_output <- file.path(tempdir(), "simulation-entrypoint.csv")
+run_rscript(
+  c(
+    shQuote(simulation_file),
+    "--nrep", "1",
+    "--n-boot", "2",
+    "--output", shQuote(reduced_output)
+  ),
+  tempdir()
+)
+stopifnot(file.exists(reduced_output))
+reduced_results <- readr::read_csv(reduced_output, show_col_types = FALSE)
+stopifnot(
+  nrow(reduced_results) == 12L,
+  identical(names(reduced_results), required_result_columns),
+  all(reduced_results$nrep == 1L),
+  all(reduced_results$n_boot == 2L),
+  all(reduced_results$scenario_seed == 987001:987012)
+)
 
 source_expression <- sprintf(
   paste(

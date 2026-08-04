@@ -256,12 +256,67 @@ run_simulation <- function(nrep = 500, n_boot = 200) {
     })
 }
 
-if (interactive()) {
-  sim_results <- run_simulation(nrep = 500)   # ~1-2 h; use nrep = 25 to smoke-test
-  print(sim_results, width = Inf)
-  write_csv(sim_results, "simulation_results.csv")
+.simulation_is_direct <- function(script_path = .simulation_script_path()) {
+  file_args <- sub(
+    "^--file=",
+    "",
+    grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+  )
+  length(file_args) == 1L &&
+    identical(
+      normalizePath(file_args[[1L]], mustWork = TRUE),
+      normalizePath(script_path, mustWork = TRUE)
+    )
+}
 
-  # Headline calibration figure: score distribution for chance-significant
-  # findings (d = 0) vs true large effects (d = 0.8), conditional on p < alpha
-  # (values reported in manuscript Table 2)
+.write_simulation_results <- function(results, output) {
+  temporary <- tempfile(
+    pattern = paste0(".", basename(output), "."),
+    tmpdir = dirname(output),
+    fileext = ".tmp"
+  )
+  on.exit(unlink(temporary), add = TRUE)
+  readr::write_csv(results, temporary, na = "NA")
+
+  backup <- NULL
+  if (file.exists(output)) {
+    backup <- tempfile(
+      pattern = paste0(".", basename(output), ".backup."),
+      tmpdir = dirname(output)
+    )
+    if (!file.rename(output, backup)) {
+      stop("Unable to protect the existing simulation output", call. = FALSE)
+    }
+  }
+
+  if (!file.rename(temporary, output)) {
+    if (!is.null(backup)) file.rename(backup, output)
+    stop("Unable to install the completed simulation output", call. = FALSE)
+  }
+  if (!is.null(backup)) unlink(backup)
+  invisible(output)
+}
+
+.run_simulation_cli <- function(args = commandArgs(trailingOnly = TRUE),
+                                script_path = .simulation_script_path()) {
+  options <- .parse_simulation_args(args, script_path)
+  if (options$help) {
+    cat(.simulation_usage(), "\n")
+    return(invisible(NULL))
+  }
+
+  message(sprintf(
+    "Running simulation with nrep=%d, n_boot=%d",
+    options$nrep,
+    options$n_boot
+  ))
+  results <- run_simulation(nrep = options$nrep, n_boot = options$n_boot)
+  print(results, width = Inf)
+  .write_simulation_results(results, options$output)
+  message("Simulation results written to ", options$output)
+  invisible(results)
+}
+
+if (.simulation_is_direct()) {
+  .run_simulation_cli()
 }
