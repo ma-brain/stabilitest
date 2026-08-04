@@ -51,6 +51,60 @@ testthat::test_that("failed families become uncalibrated rather than silently sh
   testthat::expect_true(is.na(row$lower_cutoff[[1L]]))
 })
 
+testthat::test_that("shared mapping validation publishes shared cutoffs, not training candidates", {
+  # Training-style candidate proposes a non-shared pair (55/75). Held-out data
+  # still validates the shared mapping; exported cutoffs must become (55/70).
+  set.seed(42L)
+  n_per <- 120L
+  make_stratum <- function(truth, lo, hi) {
+    data.frame(
+      analysis_family = "shared_override",
+      truth_class = truth,
+      overall_score = runif(n_per, lo, hi),
+      status = "completed",
+      design_layer = "core",
+      stringsAsFactors = FALSE
+    )
+  }
+  validation <- rbind(
+    make_stratum("null", 10, 40),
+    make_stratum("borderline", 56, 68),
+    make_stratum("clear", 80, 95)
+  )
+  candidates <- data.frame(
+    analysis_family = "shared_override",
+    lower_cutoff = 55L, upper_cutoff = 75L,
+    shared_lower = 55L, shared_upper = 70L,
+    training_balanced_accuracy = 0.9,
+    training_false_reassurance = 0.01,
+    training_robust_identification = 0.9,
+    training_false_reassurance_upper = 0.05,
+    training_robust_identification_lower = 0.8,
+    shared_balanced_accuracy = 0.9,
+    shared_false_reassurance = 0.01,
+    shared_robust_identification = 0.9,
+    shared_false_reassurance_upper = 0.05,
+    shared_robust_identification_lower = 0.8,
+    heldout_balanced_accuracy = NA_real_, shared_heldout_accuracy = NA_real_,
+    heldout_improvement = NA_real_, material_difference = NA_integer_,
+    heldout_false_reassurance_upper = NA_real_,
+    heldout_robust_identification_lower = NA_real_,
+    median_ordering_ok = NA, stratum_complete = NA,
+    improvement_direction_ok = NA,
+    status = "candidate", reason = NA_character_,
+    stringsAsFactors = FALSE
+  )
+  evaluated <- threshold_env$validate_calibration_candidates(
+    candidates, validation, shared_cutoffs = c(55L, 70L), minimum_stratum_n = 100L
+  )
+  row <- evaluated[evaluated$analysis_family == "shared_override", , drop = FALSE]
+  testthat::expect_identical(nrow(row), 1L)
+  testthat::expect_identical(row$status[[1L]], "validated")
+  testthat::expect_identical(row$reason[[1L]], "shared_mapping_validated")
+  testthat::expect_identical(row$lower_cutoff[[1L]], 55L)
+  testthat::expect_identical(row$upper_cutoff[[1L]], 70L)
+})
+
 testthat::test_that("analysis is deterministic and freezes a hashed registry", {
   training <- readRDS(fixture_path("training-replicates.rds"))
   validation <- readRDS(fixture_path("validation-replicates.rds"))

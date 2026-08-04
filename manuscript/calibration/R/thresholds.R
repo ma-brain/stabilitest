@@ -404,6 +404,11 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
     } else if (identical(out$status[[i]], "candidate")) {
       shared_ok <- shared_policy_valid
       if (shared_ok) {
+        # Consumers read lower/upper as the active published mapping. When the
+        # held-out decision is shared-mapping validation, force those cutoffs
+        # even if training proposed a different candidate pair.
+        out$lower_cutoff[[i]] <- shared_cutoffs[[1L]]
+        out$upper_cutoff[[i]] <- shared_cutoffs[[2L]]
         out$status[[i]] <- "validated"
         out$reason[[i]] <- "shared_mapping_validated"
       } else {
