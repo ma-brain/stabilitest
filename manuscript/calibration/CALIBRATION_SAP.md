@@ -84,7 +84,11 @@ freezes these operational rules for the publication run:
 
 The full scenario manifest hash after this pilot review is
 `f543a90c41a342497f07f1287503eb5b`.  Any subsequent scenario, adapter, or RNG
-change requires a new hash and a new pilot before full execution.
+change requires a new hash and a new pilot before full execution.  Expanding
+the analysis-specific scenario registry (Cox core strata, proportion
+stress/validation, paired Wilcoxon rows, and TOST core truth classes) changes
+that frozen hash; recompute and record the new manifest hash only after the
+next pilot, not from this registry edit alone.
 
 Use one-sided 95% Wilson bounds for the acceptance decisions below.  When rates
 are aggregated across scenarios, retain scenario identity and report

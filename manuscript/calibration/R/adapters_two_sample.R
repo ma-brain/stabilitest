@@ -257,6 +257,10 @@ generate_two_sample <- function(scenario, seed = NULL) {
   list(group1 = group1, group2 = group2)
 }
 
+# Proportion scenarios reuse the same binary two-sample generator; the alias
+# keeps registry `data_generator` names honest for the proportion family.
+generate_proportion <- generate_two_sample
+
 #' Build the two-sample calibration adapter.
 #' @export
 two_sample_adapter <- function() {
