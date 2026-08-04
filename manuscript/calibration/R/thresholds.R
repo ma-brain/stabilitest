@@ -6,6 +6,64 @@ CALIBRATION_MATERIAL_CUTOFF_DIFFERENCE <- 5L
 
 .threshold_abort <- function(message) stop(message, call. = FALSE)
 
+.threshold_wilson <- function(x, n, side = c("lower", "upper"), conf_level = 0.95) {
+  side <- match.arg(side)
+  if (!is.numeric(x) || length(x) != 1L || !is.numeric(n) || length(n) != 1L ||
+      !is.finite(x) || !is.finite(n) || n <= 0 || x < 0 || x > n ||
+      conf_level <= 0 || conf_level >= 1) return(NA_real_)
+  # One-sided 95% bounds use the 95th percentile, not the two-sided 97.5th.
+  z <- stats::qnorm(conf_level)
+  centre <- (x + z^2 / 2) / (n + z^2)
+  radius <- z * sqrt(x * (n - x) / n + z^2 / 4) / (n + z^2)
+  if (identical(side, "upper")) min(1, centre + radius) else max(0, centre - radius)
+}
+
+.threshold_manifest <- function(manifest, label, expected_split) {
+  if (is.null(manifest)) return(NULL)
+  if (!is.list(manifest)) .threshold_abort(sprintf("%s manifest must be a list", label))
+  required <- c("manifest_version", "scenario_manifest_hash", "options")
+  missing <- setdiff(required, names(manifest))
+  if (length(missing)) .threshold_abort(sprintf("%s manifest missing: %s", label, paste(missing, collapse = ", ")))
+  if (!is.character(manifest$manifest_version) || length(manifest$manifest_version) != 1L ||
+      is.na(manifest$manifest_version) || !grepl("^calibration-", manifest$manifest_version)) {
+    .threshold_abort(sprintf("%s manifest_version is unsupported", label))
+  }
+  hash <- manifest$scenario_manifest_hash
+  if (!is.character(hash) || length(hash) != 1L || is.na(hash) || !nzchar(hash)) {
+    .threshold_abort(sprintf("%s scenario_manifest_hash must be non-empty", label))
+  }
+  if (!is.list(manifest$options)) .threshold_abort(sprintf("%s manifest options must be a list", label))
+  if (!is.null(manifest$options$validation_only) &&
+      (!is.logical(manifest$options$validation_only) || length(manifest$options$validation_only) != 1L ||
+       is.na(manifest$options$validation_only))) {
+    .threshold_abort(sprintf("%s manifest validation_only option must be logical", label))
+  }
+  if (identical(expected_split, "validation") && isFALSE(manifest$options$validation_only)) {
+    .threshold_abort(sprintf("%s manifest options are not validation-only", label))
+  }
+  if (identical(expected_split, "training") && isTRUE(manifest$options$validation_only)) {
+    .threshold_abort(sprintf("%s manifest options are validation-only", label))
+  }
+  split <- if (!is.null(manifest$split)) manifest$split else manifest$options$split
+  if (!is.null(split) && (!is.character(split) || length(split) != 1L ||
+                          !split %in% c("training", "validation"))) {
+    .threshold_abort(sprintf("%s manifest split must be training or validation", label))
+  }
+  if (!is.null(split) && !identical(split, expected_split)) {
+    .threshold_abort(sprintf("%s manifest split does not match expected %s", label, expected_split))
+  }
+  manifest
+}
+
+.threshold_manifest_pair <- function(training_manifest, validation_manifest) {
+  if (is.null(training_manifest) || is.null(validation_manifest)) return(invisible(NULL))
+  if (!identical(training_manifest$scenario_manifest_hash,
+                 validation_manifest$scenario_manifest_hash)) {
+    .threshold_abort("training and validation scenario_manifest_hash values differ")
+  }
+  invisible(NULL)
+}
+
 .threshold_hash_object <- function(object) {
   if (exists("calibration_hash_object", mode = "function", inherits = TRUE)) {
     return(calibration_hash_object(object))
@@ -115,12 +173,16 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
   robust <- if (!any(clear_rows)) NA_real_ else mean(observed[clear_rows] == 2L, na.rm = TRUE)
   list(n = sum(usable), balanced_ordinal_accuracy = as.numeric(balanced),
        false_reassurance = as.numeric(false), robust_identification = as.numeric(robust),
+       false_reassurance_upper = .threshold_wilson(sum(observed[null_rows] >= 1L, na.rm = TRUE), sum(null_rows), "upper"),
+       robust_identification_lower = .threshold_wilson(sum(observed[clear_rows] == 2L, na.rm = TRUE), sum(clear_rows), "lower"),
        median_score = stats::median(score), status = "ok", cutoffs = cutoffs)
 }
 
 .threshold_constraints_ok <- function(metrics) {
   isTRUE(is.finite(metrics$false_reassurance)) && metrics$false_reassurance <= 0.05 &&
-    isTRUE(is.finite(metrics$robust_identification)) && metrics$robust_identification >= 0.70
+    isTRUE(is.finite(metrics$false_reassurance_upper)) && metrics$false_reassurance_upper <= 0.10 &&
+    isTRUE(is.finite(metrics$robust_identification)) && metrics$robust_identification >= 0.70 &&
+    isTRUE(is.finite(metrics$robust_identification_lower)) && metrics$robust_identification_lower >= 0.60
 }
 
 .threshold_row <- function(family, cutoffs = c(NA_integer_, NA_integer_), status = "uncalibrated",
@@ -132,11 +194,34 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
     training_balanced_accuracy = if (is.null(training)) NA_real_ else training$balanced_ordinal_accuracy,
     training_false_reassurance = if (is.null(training)) NA_real_ else training$false_reassurance,
     training_robust_identification = if (is.null(training)) NA_real_ else training$robust_identification,
+    training_false_reassurance_upper = if (is.null(training)) NA_real_ else training$false_reassurance_upper,
+    training_robust_identification_lower = if (is.null(training)) NA_real_ else training$robust_identification_lower,
     shared_balanced_accuracy = if (is.null(shared)) NA_real_ else shared$balanced_ordinal_accuracy,
     heldout_balanced_accuracy = NA_real_, shared_heldout_accuracy = NA_real_,
     heldout_improvement = NA_real_, material_difference = NA_integer_,
+    heldout_false_reassurance_upper = NA_real_, heldout_robust_identification_lower = NA_real_,
+    median_ordering_ok = NA, stratum_complete = NA,
     status = as.character(status), reason = as.character(reason), stringsAsFactors = FALSE
   )
+}
+
+.threshold_validation_diagnostics <- function(data, minimum_stratum_n = 100L) {
+  truths <- c("null", "borderline", "clear")
+  counts <- table(factor(data$truth_class, levels = truths))
+  complete <- all(as.numeric(counts) >= as.integer(minimum_stratum_n))
+  ordering <- TRUE
+  layers <- if ("design_layer" %in% names(data)) unique(as.character(data$design_layer)) else "all"
+  for (layer in layers) {
+    group <- if (identical(layer, "all")) data else data[as.character(data$design_layer) == layer, , drop = FALSE]
+    medians <- vapply(truths, function(truth) {
+      values <- group$overall_score[group$truth_class == truth & is.finite(group$overall_score)]
+      if (!length(values)) NA_real_ else stats::median(values)
+    }, numeric(1))
+    present <- is.finite(medians)
+    if (sum(present) >= 2L && any(diff(medians[present]) < 0)) ordering <- FALSE
+  }
+  list(stratum_complete = complete, median_ordering_ok = ordering,
+       stratum_counts = counts)
 }
 
 # Search the finite, ordered integer grid.  Ties are resolved by minimizing
@@ -174,7 +259,7 @@ fit_family_thresholds <- function(replicates, shared_cutoffs = CALIBRATION_SHARE
 
 fit_calibration_candidates <- function(training_replicates,
                                         shared_cutoffs = CALIBRATION_SHARED_CUTOFFS,
-                                        sap = list()) {
+                                        sap = list(), training_manifest = NULL) {
   shared_cutoffs <- .threshold_cutoffs(shared_cutoffs, "shared_cutoffs")
   data <- .threshold_data(training_replicates, "training")
   families <- sort(unique(data$analysis_family))
@@ -193,7 +278,8 @@ fit_calibration_candidates <- function(training_replicates,
   rownames(registry) <- NULL
   result <- list(shared_cutoffs = shared_cutoffs, shared_evaluated = TRUE,
                  shared = shared_by_family, registry = registry,
-                 training_rows = nrow(data), sap = sap)
+                 training_rows = nrow(data), sap = sap,
+                 training_manifest = training_manifest)
   result$candidate_hash <- .threshold_hash_object(registry)
   class(result) <- c("calibration_candidates", "list")
   result
@@ -232,7 +318,8 @@ evaluate_calibration_registry <- function(replicates, registry,
 validate_calibration_candidates <- function(candidates, validation_replicates,
                                              shared_cutoffs = CALIBRATION_SHARED_CUTOFFS,
                                              improvement = CALIBRATION_FAMILY_IMPROVEMENT,
-                                             material_difference = CALIBRATION_MATERIAL_CUTOFF_DIFFERENCE) {
+                                             material_difference = CALIBRATION_MATERIAL_CUTOFF_DIFFERENCE,
+                                             minimum_stratum_n = 100L) {
   shared_cutoffs <- .threshold_cutoffs(shared_cutoffs, "shared_cutoffs")
   data <- .threshold_data(validation_replicates, "validation")
   registry <- .threshold_registry(candidates)
@@ -242,12 +329,19 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
   if (!is.numeric(material_difference) || length(material_difference) != 1L || material_difference < 0) {
     .threshold_abort("material_difference must be non-negative")
   }
+  if (!is.numeric(minimum_stratum_n) || length(minimum_stratum_n) != 1L ||
+      !is.finite(minimum_stratum_n) || minimum_stratum_n < 1 || minimum_stratum_n != floor(minimum_stratum_n)) {
+    .threshold_abort("minimum_stratum_n must be a positive integer")
+  }
   out <- registry
   for (i in seq_len(nrow(out))) {
     family <- out$analysis_family[[i]]
     group <- data[data$analysis_family == family, , drop = FALSE]
     shared <- .threshold_metrics(group, shared_cutoffs)
+    diagnostics <- .threshold_validation_diagnostics(group, minimum_stratum_n)
     out$shared_heldout_accuracy[[i]] <- shared$balanced_ordinal_accuracy
+    out$median_ordering_ok[[i]] <- diagnostics$median_ordering_ok
+    out$stratum_complete[[i]] <- diagnostics$stratum_complete
     if (is.na(out$lower_cutoff[[i]]) || !nrow(group)) {
       out$status[[i]] <- "uncalibrated"
       out$reason[[i]] <- if (!nrow(group)) "no_validation_replicates" else "training_fit_failed"
@@ -255,17 +349,22 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
     }
     candidate <- .threshold_metrics(group, c(out$lower_cutoff[[i]], out$upper_cutoff[[i]]))
     out$heldout_balanced_accuracy[[i]] <- candidate$balanced_ordinal_accuracy
+    out$heldout_false_reassurance_upper[[i]] <- candidate$false_reassurance_upper
+    out$heldout_robust_identification_lower[[i]] <- candidate$robust_identification_lower
     out$heldout_improvement[[i]] <- candidate$balanced_ordinal_accuracy - shared$balanced_ordinal_accuracy
     out$material_difference[[i]] <- max(abs(out$lower_cutoff[[i]] - shared_cutoffs[[1L]]),
                                          abs(out$upper_cutoff[[i]] - shared_cutoffs[[2L]]))
-    accepted <- .threshold_constraints_ok(candidate) &&
+    accepted <- diagnostics$stratum_complete && diagnostics$median_ordering_ok &&
+      .threshold_constraints_ok(candidate) &&
       isTRUE(out$heldout_improvement[[i]] >= improvement) &&
       isTRUE(out$material_difference[[i]] >= material_difference)
     if (accepted) {
       out$status[[i]] <- "family_specific"
       out$reason[[i]] <- "heldout_improvement_and_material_difference"
     } else if (identical(out$status[[i]], "candidate")) {
-      if (.threshold_constraints_ok(shared)) {
+      shared_ok <- diagnostics$stratum_complete && diagnostics$median_ordering_ok &&
+        .threshold_constraints_ok(shared)
+      if (shared_ok) {
         out$status[[i]] <- "validated"
         out$reason[[i]] <- "shared_mapping_validated"
       } else {
@@ -296,15 +395,21 @@ freeze_calibration_registry <- function(registry) {
 analyse_calibration <- function(training_replicates, validation_replicates,
                                 training_manifest = NULL, validation_manifest = NULL,
                                 shared_cutoffs = CALIBRATION_SHARED_CUTOFFS,
-                                output = NULL, ...) {
+                                output = NULL, minimum_stratum_n = 100L, ...) {
   training <- .threshold_data(training_replicates, "training")
   validation <- .threshold_data(validation_replicates, "validation")
   .threshold_assert_disjoint(training, validation)
-  if (!is.null(training_manifest) && !is.list(training_manifest)) .threshold_abort("training manifest must be a list")
-  if (!is.null(validation_manifest) && !is.list(validation_manifest)) .threshold_abort("validation manifest must be a list")
-  candidates <- fit_calibration_candidates(training, shared_cutoffs = shared_cutoffs)
+  training_manifest <- .threshold_manifest(training_manifest, "training", "training")
+  validation_manifest <- .threshold_manifest(validation_manifest, "validation", "validation")
+  .threshold_manifest_pair(training_manifest, validation_manifest)
+  candidates <- fit_calibration_candidates(training, shared_cutoffs = shared_cutoffs,
+                                           training_manifest = training_manifest)
   candidate_hash <- candidates$candidate_hash
-  registry <- validate_calibration_candidates(candidates, validation, shared_cutoffs = shared_cutoffs)
+  registry <- validate_calibration_candidates(candidates, validation, shared_cutoffs = shared_cutoffs,
+                                              minimum_stratum_n = minimum_stratum_n)
+  registry$training_manifest_hash <- if (is.null(training_manifest)) NA_character_ else training_manifest$scenario_manifest_hash
+  registry$validation_manifest_hash <- if (is.null(validation_manifest)) NA_character_ else validation_manifest$scenario_manifest_hash
+  registry$manifest_version <- if (is.null(training_manifest)) NA_character_ else training_manifest$manifest_version
   frozen <- freeze_calibration_registry(registry)
   heldout <- evaluate_calibration_registry(validation, frozen$registry)
   result <- list(

@@ -65,3 +65,34 @@ testthat::test_that("analysis is deterministic and freezes a hashed registry", {
     "disjoint|overlap|held.?out"
   )
 })
+
+testthat::test_that("manifest provenance is validated and preserved", {
+  training <- readRDS(fixture_path("training-replicates.rds"))
+  validation <- readRDS(fixture_path("validation-replicates.rds"))
+  training_manifest <- list(manifest_version = "calibration-1", scenario_manifest_hash = "same",
+                           options = list(split = "training", validation_only = FALSE))
+  validation_manifest <- list(manifest_version = "calibration-1", scenario_manifest_hash = "same",
+                             options = list(split = "validation", validation_only = TRUE))
+  result <- threshold_env$analyse_calibration(training, validation, training_manifest, validation_manifest)
+  testthat::expect_true(all(result$registry$training_manifest_hash == "same"))
+  testthat::expect_true(all(result$registry$validation_manifest_hash == "same"))
+  bad <- validation_manifest; bad$scenario_manifest_hash <- "different"
+  testthat::expect_error(threshold_env$analyse_calibration(training, validation, training_manifest, bad), "hash")
+  bad <- validation_manifest; bad$manifest_version <- "future-format"
+  testthat::expect_error(threshold_env$analyse_calibration(training, validation, training_manifest, bad), "version")
+})
+
+testthat::test_that("held-out acceptance records Wilson bounds and stratum checks", {
+  training <- readRDS(fixture_path("training-replicates.rds"))
+  validation <- readRDS(fixture_path("validation-replicates.rds"))
+  result <- threshold_env$analyse_calibration(training, validation)
+  fake <- result$registry[result$registry$analysis_family == "fake_family", , drop = FALSE]
+  testthat::expect_lte(fake$heldout_false_reassurance_upper[[1L]], 0.10)
+  testthat::expect_gte(fake$heldout_robust_identification_lower[[1L]], 0.60)
+  testthat::expect_true(isTRUE(fake$stratum_complete[[1L]]))
+  testthat::expect_true(isTRUE(fake$median_ordering_ok[[1L]]))
+  short <- validation[seq_len(6L), , drop = FALSE]
+  short_result <- threshold_env$analyse_calibration(training, short,
+                                                     minimum_stratum_n = 1L)
+  testthat::expect_true(any(!short_result$registry$stratum_complete))
+})
