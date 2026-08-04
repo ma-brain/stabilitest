@@ -25,7 +25,15 @@
 }
 
 .two_sample_generator_settings <- function(scenario) {
-  parameters <- if (is.data.frame(scenario)) scenario$parameters[[1L]] else scenario$parameters
+  parameters <- if (is.data.frame(scenario)) {
+    scenario$parameters[[1L]]
+  } else if (is.list(scenario) && !is.null(scenario$parameters)) {
+    scenario$parameters
+  } else if (is.list(scenario) && !is.null(scenario$generator)) {
+    scenario
+  } else {
+    NULL
+  }
   if (is.null(parameters) || !is.list(parameters)) return(list())
   generator <- parameters$generator
   if (is.null(generator)) list() else generator

@@ -1,3 +1,8 @@
+if (!requireNamespace("stabilitest", quietly = TRUE)) {
+  test_project_root <- normalizePath(file.path("..", "..", "..", ".."), mustWork = TRUE)
+  pkgload::load_all(test_project_root, quiet = TRUE)
+}
+
 testthat::test_that("two-sample adapters preserve primary-test parity", {
   adapter_path <- file.path("..", "..", "R", "adapters_two_sample.R")
   testthat::expect_true(file.exists(adapter_path))
@@ -115,6 +120,13 @@ testthat::test_that("generator supports imbalanced unpaired groups and rejects u
   generated <- adapter_env$generate_two_sample(imbalanced, seed = 42L)
   testthat::expect_length(generated$group1, 7L)
   testthat::expect_length(generated$group2, 13L)
+  direct_named <- list(generator = list(
+    n_group1 = 5L, n_group2 = 9L, effect_size = 0.2,
+    distribution = "normal"
+  ))
+  direct_generated <- adapter_env$generate_two_sample(direct_named, seed = 43L)
+  testthat::expect_length(direct_generated$group1, 5L)
+  testthat::expect_length(direct_generated$group2, 9L)
 
   paired_bad <- list(parameters = list(generator = list(
     n_group1 = 7L, n_group2 = 13L, paired = TRUE
