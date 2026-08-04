@@ -123,3 +123,53 @@ testthat::test_that("timeout and generated-data failures preserve audit status",
   testthat::expect_identical(generated$failure_class, "error")
   testthat::expect_true(env$validate_calibration_replicates(generated))
 })
+
+testthat::test_that("adapter-declared failure fields and timeout conditions are preserved", {
+  env <- new.env(parent = globalenv())
+  for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
+    sys.source(file.path("..", "..", "R", file), envir = env)
+  }
+  scenario <- list(scenario_id = "declared", analysis_family = "fake", endpoint = "mean",
+                   design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
+                   sample_size = 3L, n_boot = 2L, max_removal_pct = .3)
+  screening <- list(conclusion = "non_significant")
+  declared <- list(primary_decision = function(...) screening,
+                   run_robustness = function(...) list(status = "failed", failure_stage = "subset",
+                                                        failure_class = "subset_failure", failure_message = "vanished subset"))
+  row <- env$run_selected_replicate(scenario, declared, 1L, data.frame(x = 1:3), replicate_seed = 1L)
+  testthat::expect_identical(row$failure_stage, "subset")
+  testthat::expect_identical(row$failure_class, "subset_failure")
+
+  timeout_condition <- structure(list(message = "elapsed time limit reached"),
+                                 class = c("simpleError", "error", "condition"))
+  timeout_adapter <- list(primary_decision = function(...) screening,
+                          run_robustness = function(...) stop(timeout_condition))
+  timed <- env$run_selected_replicate(scenario, timeout_adapter, 1L,
+                                      data.frame(x = 1:3), replicate_seed = 1L)
+  testthat::expect_identical(timed$failure_stage, "timeout")
+  testthat::expect_identical(timed$failure_class, "error")
+})
+
+testthat::test_that("parallel identity is defined for analysis fields while runtime is measured", {
+  env <- new.env(parent = globalenv())
+  for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
+    sys.source(file.path("..", "..", "R", file), envir = env)
+  }
+  scenario <- list(scenario_id = "identity", analysis_family = "fake", endpoint = "mean",
+                   design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
+                   sample_size = 3L, n_boot = 2L, max_removal_pct = .3)
+  adapter <- list(
+    generate = function(scenario, seed) { set.seed(seed); list(data = data.frame(x = rnorm(3L))) },
+    primary_decision = function(...) list(conclusion = "non_significant"),
+    run_robustness = function(data, ...) list(status = "completed", original_p = .5, effective_p = .5,
+      metrics = list(jackknife_conclusion_stability = 100, worstcase_fragility_component = 100,
+                     worstcase_fragility_k = 3L, worstcase_fragility_pct = 100,
+                     bootstrap_reproducibility = 100, overall_robustness = 100),
+      interpretation_label = "Robust", n = 3L)
+  )
+  one <- env$run_full_scenario(scenario, adapter, replicate_ids = 1:4, workers = 1L)
+  many <- env$run_full_scenario(scenario, adapter, replicate_ids = 1:4, workers = 2L)
+  testthat::expect_identical(one[, setdiff(names(one), "runtime_seconds")],
+                             many[, setdiff(names(many), "runtime_seconds")])
+  testthat::expect_true(all(one$runtime_seconds >= 0) && all(many$runtime_seconds >= 0))
+})

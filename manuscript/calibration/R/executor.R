@@ -5,6 +5,10 @@ if (!exists("%||%", mode = "function")) `%||%` <- function(x, y) if (is.null(x))
 .executor_abort <- function(message) stop(message, call. = FALSE)
 .executor_replicate_seed <- function(value, id) replicate_seed(value, id)
 .executor_bootstrap_seed <- function(value) bootstrap_seed(value)
+.executor_timeout_condition <- function(error) {
+  inherits(error, c("elapsedTimeLimit", "timeLimit")) ||
+    grepl("elapsed.*time|time[ -]?limit|timeout", conditionMessage(error), ignore.case = TRUE)
+}
 
 .executor_scenario_values <- function(scenario) {
   if (is.data.frame(scenario)) {
@@ -163,7 +167,10 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
     if (!identical(screen_status, "completed")) {
       cls <- .executor_value(screening, list(c("failure_class")), "screening_failure")
       msg <- .executor_value(screening, list(c("failure_message")), "screening did not complete")
-      stop(.executor_condition(as.character(cls), msg, stage = "screening"))
+      stage <- .executor_value(screening, list(c("failure_stage")), "screening")
+      return(.executor_failure_row(values, replicate_id, as.character(stage),
+                                   .executor_condition(as.character(cls), msg),
+                                   replicate_seed, bootstrap_seed))
     }
     screening_conclusion <- .executor_conclusion(screening)
     if (is.na(screening_conclusion)) stop("screening conclusion is missing", call. = FALSE)
@@ -175,8 +182,9 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
       cls <- .executor_value(full, list(c("failure_class")), as.character(full_status))
       msg <- .executor_value(full, list(c("failure_message")), "robustness analysis did not complete")
       stage <- .executor_value(full, list(c("failure_stage")), "robustness")
-      stop(.executor_condition(as.character(cls), msg,
-                               stage = .executor_value(full, list(c("failure_stage")), "robustness")))
+      return(.executor_failure_row(values, replicate_id, as.character(stage),
+                                   .executor_condition(as.character(cls), msg),
+                                   replicate_seed, bootstrap_seed))
     }
     validated <- .executor_validate_success(full, data)
     if (!validated$ok) stop(validated$condition)
@@ -199,7 +207,7 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
       failure_class = NA_character_, failure_message = NA_character_
     )
   }, error = function(error) {
-    stage <- if (inherits(error, "elapsedTimeLimit")) "timeout" else if (
+    stage <- if (.executor_timeout_condition(error)) "timeout" else if (
       inherits(error, "non_finite_metric")
     ) "metric_validation" else if (inherits(error, "subset_failure")) "subset" else if (
       inherits(error, "screening_failure")
@@ -248,6 +256,10 @@ run_full_scenario <- function(scenario, adapter, selected = NULL, replicate_ids 
   if (isTRUE(resume) && !is.null(path) && file.exists(path)) {
     existing <- tryCatch(read_checkpoint(path, manifest_hash)$replicates,
                          error = function(error) NULL)
+    existing <- if (!is.null(existing)) {
+      tryCatch({ validate_calibration_replicates(existing); existing },
+               error = function(error) NULL)
+    } else NULL
     if (!is.null(existing) && checkpoint_complete(path, manifest_hash, target_n)) {
       return(existing)
     }
