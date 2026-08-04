@@ -71,11 +71,10 @@ load_calibration <- function(project_root = .calibration_project_root(), envir =
 
   calibration_r_dir <- file.path(project_root, "manuscript", "calibration", "R")
   calibration_files <- list.files(calibration_r_dir, pattern = "[.]R$", full.names = TRUE)
-  this_file <- if (is.null(.calibration_script_file)) {
-    file.path(project_root, "manuscript", "calibration", "R", "load_calibration.R")
-  } else {
-    normalizePath(.calibration_script_file, mustWork = TRUE)
-  }
+  this_file <- normalizePath(
+    file.path(project_root, "manuscript", "calibration", "R", "load_calibration.R"),
+    mustWork = TRUE
+  )
   calibration_files <- calibration_files[
     normalizePath(calibration_files, mustWork = TRUE) != this_file
   ]

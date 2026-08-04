@@ -48,4 +48,15 @@ testthat::test_that("loader locates the project root when sys.source omits ofile
   testthat::expect_identical(loader_env$.calibration_project_root(), project_root)
   testthat::expect_identical(loader_env$load_calibration(envir = loader_env), project_root)
   testthat::expect_true(exists("calibration_scenarios", envir = loader_env, inherits = FALSE))
+
+  foreign_loader <- tempfile(fileext = ".R")
+  testthat::expect_true(file.copy(loader_path, foreign_loader, overwrite = TRUE))
+  foreign_env <- new.env(parent = globalenv())
+  sys.source(loader_path, envir = foreign_env)
+  foreign_env$.calibration_script_file <- normalizePath(foreign_loader, mustWork = TRUE)
+  foreign_env$load_calibration(project_root = project_root, envir = foreign_env)
+  testthat::expect_identical(
+    foreign_env$.calibration_script_file,
+    normalizePath(foreign_loader, mustWork = TRUE)
+  )
 })
