@@ -1,0 +1,2 @@
+scenario_id,analysis_family,design_layer,truth_class,target_conclusion,failure_stage,failure_class,failure_count,denominator,failure_rate
+two_sample_core_clear_n80,two_sample,core,clear,significant,screening,quota_incomplete,3,10,0.300000

@@ -250,8 +250,23 @@ run_tost_adapter <- function(data, endpoint = c("mean", "prop", "or"),
                     higher_is_better, alpha, n_boot, max_removal_pct, seed, list(...))
     analysis <- do.call(stabilitest::robustness_tost,
                         c(a[setdiff(names(a), "dots")], a$dots))
+    # Flatten the shared robustness fields at the adapter boundary.  The
+    # executor consumes the common result schema across analysis families;
+    # keeping metrics only under `$analysis` would make a valid TOST run look
+    # like a non-finite-metric failure during pilot/full execution.
     list(status = "completed", screening = screening, analysis = analysis,
          original_p = analysis$original_p, effective_p = analysis$original_p,
+         # Preserve the endpoint-specific conclusion (equivalent /
+         # not_equivalent or noninferior / inferior) for the common executor
+         # schema.  The nested robustness object exposes only the logical
+         # original_significant flag, which is not sufficient to distinguish
+         # these TOST/NI conclusions.
+         conclusion = screening$conclusion,
+         analysis_conclusion = screening$conclusion,
+         metrics = analysis$metrics, robustness_metrics = analysis$metrics,
+         interpretation_label = analysis$interpretation_label,
+         robustness_interpretation = analysis$interpretation_label,
+         n = analysis$n,
          failure_stage = NA_character_, failure_class = NA_character_, failure_message = NA_character_)
   }, error = function(e) {
     cls <- if (endpoint == "prop" && .tost_prop_degenerate(data)) {

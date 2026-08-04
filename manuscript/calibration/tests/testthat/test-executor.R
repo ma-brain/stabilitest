@@ -150,6 +150,35 @@ testthat::test_that("adapter-declared failure fields and timeout conditions are 
   testthat::expect_identical(timed$failure_class, "error")
 })
 
+testthat::test_that("selected adapter screening results with status ok are accepted", {
+  env <- new.env(parent = globalenv())
+  for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
+    sys.source(file.path("..", "..", "R", file), envir = env)
+  }
+  scenario <- list(scenario_id = "status-ok-screen", analysis_family = "fake",
+                   endpoint = "mean", design_layer = "core", truth_class = "clear",
+                   target_conclusion = "significant", sample_size = 3L, n_boot = 2L,
+                   max_removal_pct = .3, scenario_seed = 17L)
+  adapter <- list(
+    primary_decision = function(...) list(status = "ok", conclusion = "significant"),
+    run_robustness = function(...) list(
+      status = "completed", original_p = .01, effective_p = .02,
+      metrics = list(jackknife_conclusion_stability = 100,
+                     worstcase_fragility_component = 80,
+                     worstcase_fragility_k = 1L, worstcase_fragility_pct = 33,
+                     bootstrap_reproducibility = 100, overall_robustness = 88),
+      interpretation_label = "Robust", n = 3L
+    )
+  )
+  row <- env$run_selected_replicate(
+    scenario, adapter, 1L, data = data.frame(x = 1:3),
+    screening = adapter$primary_decision(), replicate_seed = 11L, n_boot = 2L
+  )
+  testthat::expect_identical(row$status, "completed")
+  testthat::expect_identical(row$failure_stage, NA_character_)
+  testthat::expect_identical(row$screening_conclusion, "significant")
+})
+
 testthat::test_that("parallel identity is defined for analysis fields while runtime is measured", {
   env <- new.env(parent = globalenv())
   for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {

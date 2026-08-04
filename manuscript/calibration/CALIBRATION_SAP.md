@@ -38,6 +38,39 @@ stratum minimum is 100 replicates; a stratum below that minimum is diagnostic
 only and cannot support a definitive mapping.  Pilot runs are for wiring,
 occupancy, and precision checks and never freeze candidates or publish a map.
 
+## Pilot review and frozen execution plan
+
+The Task 14 pilot was run with the frozen scenario registry at commit
+`bfc3816`, workers `1`, `n_boot = 50`, a target of 10 completed replicates per
+truth/conclusion stratum, and a maximum of 250 screening draws per scenario.
+The run selected all 13 core scenario rows (the pilot selection is recorded in
+`published/pilot-runtime-summary.csv`).  It completed 257 of 257 selected
+analyses with no analysis failures.  One occupancy limit was observed:
+`two_sample_core_clear_n80` supplied only 7 of the 10 requested
+`clear::non_significant` screening rows, so 17 rather than 20 replicates were
+selected.  This is recorded as a quota-incomplete screening condition, not as
+an exclusion or a score-based decision.
+
+The pilot recorded per-scenario runtime, screening completion, selected counts,
+and failure classes only; it was not used to inspect score distributions,
+change truth classes, tune cutoffs, or fit a calibration map.  The compact
+failure record is `published/pilot-failure-summary.csv`.  The pilot therefore
+freezes these operational rules for the publication run:
+
+- retain the scenario parameters, truth labels, cutoffs, and `n_boot = 1000`;
+- retain a 10-replicate-per-stratum pilot target and 250-draw pilot budget for
+  future wiring checks;
+- use the full-run screening budget of 10,000 draws, with resume checkpoints,
+  when filling the publication quotas;
+- report any unfilled stratum explicitly and do not substitute score-based
+  sampling or alter a scenario to improve occupancy;
+- treat computational failures above 5% (or any failure that changes a held-out
+  rate by more than 0.05) as a review trigger before publishing.
+
+The full scenario manifest hash after this pilot review is
+`f543a90c41a342497f07f1287503eb5b`.  Any subsequent scenario, adapter, or RNG
+change requires a new hash and a new pilot before full execution.
+
 Use one-sided 95% Wilson bounds for the acceptance decisions below.  When rates
 are aggregated across scenarios, retain scenario identity and report
 scenario-cluster uncertainty (a scenario-cluster bootstrap or equivalent

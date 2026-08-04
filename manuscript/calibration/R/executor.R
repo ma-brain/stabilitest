@@ -171,7 +171,12 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
       screening <- adapter$primary_decision(data, scenario)
     }
     screen_status <- .executor_value(screening, list(c("status")), "completed")
-    if (!identical(screen_status, "completed")) {
+    # Public adapters use `status = "ok"` for a successful primary fit,
+    # whereas the screening stage itself records `completed`.  A selected
+    # replicate reuses the adapter result, so both success markers must be
+    # accepted here; otherwise every model replicate is falsely audited as a
+    # screening failure during the pilot/full hand-off.
+    if (!screen_status %in% c("completed", "ok")) {
       cls <- .executor_nonempty(.executor_value(screening, list(c("failure_class"))), "screening_failure")
       msg <- .executor_nonempty(.executor_value(screening, list(c("failure_message"))), "screening did not complete")
       stage <- .executor_nonempty(.executor_value(screening, list(c("failure_stage"))), "screening")
