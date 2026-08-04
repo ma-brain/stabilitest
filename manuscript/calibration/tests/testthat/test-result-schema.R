@@ -295,6 +295,13 @@ testthat::test_that("failed rows cannot carry selected or analysis results", {
     ),
     "replicate_seed"
   )
+
+  invalid_runtime <- failure
+  invalid_runtime$runtime_seconds[[1L]] <- NaN
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(invalid_runtime),
+    "failed runtime_seconds"
+  )
 })
 
 testthat::test_that("empty artifacts still have valid column classes", {

@@ -343,7 +343,12 @@ validate_calibration_replicates <- function(x) {
   failed_runtime <- x$runtime_seconds[failed]
   if (length(failed_runtime) > 0L && any(vapply(
     failed_runtime,
-    function(value) !is.na(value) && (!is.finite(value) || value < 0),
+    function(value) {
+      if (is.na(value)) {
+        return(is.numeric(value) && is.nan(value))
+      }
+      !is.finite(value) || value < 0
+    },
     logical(1)
   ))) {
     .schema_abort("failed runtime_seconds values must be missing or finite non-negative values")
