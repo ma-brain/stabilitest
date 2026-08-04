@@ -262,6 +262,13 @@ testthat::test_that("failed rows cannot carry selected or analysis results", {
   )
 
   contaminated <- failure
+  contaminated$overall_score[[1L]] <- NaN
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(contaminated),
+    "failed.*overall_score"
+  )
+
+  contaminated <- failure
   contaminated$analysis_conclusion <- list(list(significant = FALSE))
   testthat::expect_error(
     schema_env$validate_calibration_replicates(contaminated),

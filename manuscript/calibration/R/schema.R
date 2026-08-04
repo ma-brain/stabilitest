@@ -59,7 +59,11 @@ CALIBRATION_REPLICATE_COLUMNS <- c(
   if (is.list(value)) {
     return(all(vapply(value, .is_missing_value, logical(1))))
   }
-  all(is.na(value))
+  missing <- is.na(value)
+  if (is.numeric(value)) {
+    missing <- missing & !is.nan(value)
+  }
+  all(missing)
 }
 
 .assert_numeric_range <- function(x, name, lower = -Inf, upper = Inf,
