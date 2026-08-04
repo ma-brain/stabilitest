@@ -83,6 +83,60 @@ testthat::test_that("pilot selection is restricted to core scenario shapes", {
   testthat::expect_true(all(selected$design_layer == "core"))
 })
 
+testthat::test_that("runner forwards screened records and resume to modular hooks", {
+  runner_env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "run_calibration.R"), envir = runner_env)
+  root <- normalizePath(file.path("..", "..", "..", ".."), mustWork = TRUE)
+  output <- tempfile("calibration-runner-")
+  calls <- new.env(parent = emptyenv())
+  calls$screen <- 0L
+  calls$analyse <- 0L
+  hooks <- list(
+    screen = function(scenario, plan, options, project_root) {
+      calls$screen <- calls$screen + 1L
+      list(selected = data.frame(replicate_id = 1L), scenario_id = scenario$scenario_id[[1L]])
+    },
+    analyse = function(scenario, plan, options, project_root, screened) {
+      calls$analyse <- calls$analyse + 1L
+      list(resume = options$resume, has_screened = !is.null(screened))
+    }
+  )
+  result <- runner_env$run_calibration(
+    args = c("--mode", "full", "--phase", "all", "--engine", "lm",
+             "--workers", "1", "--resume", "--allow-dirty", "--output", output),
+    project_root = root, hooks = hooks
+  )
+  testthat::expect_equal(calls$screen, 4L)
+  testthat::expect_equal(calls$analyse, 4L)
+  testthat::expect_true(all(vapply(result$selected_scenario_ids, nzchar, logical(1))))
+  testthat::expect_true(file.exists(file.path(output, "manifest.rds")))
+})
+
+testthat::test_that("runner hook seam exposes screening and executor arguments", {
+  runner_env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "run_calibration.R"), envir = runner_env)
+  scenario <- data.frame(
+    scenario_id = "hook-scenario", analysis_family = "lm",
+    truth_class = "null", target_conclusion = "non_significant",
+    sample_size = 20L, n_boot = 1000L, stringsAsFactors = FALSE
+  )
+  plan <- list(mode = "smoke", n_boot = 5L, replicates_per_stratum = 2L,
+               max_screen_draws = 2L)
+  options <- list(output = "/tmp/calibration-hook", workers = 3L, resume = TRUE)
+  hook <- function(scenario, adapter, target_by_stratum, max_draws, workers,
+                   checkpoint_root) {
+    list(target = target_by_stratum, max_draws = max_draws, workers = workers,
+         checkpoint_root = checkpoint_root)
+  }
+  seen <- runner_env$.calibration_call_hook(
+    hook, scenario, plan, options, "/tmp/project", adapter = list()
+  )
+  testthat::expect_identical(seen$target, c("null::non_significant" = 2L))
+  testthat::expect_identical(seen$max_draws, 2L)
+  testthat::expect_identical(seen$workers, 3L)
+  testthat::expect_identical(seen$checkpoint_root, "/tmp/calibration-hook/checkpoints")
+})
+
 testthat::test_that("manifest hashes and records provenance", {
   manifest_env <- new.env(parent = globalenv())
   sys.source(file.path("..", "..", "R", "manifest.R"), envir = manifest_env)

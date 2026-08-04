@@ -52,16 +52,125 @@
   selected[order(selected$scenario_id), , drop = FALSE]
 }
 
-.calibration_call_hook <- function(hook, scenario, plan, options, project_root) {
+.calibration_call_hook <- function(hook, scenario, plan, options, project_root,
+                                  adapter = NULL, screened = NULL, envir = parent.frame()) {
   if (!is.function(hook)) return(NULL)
-  # Hooks are deliberately passed named arguments so task 8/9 can evolve
-  # without changing the command-line contract.
-  hook(scenario = scenario, plan = plan, options = options, project_root = project_root)
+  # Hooks are deliberately passed named arguments.  Subsetting by formals
+  # keeps this compatible with both the small test doubles and the concrete
+  # Task 8/9 APIs, while `...` hooks receive the complete context.
+  arguments <- list(
+    scenario = scenario, plan = plan, options = options,
+    project_root = project_root, adapter = adapter, screened = screened, envir = envir
+  )
+  arguments$target_by_stratum <- .calibration_target_by_stratum(scenario, plan)
+  arguments$max_draws <- if (is.finite(plan$max_screen_draws)) as.integer(plan$max_screen_draws) else as.integer(scenario$n_boot[[1L]])
+  arguments$workers <- options$workers
+  arguments$checkpoint_root <- file.path(options$output, "checkpoints")
+  arguments$resume <- isTRUE(options$resume)
+  arguments$n_boot <- plan$n_boot
+  arguments$selected <- if (!is.null(screened)) screened$selected %||% screened else NULL
+  arguments$replicate_ids <- if (is.data.frame(arguments$selected) && "replicate_id" %in% names(arguments$selected)) arguments$selected$replicate_id else NULL
+  formals <- names(formals(hook))
+  if ("..." %in% formals) return(do.call(hook, arguments))
+  do.call(hook, arguments[intersect(names(arguments), formals)])
+}
+
+.calibration_adapter_for_scenario <- function(scenario, envir = parent.frame()) {
+  family <- as.character(scenario$analysis_family[[1L]])
+  lookup <- function(name) get(name, envir = envir, inherits = TRUE)
+  if (family %in% c("two_sample", "proportion")) return(lookup("two_sample_adapter")())
+  if (family %in% c("lm", "binomial", "poisson") && exists("calibration_model_adapters", envir = envir, inherits = TRUE)) {
+    return(lookup("calibration_model_adapters")()[[family]])
+  }
+  if (identical(family, "cox")) {
+    generate <- lookup("generate_cox")
+    screen <- lookup("screen_cox")
+    robustness <- lookup("run_cox_adapter")
+    return(list(
+      generate = function(scenario, seed = NULL) {
+        do.call(generate, c(list(seed = seed), scenario$parameters[[1L]]$generator))
+      },
+      primary_decision = function(data, scenario) {
+        analysis <- scenario$parameters[[1L]]$analysis
+        do.call(screen, c(list(data = data), analysis))
+      },
+      run_robustness = function(data, scenario, n_boot = NULL, seed = NULL) {
+        analysis <- scenario$parameters[[1L]]$analysis
+        args <- c(list(data = data, n_boot = n_boot %||% scenario$n_boot[[1L]], seed = seed), analysis)
+        do.call(robustness, args)
+      }
+    ))
+  }
+  if (identical(family, "tost")) {
+    generate <- lookup("generate_tost")
+    screen <- lookup("screen_tost")
+    robustness <- lookup("run_tost_adapter")
+    return(list(
+      generate = function(scenario, seed = NULL) {
+        do.call(generate, c(list(seed = seed), scenario$parameters[[1L]]$generator))
+      },
+      primary_decision = function(data, scenario) {
+        do.call(screen, c(list(data = data), scenario$parameters[[1L]]$analysis))
+      },
+      run_robustness = function(data, scenario, n_boot = NULL, seed = NULL) {
+        args <- c(list(data = data, n_boot = n_boot %||% scenario$n_boot[[1L]], seed = seed), scenario$parameters[[1L]]$analysis)
+        do.call(robustness, args)
+      }
+    ))
+  }
+  stop(sprintf("unsupported calibration analysis family: %s", family), call. = FALSE)
+}
+
+.calibration_target_by_stratum <- function(scenario, plan) {
+  target <- if (is.null(plan$replicates_per_stratum)) {
+    # The publication contract requires at least 500 completed core analyses;
+    # use that frozen lower bound when no pilot quota is supplied.
+    500L
+  } else {
+    value <- plan$replicates_per_stratum
+    if (length(value) == 1L) value[[1L]] else value[[1L]]
+  }
+  name <- paste(scenario$truth_class[[1L]], scenario$target_conclusion[[1L]], sep = "::")
+  stats::setNames(as.integer(target), name)
+}
+
+.calibration_default_screen <- function(scenario, plan, options, project_root,
+                                        adapter = NULL, envir = parent.frame(), ...) {
+  if (!exists("screen_scenario", envir = envir, mode = "function", inherits = TRUE)) return(NULL)
+  screen <- get("screen_scenario", envir = envir, inherits = TRUE)
+  adapter <- adapter %||% .calibration_adapter_for_scenario(scenario)
+  max_draws <- if (is.finite(plan$max_screen_draws)) plan$max_screen_draws else max(2L, as.integer(scenario$n_boot[[1L]]))
+  screen(
+    scenario, adapter, .calibration_target_by_stratum(scenario, plan),
+    max_draws = as.integer(max_draws), workers = options$workers,
+    checkpoint_root = file.path(options$output, "checkpoints", "screen")
+  )
+}
+
+.calibration_default_analyse <- function(scenario, plan, options, project_root,
+                                         adapter = NULL, screened = NULL,
+                                         envir = parent.frame(), ...) {
+  if (!exists("run_full_scenario", envir = envir, mode = "function", inherits = TRUE)) return(NULL)
+  execute <- get("run_full_scenario", envir = envir, inherits = TRUE)
+  adapter <- adapter %||% .calibration_adapter_for_scenario(scenario)
+  if (is.null(screened) || is.null(screened$selected)) {
+    return(NULL)
+  }
+  selected <- screened$selected
+  execute(
+    scenario, adapter, selected = selected, master_seed = options$master_seed,
+    workers = options$workers, checkpoint_root = file.path(options$output, "checkpoints", "full"),
+    resume = isTRUE(options$resume), n_boot = plan$n_boot
+  )
 }
 
 run_calibration <- function(args = commandArgs(trailingOnly = TRUE), project_root = NULL,
                             hooks = list(), command = NULL) {
-  script <- .calibration_runner_script()
+  script <- if (is.null(project_root)) {
+    .calibration_runner_script()
+  } else {
+    normalizePath(file.path(project_root, "manuscript", "calibration", "run_calibration.R"), mustWork = TRUE)
+  }
   root <- if (is.null(project_root)) .calibration_runner_root(script) else normalizePath(project_root, mustWork = TRUE)
   runner_env <- environment()
   loader <- file.path(root, "manuscript", "calibration", "R", "load_calibration.R")
@@ -96,21 +205,28 @@ run_calibration <- function(args = commandArgs(trailingOnly = TRUE), project_roo
   saveRDS(selected, file.path(output, "selected-scenarios.rds"), version = 2)
 
   screen_hook <- hooks$screen %||% if (exists("screen_scenario", envir = runner_env, inherits = TRUE)) {
-    get("screen_scenario", envir = runner_env)
+    .calibration_default_screen
   } else NULL
   analyse_hook <- hooks$analyse %||% hooks$analyze %||%
     if (exists("run_full_scenario", envir = runner_env, inherits = TRUE)) {
-      get("run_full_scenario", envir = runner_env)
+      .calibration_default_analyse
     } else NULL
   results <- list()
   if (options$phase %in% c("screen", "all")) {
     results$screen <- lapply(seq_len(nrow(selected)), function(index) {
-      .calibration_call_hook(screen_hook, selected[index, , drop = FALSE], plan, options, root)
+      scenario <- selected[index, , drop = FALSE]
+      adapter <- if (is.function(screen_hook)) .calibration_adapter_for_scenario(scenario, runner_env) else NULL
+      .calibration_call_hook(screen_hook, scenario, plan, options, root,
+                             adapter = adapter, envir = runner_env)
     })
   }
   if (options$phase %in% c("analyse", "all")) {
     results$analyse <- lapply(seq_len(nrow(selected)), function(index) {
-      .calibration_call_hook(analyse_hook, selected[index, , drop = FALSE], plan, options, root)
+      scenario <- selected[index, , drop = FALSE]
+      adapter <- if (is.function(analyse_hook)) .calibration_adapter_for_scenario(scenario, runner_env) else NULL
+      screened <- if (!is.null(results$screen)) results$screen[[index]] else NULL
+      .calibration_call_hook(analyse_hook, scenario, plan, options, root,
+                             adapter = adapter, screened = screened, envir = runner_env)
     })
   }
   saveRDS(results, file.path(output, "run-results.rds"), version = 2)

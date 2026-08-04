@@ -29,17 +29,18 @@ calibration_scenario_hash <- function(scenarios) {
     system2("git", c("-C", project_root, args), stdout = TRUE, stderr = FALSE),
     warning = function(w) character(), error = function(e) character()
   )
-  if (length(output) == 0L) NA_character_ else trimws(output[[1L]])
+  if (length(output) == 0L) NA_character_ else trimws(output)
 }
 
 calibration_git_provenance <- function(project_root = getwd()) {
   root <- normalizePath(project_root, mustWork = TRUE)
-  commit <- .calibration_git_command(root, c("rev-parse", "HEAD"))
+  commit_output <- .calibration_git_command(root, c("rev-parse", "HEAD"))
+  commit <- if (length(commit_output) == 0L || is.na(commit_output[[1L]])) NA_character_ else commit_output[[1L]]
   status <- .calibration_git_command(root, c("status", "--porcelain"))
   list(
     commit = commit,
-    dirty = !is.na(status) && nzchar(status),
-    status = if (is.na(status)) character() else status
+    dirty = length(status) > 0L && any(!is.na(status) & nzchar(status)),
+    status = if (length(status) == 1L && is.na(status)) character() else status
   )
 }
 
