@@ -17,7 +17,45 @@ testthat::test_that("TOST adapter preserves p_eff and conclusion parity", {
                                                        max_removal_pct = .1, seed = 8), spec))
     testthat::expect_equal(screened$p_eff, analyzed$analysis$original_p, tolerance = 1e-12)
     testthat::expect_identical(screened$conclusion, analyzed$screening$conclusion)
+    testthat::expect_identical(analyzed$conclusion, analyzed$screening$conclusion)
+    testthat::expect_identical(analyzed$analysis_conclusion, analyzed$screening$conclusion)
   }
+})
+
+testthat::test_that("executor preserves endpoint-specific TOST conclusions", {
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  scenario <- list(
+    scenario_id = "tost_executor_conclusion", analysis_family = "tost",
+    endpoint = "mean", design_layer = "core", truth_class = "clear",
+    target_conclusion = "equivalent", sample_size = 40L, n_boot = 5L,
+    max_removal_pct = .1, scenario_seed = 1701L,
+    parameters = list(
+      generator = list(endpoint = "mean", type = "equivalence", n_per_group = 20L,
+                       mean_difference = 0, margin = .5),
+      analysis = list(endpoint = "mean", type = "equivalence", margin = .5,
+                      alpha = .05)
+    )
+  )
+  generated <- env$generate_tost(seed = 101L, endpoint = "mean", type = "equivalence",
+                                 n_per_group = 20L, mean_difference = 0, margin = .5)
+  adapter <- list(
+    primary_decision = function(data, scenario) {
+      do.call(env$screen_tost, c(list(data = data), scenario$parameters$analysis))
+    },
+    run_robustness = function(data, scenario, n_boot, seed) {
+      do.call(env$run_tost_adapter, c(list(data = data, n_boot = n_boot, seed = seed),
+                                       scenario$parameters$analysis))
+    }
+  )
+  row <- env$run_selected_replicate(
+    scenario, adapter, replicate_id = 1L, data = generated,
+    replicate_seed = 11L, n_boot = 5L
+  )
+  testthat::expect_identical(row$status, "completed")
+  testthat::expect_identical(row$analysis_conclusion, row$screening_conclusion)
+  testthat::expect_true(row$analysis_conclusion %in% c("equivalent", "not_equivalent"))
 })
 
 testthat::test_that("TOST screening is primary-test only and validates alpha", {
