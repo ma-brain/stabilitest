@@ -35,6 +35,15 @@
   is.numeric(alpha) && length(alpha) == 1L && is.finite(alpha) && alpha > 0 && alpha < 1
 }
 
+.link_failure <- function(family, link, data = NULL, stage = "screening") {
+  valid <- is.character(link) && length(link) == 1L && !is.na(link) && nzchar(link)
+  class <- if (valid) "unsupported_link" else "invalid_link"
+  expected <- if (identical(family, "binomial")) "logit" else "log"
+  message <- if (valid) sprintf("%s models require the %s link", family, expected) else
+    "link must be one non-empty scalar string"
+  .model_failure(class, message, data = data, stage = stage)
+}
+
 .valid_row_ids <- function(data) {
   ".row_id" %in% names(data) && length(data$.row_id) == nrow(data) &&
     !anyNA(data$.row_id) && !anyDuplicated(data$.row_id)
@@ -384,7 +393,13 @@ primary_decision_glm <- function(data, scenario = list(), term = NULL,
   obs_weights <- input$weights
   a <- .model_analysis(scenario, term = term, alpha = alpha %||% 0.05)
   if (is.null(family)) {
-    family <- if (identical(a$family, "poisson")) stats::poisson(link = a$link %||% "log") else stats::binomial(link = a$link %||% "logit")
+    fam <- if (identical(a$family, "poisson")) "poisson" else "binomial"
+    link <- if (is.null(a$link)) if (identical(fam, "poisson")) "log" else "logit" else a$link
+    if (!is.character(link) || length(link) != 1L || is.na(link) || !nzchar(link) ||
+        !link %in% if (identical(fam, "poisson")) "log" else "logit") {
+      return(.link_failure(fam, link, data = data))
+    }
+    family <- if (identical(fam, "poisson")) stats::poisson(link = link) else stats::binomial(link = link)
   }
   fam_name <- if (is.character(family)) family else family$family
   .screen_glm_fit(data, .model_formula(data, scenario, formula, fam_name),
@@ -409,7 +424,13 @@ run_robustness_glm <- function(data, scenario = list(), formula = NULL, term = N
   obs_weights <- input$weights
   a <- .model_analysis(scenario, term = term)
   if (is.null(family)) {
-    family <- if (identical(a$family, "poisson")) stats::poisson(link = a$link %||% "log") else stats::binomial(link = a$link %||% "logit")
+    fam <- if (identical(a$family, "poisson")) "poisson" else "binomial"
+    link <- if (is.null(a$link)) if (identical(fam, "poisson")) "log" else "logit" else a$link
+    if (!is.character(link) || length(link) != 1L || is.na(link) || !nzchar(link) ||
+        !link %in% if (identical(fam, "poisson")) "log" else "logit") {
+      return(.link_failure(fam, link, data = data, stage = "robustness"))
+    }
+    family <- if (identical(fam, "poisson")) stats::poisson(link = link) else stats::binomial(link = link)
   }
   fam_name <- if (is.character(family)) family[[1L]] else family$family
   if (is.character(family)) family <- switch(fam_name, binomial = stats::binomial(), poisson = stats::poisson(), family)
@@ -436,9 +457,9 @@ lm_model_adapter <- function() list(
 glm_model_adapter <- function(family = stats::binomial()) list(
   generate = if (identical(if (is.character(family)) family[[1L]] else family$family, "poisson")) generate_poisson else generate_binomial,
   generate_data = if (identical(if (is.character(family)) family[[1L]] else family$family, "poisson")) generate_poisson else generate_binomial,
-  primary_decision = function(data, scenario, ...) primary_decision_glm(data, scenario, family = family, ...),
-  run_robustness = function(data, scenario, ...) run_robustness_glm(data, scenario, family = family, ...),
-  robustness_analysis = function(data, scenario, ...) run_robustness_glm(data, scenario, family = family, ...)
+  primary_decision = function(data, scenario, ...) primary_decision_glm(data, scenario, family = NULL, ...),
+  run_robustness = function(data, scenario, ...) run_robustness_glm(data, scenario, family = NULL, ...),
+  robustness_analysis = function(data, scenario, ...) run_robustness_glm(data, scenario, family = NULL, ...)
 )
 
 calibration_model_adapters <- function() list(

@@ -273,3 +273,23 @@ testthat::test_that("generated weights and inferred unsupported links propagate 
                               list(analysis = list(family = "binomial", link = "probit", term = "treatmentB")))
   testthat::expect_identical(bad$failure_class, "unsupported_link")
 })
+
+testthat::test_that("malformed inferred links return explicit adapter failures", {
+  env <- new.env(parent = globalenv())
+  sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
+  env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
+  generated <- env$generate_binomial(list(n = 36L), seed = 63L)
+  for (link in list(NA_character_, character(), c("logit", "probit"), "bogus")) {
+    scenario <- list(analysis = list(family = "binomial", link = link, term = "treatmentB"))
+    screen <- env$primary_decision(generated$data, scenario)
+    testthat::expect_identical(screen$status, "failed")
+    testthat::expect_true(screen$failure_class %in% c("invalid_link", "unsupported_link"))
+    full <- env$calibration_robustness_analysis(generated$data, scenario, n_boot = 1L)
+    testthat::expect_identical(full$status, "failed")
+    testthat::expect_true(full$failure_class %in% c("invalid_link", "unsupported_link"))
+  }
+  adapter <- env$calibration_model_adapters()$binomial
+  bad <- adapter$primary_decision(generated$data,
+                                  list(analysis = list(family = "binomial", link = "probit", term = "treatmentB")))
+  testthat::expect_identical(bad$failure_class, "unsupported_link")
+})
