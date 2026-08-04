@@ -1,0 +1,30 @@
+list(
+  artifact_kind = "calibration-publication-manifest",
+  artifact_version = "calibration-publication-1",
+  manifest_version = "calibration-1",
+  status = "reduced_fixture",
+  mode = "full",
+  split = "training",
+  options = list(mode = "full", phase = "all", engine = "all",
+                 validation_only = FALSE, split = "training"),
+  scenario_manifest_hash = "f543a90c41a342497f07f1287503eb5b",
+  scenario_count = 35L,
+  scenario_ids = c("fake_family_training", "shared_family_training", "failed_family_training"),
+  n_boot = 1000L,
+  target_replicates = 500L,
+  minimum_heldout_stratum = 100L,
+  attempted_replicates = 900L,
+  completed_replicates = 600L,
+  failed_replicates = 300L,
+  reduced_fixture = TRUE,
+  fixture_source = "manuscript/calibration/tests/fixtures/training-replicates.rds",
+  fixture_source_md5 = "ee0acf18961e91b6600850e48f67c10b",
+  candidate_hash = "a0a017fcb1bd8e2a6f11dcde16b4aea2",
+  registry_hash = "690467ca331d162feea16386b5921a3a",
+  validation_refit = FALSE,
+  unsupported = c(
+    "Full 35-scenario publication quotas were not executed in this environment; this deterministic fixture is reduced.",
+    "The frozen n_boot=1000 setting is recorded, while fixture rows are precomputed rather than regenerated.",
+    "Unfilled production strata are unsupported for publication claims and require a full run before release."
+  )
+)

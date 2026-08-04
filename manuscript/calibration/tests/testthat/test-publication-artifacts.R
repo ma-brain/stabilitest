@@ -1,0 +1,88 @@
+testthat::test_that("published training and validation manifests are compact and paired", {
+  published <- file.path("..", "..", "published")
+  training_path <- file.path(published, "training-manifest.dput")
+  validation_path <- file.path(published, "validation-manifest.dput")
+  hashes_path <- file.path(published, "output-hashes.txt")
+  testthat::expect_true(file.exists(training_path))
+  testthat::expect_true(file.exists(validation_path))
+  testthat::expect_true(file.exists(hashes_path))
+
+  training <- dget(training_path)
+  validation <- dget(validation_path)
+  required <- c(
+    "artifact_kind", "status", "mode", "split", "scenario_manifest_hash",
+    "scenario_count", "n_boot", "reduced_fixture", "target_replicates",
+    "completed_replicates", "failed_replicates", "unsupported"
+  )
+  testthat::expect_true(all(required %in% names(training)))
+  testthat::expect_true(all(required %in% names(validation)))
+  testthat::expect_identical(training$artifact_kind, "calibration-publication-manifest")
+  testthat::expect_identical(validation$artifact_kind, "calibration-publication-manifest")
+  testthat::expect_identical(training$split, "training")
+  testthat::expect_identical(validation$split, "validation")
+  testthat::expect_identical(training$scenario_manifest_hash, validation$scenario_manifest_hash)
+  testthat::expect_identical(training$scenario_manifest_hash,
+                             "f543a90c41a342497f07f1287503eb5b")
+  testthat::expect_true(isTRUE(training$reduced_fixture))
+  testthat::expect_true(isTRUE(validation$reduced_fixture))
+  testthat::expect_identical(training$n_boot, 1000L)
+  testthat::expect_identical(validation$n_boot, 1000L)
+  testthat::expect_gt(training$completed_replicates, 0L)
+  testthat::expect_gt(validation$completed_replicates, 0L)
+  testthat::expect_true(training$failed_replicates >= 0L)
+  testthat::expect_true(validation$failed_replicates >= 0L)
+  testthat::expect_true(is.character(training$unsupported))
+  testthat::expect_true(is.character(validation$unsupported))
+
+  hashes <- readLines(hashes_path, warn = FALSE)
+  testthat::expect_true(length(hashes) >= 3L)
+  testthat::expect_true(all(grepl("^[[:xdigit:]]{32}  manuscript/calibration/published/[^ ]+$", hashes)))
+  testthat::expect_false(any(grepl("raw|checkpoint|selected", hashes, ignore.case = TRUE)))
+  testthat::expect_false(any(grepl("output-hashes[.]txt", hashes, fixed = TRUE)))
+  entries <- strsplit(hashes, "  ", fixed = TRUE)
+  for (entry in entries) {
+    path <- entry[[2L]]
+    local <- file.path("..", "..", "published", basename(path))
+    testthat::expect_true(file.exists(local))
+    testthat::expect_identical(unname(as.character(tools::md5sum(local))), entry[[1L]])
+  }
+})
+
+testthat::test_that("published manifest records unsupported quota outcomes explicitly", {
+  published <- file.path("..", "..", "published")
+  training <- dget(file.path(published, "training-manifest.dput"))
+  validation <- dget(file.path(published, "validation-manifest.dput"))
+  for (manifest in list(training, validation)) {
+    testthat::expect_identical(manifest$status, "reduced_fixture")
+    testthat::expect_true(length(manifest$unsupported) >= 1L)
+    testthat::expect_true(any(grepl("full quota|reduced|comput", manifest$unsupported,
+                                    ignore.case = TRUE)))
+    testthat::expect_true(all(!grepl("/artifacts/raw|/checkpoints", unlist(manifest),
+                                     ignore.case = TRUE)))
+  }
+})
+
+testthat::test_that("reduced publication fixture preserves the locked no-refit flow", {
+  root <- normalizePath(file.path("..", "..", "..", ".."), mustWork = TRUE)
+  env <- new.env(parent = globalenv())
+  sys.source(file.path(root, "manuscript", "calibration", "R", "load_calibration.R"), env)
+  env$load_calibration(project_root = root, envir = env)
+  sys.source(file.path(root, "manuscript", "calibration", "analyse_calibration.R"), env)
+  output <- tempfile("calibration-publication-")
+  on.exit(unlink(output, recursive = TRUE, force = TRUE), add = TRUE)
+  result <- env$calibration_analysis_from_files(
+    file.path(root, "manuscript", "calibration", "tests", "fixtures", "training-replicates.rds"),
+    file.path(root, "manuscript", "calibration", "tests", "fixtures", "validation-replicates.rds"),
+    dget(file.path(root, "manuscript", "calibration", "published", "training-manifest.dput")),
+    dget(file.path(root, "manuscript", "calibration", "published", "validation-manifest.dput")),
+    output = output,
+    minimum_stratum_n = 100L
+  )
+  testthat::expect_identical(result$validation$refit, FALSE)
+  testthat::expect_identical(result$candidate_hash,
+                             "a0a017fcb1bd8e2a6f11dcde16b4aea2")
+  testthat::expect_identical(result$registry_hash,
+                             "690467ca331d162feea16386b5921a3a")
+  testthat::expect_true(file.exists(file.path(output, "calibration-registry.csv")))
+  testthat::expect_true(file.exists(file.path(output, "non-significant-registry.csv")))
+})
