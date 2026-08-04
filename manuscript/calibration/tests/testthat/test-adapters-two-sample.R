@@ -223,6 +223,16 @@ testthat::test_that("two-sample inputs are strictly validated", {
   testthat::expect_error(
     adapter$run_robustness(valid_data, bad_boot, n_boot = 5L, seed = 1.5), "seed"
   )
+  testthat::expect_error(
+    adapter$run_robustness(valid_data, bad_boot, n_boot = 5L,
+                           seed = .Machine$integer.max + 1), "seed"
+  )
+  overflow_size <- list(parameters = list(generator = list(
+    n_group1 = .Machine$integer.max + 1, n_group2 = 6L
+  )))
+  testthat::expect_error(
+    adapter_env$generate_two_sample(overflow_size, seed = 1L), "group size"
+  )
   bad_generator_settings <- list(sd = 0, sd_control = NA_real_, sd_treatment = Inf,
                                  effect_size = NaN, contamination = 1.1)
   for (setting_name in names(bad_generator_settings)) {
@@ -231,6 +241,15 @@ testthat::test_that("two-sample inputs are strictly validated", {
     scenario <- list(parameters = list(generator = generator))
     testthat::expect_error(adapter_env$generate_two_sample(scenario, seed = 1L))
   }
+  malformed <- valid_scenario
+  malformed$n_boot <- NA_real_
+  testthat::expect_error(adapter$run_robustness(valid_data, malformed), "n_boot")
+  malformed <- valid_scenario
+  malformed$scenario_seed <- c(1L, 2L)
+  testthat::expect_error(adapter$run_robustness(valid_data, malformed), "scenario_seed")
+  malformed <- valid_scenario
+  malformed$max_removal_pct <- NA_real_
+  testthat::expect_error(adapter$run_robustness(valid_data, malformed), "max_removal_pct")
 })
 
 testthat::test_that("degenerate Brunner-Munzel p-values fail explicitly", {

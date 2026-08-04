@@ -12,6 +12,7 @@
                                           positive = FALSE, lower = -Inf, upper = Inf) {
   valid <- is.numeric(value) && length(value) == 1L && !is.na(value) && is.finite(value)
   if (valid && integer) valid <- floor(value) == value
+  if (valid && integer) valid <- value <= .Machine$integer.max
   if (valid && positive) valid <- value > 0
   if (valid) valid <- value >= lower && value <= upper
   if (!valid) .two_sample_abort(sprintf("%s must be a valid numeric%s", name,
@@ -63,7 +64,11 @@
   } else if (is.list(scenario)) {
     scenario[[field]]
   } else NULL
-  if (is.null(value) || length(value) != 1L || is.na(value)) default else value
+  if (is.null(value)) return(default)
+  if (length(value) != 1L || is.na(value)) {
+    .two_sample_abort(sprintf("scenario %s must be one non-missing scalar", field))
+  }
+  value
 }
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
