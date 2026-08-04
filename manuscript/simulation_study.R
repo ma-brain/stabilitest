@@ -212,6 +212,7 @@ simulate_scenario <- function(d, n_per_group, n_outliers,
     summarise(
       rejection_rate = mean(significant),
       score_all      = mean(score),
+      score_all_sd   = stats::sd(score),
       # calibration is defined conditional on the significance outcome:
       score_sig      = mean(score[significant]),
       score_nonsig   = mean(score[!significant]),
@@ -222,8 +223,15 @@ simulate_scenario <- function(d, n_per_group, n_outliers,
       s_boot_sig     = mean(s_boot[significant]),
       .groups = "drop"
     ) |>
-    mutate(d = d, n_per_group = n_per_group, n_outliers = n_outliers,
-           nrep = nrep, .before = 1)
+    mutate(
+      nrep = nrep,
+      n_boot = n_boot,
+      scenario_seed = if (is.null(seed)) NA_integer_ else as.integer(seed),
+      d = d,
+      n_per_group = n_per_group,
+      n_outliers = n_outliers,
+      .before = 1
+    )
 }
 
 # --- full grid ----------------------------------------------------------------
@@ -233,14 +241,18 @@ scenarios <- expand_grid(
   n_outliers = c(0, 2)
 )
 
-run_simulation <- function(nrep = 500) {
+run_simulation <- function(nrep = 500, n_boot = 200) {
+  scenario_count <- nrow(scenarios)
   scenarios |>
     mutate(scenario = row_number()) |>
     pmap_dfr(\(d, n_per_group, n_outliers, scenario) {
-      message(sprintf("Scenario %d/12: d=%.1f, n=%d, outliers=%d",
-                      scenario, d, n_per_group, n_outliers))
+      scenario_seed <- 987000L + scenario
+      message(sprintf(
+        "Scenario %d/%d: d=%.1f, n=%d, outliers=%d",
+        scenario, scenario_count, d, n_per_group, n_outliers
+      ))
       simulate_scenario(d, n_per_group, n_outliers,
-                        nrep = nrep, seed = 987000 + scenario)
+                        nrep = nrep, n_boot = n_boot, seed = scenario_seed)
     })
 }
 

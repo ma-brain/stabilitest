@@ -114,6 +114,36 @@ expect_parse_error(
   "output directory does not exist"
 )
 
+test_simulation_schema <- function() {
+  simulation_environment <- environment(run_simulation)
+  full_scenarios <- get("scenarios", envir = simulation_environment)
+  on.exit(
+    assign("scenarios", full_scenarios, envir = simulation_environment),
+    add = TRUE
+  )
+  assign(
+    "scenarios",
+    full_scenarios[seq_len(2L), , drop = FALSE],
+    envir = simulation_environment
+  )
+
+  result <- run_simulation(nrep = 1L, n_boot = 2L)
+  required <- c(
+    "nrep", "n_boot", "scenario_seed", "d", "n_per_group", "n_outliers",
+    "rejection_rate", "score_all", "score_all_sd", "score_sig",
+    "score_nonsig", "k_wc_med_sig", "frag_wc_med_sig", "k_ex_med_sig",
+    "s_jack_sig", "s_boot_sig"
+  )
+  stopifnot(
+    identical(names(result), required),
+    all(result$nrep == 1L),
+    all(result$n_boot == 2L),
+    identical(result$scenario_seed, 987001:987002)
+  )
+}
+
+test_simulation_schema()
+
 run_rscript(shQuote(simulation_file), tempdir())
 
 source_expression <- sprintf(
