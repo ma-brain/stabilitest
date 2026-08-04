@@ -6,6 +6,10 @@
 #' kept in the `parameters` list-column so that the tabular contract remains
 #' stable as scenario families grow.
 #'
+#' Adapter metadata is documentary: the runner dispatches by `analysis_family`.
+#' `primary_adapter` names the screening helper; `robustness_adapter` names the
+#' public `stabilitest::*` entry point the adapters call.
+#'
 #' @return A tibble with the frozen calibration schema.
 #' @export
 calibration_scenarios <- function() {
@@ -40,17 +44,20 @@ calibration_scenarios <- function() {
       "generate_poisson", "generate_lm", "generate_binomial", "generate_poisson"
     ),
     primary_adapter = c(
+      "two_sample_primary_decision", "two_sample_primary_decision",
+      "primary_decision_lm", "primary_decision_glm", "primary_decision_glm",
+      "screen_cox", "screen_tost",
+      "primary_decision_lm", "primary_decision_lm", "primary_decision_lm",
+      "primary_decision_glm", "primary_decision_glm", "primary_decision_glm",
+      "primary_decision_glm", "primary_decision_glm", "primary_decision_glm",
+      "primary_decision_lm", "primary_decision_glm", "primary_decision_glm"
+    ),
+    robustness_adapter = c(
       "robustness_analysis", "robustness_analysis", "robustness_lm",
       "robustness_glm", "robustness_glm", "robustness_surv", "robustness_tost",
       "robustness_lm", "robustness_lm", "robustness_lm", "robustness_glm",
       "robustness_glm", "robustness_glm", "robustness_glm", "robustness_glm",
       "robustness_glm", "robustness_lm", "robustness_glm", "robustness_glm"
-    ),
-    robustness_adapter = c(
-      "t.test", "prop.test", "term_test", "term_test", "term_test",
-      "coxph", "tost_mean", "term_test", "term_test", "term_test", "term_test",
-      "term_test", "term_test", "term_test", "term_test", "term_test", "term_test",
-      "term_test", "term_test"
     ),
     truth_class = c("null", "clear", "clear", "borderline", "clear", "borderline", "clear",
                     "clear", "borderline", "clear", "clear", "borderline", "clear",
@@ -97,8 +104,13 @@ calibration_scenarios <- function() {
         analysis = list(term = "treatment", alpha = 0.05)
       ),
       list(
-        generator = list(n_per_group = 40L, mean_difference = 0, equivalence_margin = 0.5),
-        analysis = list(endpoint = "mean", margin = 0.5, alpha = 0.05)
+        generator = list(
+          n_per_group = 40L, endpoint = "mean", type = "equivalence",
+          mean_difference = 0, equivalence_margin = 0.5
+        ),
+        analysis = list(
+          endpoint = "mean", type = "equivalence", margin = 0.5, alpha = 0.05
+        )
       ),
       list(
         generator = list(n = 90L, effect = 0.6, covariate_effect = 0.6,
@@ -177,10 +189,7 @@ calibration_scenarios <- function() {
     design_layer = c(rep("core", 3L), rep("stress", 3L), rep("validation", 3L)),
     data_generator = rep("generate_two_sample", 9L),
     primary_adapter = rep("two_sample_primary_decision", 9L),
-    robustness_adapter = c(
-      "t.test", "t.test", "t.test", "brunner_munzel", "wilcoxon", "t.test",
-      "paired.t.test", "brunner_munzel", "wilcoxon"
-    ),
+    robustness_adapter = rep("robustness_analysis", 9L),
     truth_class = rep(c("null", "borderline", "clear"), 3L),
     target_conclusion = rep(c("non_significant", "significant", "significant"), 3L),
     sample_size = c(20L, 40L, 80L, 20L, 40L, 80L, 30L, 60L, 100L),
@@ -227,7 +236,7 @@ calibration_scenarios <- function() {
     design_layer = c("core", "stress", "validation", "validation"),
     data_generator = rep("generate_two_sample", 4L),
     primary_adapter = rep("two_sample_primary_decision", 4L),
-    robustness_adapter = c("t.test", "fisher", "chisq", "prop"),
+    robustness_adapter = rep("robustness_analysis", 4L),
     truth_class = c("borderline", "null", "null", "borderline"),
     target_conclusion = c("significant", "non_significant", "non_significant", "significant"),
     sample_size = c(28L, 42L, 54L, 60L),
@@ -254,7 +263,182 @@ calibration_scenarios <- function() {
     )
   )
 
-  scenarios <- tibble::as_tibble(rbind(base, expanded, imbalance_sparse), .name_repair = "check_unique")
+  # Proportion-family held-out depth for Fisher / chi-square / prop beyond the
+  # smoke row.  Generators reuse generate_proportion (= generate_two_sample).
+  proportion_depth <- tibble::tibble(
+    scenario_id = c(
+      "proportion_stress_fisher_null",
+      "proportion_stress_prop_borderline",
+      "proportion_validation_chisq_clear"
+    ),
+    analysis_family = rep("proportion", 3L),
+    endpoint = rep("risk_difference", 3L),
+    design_layer = c("stress", "stress", "validation"),
+    data_generator = rep("generate_proportion", 3L),
+    primary_adapter = rep("two_sample_primary_decision", 3L),
+    robustness_adapter = rep("robustness_analysis", 3L),
+    truth_class = c("null", "borderline", "clear"),
+    target_conclusion = c("non_significant", "significant", "significant"),
+    sample_size = c(60L, 100L, 120L),
+    n_boot = rep(1000L, 3L),
+    max_removal_pct = c(0.10, 0.15, 0.20),
+    training_split = rep(0.70, 3L),
+    scenario_seed = c(1211L, 1212L, 1213L),
+    parameters = list(
+      list(
+        generator = list(
+          n_group1 = 20L, n_group2 = 40L,
+          probability_control = 0.25, probability_treatment = 0.25,
+          distribution = "binary"
+        ),
+        analysis = list(test_type = "fisher", alpha = 0.05, correct = TRUE)
+      ),
+      list(
+        generator = list(
+          n_per_group = 50L,
+          probability_control = 0.35, probability_treatment = 0.50,
+          distribution = "binary"
+        ),
+        analysis = list(test_type = "prop", alpha = 0.05, correct = TRUE)
+      ),
+      list(
+        generator = list(
+          n_per_group = 60L,
+          probability_control = 0.30, probability_treatment = 0.55,
+          distribution = "binary"
+        ),
+        analysis = list(test_type = "chisq", alpha = 0.05, correct = TRUE)
+      )
+    )
+  )
+
+  # Paired Wilcoxon is supported by the two-sample adapter but needs dedicated
+  # registry rows so coverage tests can catch regressions.
+  wilcoxon_paired <- tibble::tibble(
+    scenario_id = c(
+      "two_sample_core_wilcoxon_paired_null",
+      "two_sample_stress_wilcoxon_paired_clear",
+      "two_sample_validation_wilcoxon_paired_borderline"
+    ),
+    analysis_family = rep("two_sample", 3L),
+    endpoint = rep("mean_difference", 3L),
+    design_layer = c("core", "stress", "validation"),
+    data_generator = rep("generate_two_sample", 3L),
+    primary_adapter = rep("two_sample_primary_decision", 3L),
+    robustness_adapter = rep("robustness_analysis", 3L),
+    truth_class = c("null", "clear", "borderline"),
+    target_conclusion = c("non_significant", "significant", "significant"),
+    sample_size = c(40L, 60L, 80L),
+    n_boot = rep(1000L, 3L),
+    max_removal_pct = rep(0.30, 3L),
+    training_split = rep(0.70, 3L),
+    scenario_seed = c(2501L, 2502L, 2503L),
+    parameters = list(
+      list(
+        generator = list(
+          n_per_group = 20L, effect_size = 0, distribution = "normal", paired = TRUE
+        ),
+        analysis = list(test_type = "wilcoxon.paired", alpha = 0.05)
+      ),
+      list(
+        generator = list(
+          n_per_group = 30L, effect_size = 1.0, distribution = "heavy_tailed",
+          paired = TRUE, contamination = 0.10
+        ),
+        analysis = list(test_type = "wilcoxon.paired", alpha = 0.05)
+      ),
+      list(
+        generator = list(
+          n_per_group = 40L, effect_size = 0.45, distribution = "normal", paired = TRUE
+        ),
+        analysis = list(test_type = "wilcoxon.paired", alpha = 0.05)
+      )
+    )
+  )
+
+  # Cox core truth strata (null / borderline / clear).  Smoke remains validation;
+  # Weibull/non-PH remains the stress row.
+  cox_core <- tibble::tibble(
+    scenario_id = c(
+      "cox_core_null", "cox_core_borderline", "cox_core_clear"
+    ),
+    analysis_family = rep("cox", 3L),
+    endpoint = rep("hazard_ratio", 3L),
+    design_layer = rep("core", 3L),
+    data_generator = rep("generate_cox", 3L),
+    primary_adapter = rep("screen_cox", 3L),
+    robustness_adapter = rep("robustness_surv", 3L),
+    truth_class = c("null", "borderline", "clear"),
+    target_conclusion = c("non_significant", "significant", "significant"),
+    sample_size = c(160L, 180L, 200L),
+    n_boot = rep(1000L, 3L),
+    max_removal_pct = rep(0.30, 3L),
+    training_split = rep(0.70, 3L),
+    scenario_seed = c(1611L, 1612L, 1613L),
+    parameters = list(
+      list(
+        generator = list(n = 160L, hazard_ratio = 1.0, censoring_rate = 0.2),
+        analysis = list(term = "treatment", alpha = 0.05)
+      ),
+      list(
+        generator = list(n = 180L, hazard_ratio = 1.4, censoring_rate = 0.25),
+        analysis = list(term = "treatment", alpha = 0.05)
+      ),
+      list(
+        generator = list(n = 200L, hazard_ratio = 2.0, censoring_rate = 0.15),
+        analysis = list(term = "treatment", alpha = 0.05)
+      )
+    )
+  )
+
+  # TOST core strata: well inside (smoke), near margin, and outside margin.
+  tost_core <- tibble::tibble(
+    scenario_id = c(
+      "tost_core_borderline_near_margin",
+      "tost_core_outside_margin"
+    ),
+    analysis_family = rep("tost", 2L),
+    endpoint = rep("equivalence", 2L),
+    design_layer = rep("core", 2L),
+    data_generator = rep("generate_tost", 2L),
+    primary_adapter = rep("screen_tost", 2L),
+    robustness_adapter = rep("robustness_tost", 2L),
+    truth_class = c("borderline", "null"),
+    target_conclusion = c("equivalent", "not_equivalent"),
+    sample_size = c(80L, 80L),
+    n_boot = rep(1000L, 2L),
+    max_removal_pct = rep(0.30, 2L),
+    training_split = rep(0.70, 2L),
+    scenario_seed = c(1711L, 1712L),
+    parameters = list(
+      list(
+        generator = list(
+          n_per_group = 40L, endpoint = "mean", type = "equivalence",
+          mean_difference = 0.40, margin = 0.5
+        ),
+        analysis = list(
+          endpoint = "mean", type = "equivalence", margin = 0.5, alpha = 0.05
+        )
+      ),
+      list(
+        generator = list(
+          n_per_group = 40L, endpoint = "mean", type = "equivalence",
+          mean_difference = 0.80, margin = 0.5
+        ),
+        analysis = list(
+          endpoint = "mean", type = "equivalence", margin = 0.5, alpha = 0.05
+        )
+      )
+    )
+  )
+
+  scenarios <- tibble::as_tibble(
+    rbind(
+      base, expanded, imbalance_sparse, proportion_depth,
+      wilcoxon_paired, cox_core, tost_core
+    ),
+    .name_repair = "check_unique"
+  )
 
   # Endpoint and stress coverage for the Cox and TOST adapters.  The original
   # smoke IDs remain frozen; these rows add Weibull/non-PH Cox and binary
@@ -262,8 +446,8 @@ calibration_scenarios <- function() {
   scenarios <- tibble::add_row(
     scenarios,
     scenario_id = "tost_prop_equivalence", analysis_family = "tost", endpoint = "risk_difference",
-    design_layer = "validation", data_generator = "generate_tost", primary_adapter = "robustness_tost",
-    robustness_adapter = "tost_prop", truth_class = "clear", target_conclusion = "equivalent",
+    design_layer = "validation", data_generator = "generate_tost", primary_adapter = "screen_tost",
+    robustness_adapter = "robustness_tost", truth_class = "clear", target_conclusion = "equivalent",
     sample_size = 80L, n_boot = 1000L, max_removal_pct = .30, training_split = .7,
     scenario_seed = 1901L,
     parameters = list(list(generator = list(n_per_group = 40L, endpoint = "prop",
@@ -276,8 +460,8 @@ calibration_scenarios <- function() {
   scenarios <- tibble::add_row(
     scenarios,
     scenario_id = "tost_or_noninferiority", analysis_family = "tost", endpoint = "odds_ratio",
-    design_layer = "stress", data_generator = "generate_tost", primary_adapter = "robustness_tost",
-    robustness_adapter = "tost_or", truth_class = "clear", target_conclusion = "noninferior",
+    design_layer = "stress", data_generator = "generate_tost", primary_adapter = "screen_tost",
+    robustness_adapter = "robustness_tost", truth_class = "clear", target_conclusion = "noninferior",
     sample_size = 80L, n_boot = 1000L, max_removal_pct = .30, training_split = .7,
     scenario_seed = 2001L,
     parameters = list(list(generator = list(n_per_group = 40L, endpoint = "or",
@@ -290,8 +474,8 @@ calibration_scenarios <- function() {
   tibble::add_row(
     scenarios,
     scenario_id = "cox_weibull_stress", analysis_family = "cox", endpoint = "hazard_ratio",
-    design_layer = "stress", data_generator = "generate_cox", primary_adapter = "robustness_surv",
-    robustness_adapter = "coxph", truth_class = "borderline", target_conclusion = "significant",
+    design_layer = "stress", data_generator = "generate_cox", primary_adapter = "screen_cox",
+    robustness_adapter = "robustness_surv", truth_class = "borderline", target_conclusion = "significant",
     sample_size = 160L, n_boot = 1000L, max_removal_pct = .30, training_split = .7,
     scenario_seed = 1801L,
     parameters = list(list(generator = list(n = 160L, hazard_ratio = 1.5,
