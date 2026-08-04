@@ -131,10 +131,28 @@ testthat::test_that("runner hook seam exposes screening and executor arguments",
   seen <- runner_env$.calibration_call_hook(
     hook, scenario, plan, options, "/tmp/project", adapter = list()
   )
-  testthat::expect_identical(seen$target, c("null::non_significant" = 2L))
+  testthat::expect_identical(seen$target, c(
+    "null::significant" = 2L, "null::non_significant" = 2L
+  ))
   testthat::expect_identical(seen$max_draws, 2L)
   testthat::expect_identical(seen$workers, 3L)
   testthat::expect_identical(seen$checkpoint_root, "/tmp/calibration-hook/checkpoints")
+})
+
+testthat::test_that("screening targets include both conclusion outcomes per truth", {
+  runner_env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "run_calibration.R"), envir = runner_env)
+  conventional <- data.frame(truth_class = "borderline", target_conclusion = "significant")
+  tost <- data.frame(truth_class = "clear", target_conclusion = "equivalent")
+  plan <- list(replicates_per_stratum = 2L)
+  testthat::expect_identical(
+    runner_env$.calibration_target_by_stratum(conventional, plan),
+    c("borderline::significant" = 2L, "borderline::non_significant" = 2L)
+  )
+  testthat::expect_identical(
+    runner_env$.calibration_target_by_stratum(tost, plan),
+    c("clear::equivalent" = 2L, "clear::not_equivalent" = 2L)
+  )
 })
 
 testthat::test_that("manifest hashes and records provenance", {

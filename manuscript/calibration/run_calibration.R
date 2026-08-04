@@ -130,8 +130,20 @@
     value <- plan$replicates_per_stratum
     if (length(value) == 1L) value[[1L]] else value[[1L]]
   }
-  name <- paste(scenario$truth_class[[1L]], scenario$target_conclusion[[1L]], sep = "::")
-  stats::setNames(as.integer(target), name)
+  truth <- as.character(scenario$truth_class[[1L]])
+  target_conclusion <- as.character(scenario$target_conclusion[[1L]])
+  conclusions <- switch(
+    target_conclusion,
+    significant = c("significant", "non_significant"),
+    non_significant = c("significant", "non_significant"),
+    equivalent = c("equivalent", "not_equivalent"),
+    not_equivalent = c("equivalent", "not_equivalent"),
+    noninferior = c("noninferior", "inferior"),
+    inferior = c("noninferior", "inferior"),
+    target_conclusion
+  )
+  stats::setNames(rep(as.integer(target), length(conclusions)),
+                  paste(truth, conclusions, sep = "::"))
 }
 
 .calibration_default_screen <- function(scenario, plan, options, project_root,
