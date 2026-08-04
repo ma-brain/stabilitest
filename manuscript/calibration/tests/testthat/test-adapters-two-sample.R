@@ -167,3 +167,16 @@ testthat::test_that("scenario registry includes imbalanced and sparse binary str
       isTRUE(x$generator$probability_treatment < 0.2)
   }, logical(1))))
 })
+
+testthat::test_that("configured adapter names expose callable wrappers", {
+  adapter_path <- file.path("..", "..", "R", "adapters_two_sample.R")
+  adapter_env <- new.env(parent = globalenv())
+  sys.source(adapter_path, envir = adapter_env)
+  testthat::expect_true(is.function(adapter_env$two_sample_primary_decision))
+  testthat::expect_true(is.function(adapter_env$run_two_sample_robustness))
+  scenario <- list(parameters = list(analysis = list(test_type = "t.test")))
+  data <- list(group1 = c(1, 2, 3, 4), group2 = c(1, 2, 2, 3))
+  direct <- adapter_env$two_sample_primary_decision(data, scenario)
+  adapter <- adapter_env$two_sample_adapter()
+  testthat::expect_equal(direct$p, adapter$primary_decision(data, scenario)$p)
+})

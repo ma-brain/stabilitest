@@ -262,3 +262,22 @@ new_two_sample_adapter <- two_sample_adapter
 get_two_sample_adapter <- two_sample_adapter
 make_two_sample_adapter <- two_sample_adapter
 two_sample_adapters <- two_sample_adapter
+
+# Named entry points used by the scenario registry.  They intentionally
+# delegate to the same adapter object so primary and robustness analyses cannot
+# drift in their test or correction settings.
+.two_sample_configured_adapter <- local({
+  adapter <- NULL
+  function() {
+    if (is.null(adapter)) adapter <<- two_sample_adapter()
+    adapter
+  }
+})
+
+two_sample_primary_decision <- function(data, scenario) {
+  .two_sample_configured_adapter()$primary_decision(data, scenario)
+}
+
+run_two_sample_robustness <- function(data, scenario, n_boot = NULL, seed = NULL) {
+  .two_sample_configured_adapter()$run_robustness(data, scenario, n_boot = n_boot, seed = seed)
+}
