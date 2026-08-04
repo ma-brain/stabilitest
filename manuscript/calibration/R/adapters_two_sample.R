@@ -76,7 +76,7 @@
 .two_sample_test_type <- function(scenario) {
   analysis <- .two_sample_analysis(scenario)
   test_type <- analysis$test_type %||% analysis$test %||% "t.test"
-  if (length(test_type) != 1L || !is.character(test_type)) {
+  if (length(test_type) != 1L || !is.character(test_type) || is.na(test_type)) {
     .two_sample_abort("test_type must be one supported character value")
   }
   supported <- c("t.test", "paired.t.test", "wilcoxon", "wilcoxon.paired",
@@ -85,6 +85,14 @@
     .two_sample_abort(sprintf("unsupported test_type '%s'", test_type))
   }
   test_type
+}
+
+.two_sample_correct <- function(analysis) {
+  value <- analysis$correct %||% TRUE
+  if (!is.logical(value) || length(value) != 1L || is.na(value)) {
+    .two_sample_abort("correct must be one non-missing logical value")
+  }
+  value
 }
 
 .two_sample_data <- function(data) {
@@ -223,11 +231,10 @@ generate_two_sample <- function(scenario, seed = NULL) {
   is_binary <- !is.null(settings$probability_control) ||
     !is.null(settings$probability_treatment) || identical(distribution, "binary")
   if (is_binary) {
-    p1 <- as.numeric(settings$probability_control %||% 0.5)
-    p2 <- as.numeric(settings$probability_treatment %||% p1)
-    if (!is.finite(p1) || !is.finite(p2) || p1 < 0 || p1 > 1 || p2 < 0 || p2 > 1) {
-      .two_sample_abort("binary probabilities must be finite values in [0, 1]")
-    }
+    p1 <- .two_sample_validate_numeric(settings$probability_control %||% 0.5,
+                                        "probability_control", lower = 0, upper = 1)
+    p2 <- .two_sample_validate_numeric(settings$probability_treatment %||% p1,
+                                        "probability_treatment", lower = 0, upper = 1)
     return(list(group1 = stats::rbinom(n1, 1L, p1), group2 = stats::rbinom(n2, 1L, p2)))
   }
   if (paired) {
@@ -257,7 +264,7 @@ two_sample_adapter <- function() {
     test_type <- .two_sample_test_type(scenario)
     analysis <- .two_sample_analysis(scenario)
     alpha <- .two_sample_alpha(analysis, scenario)
-    correct <- analysis$correct %||% TRUE
+    correct <- .two_sample_correct(analysis)
     groups <- .two_sample_data(data)
     tested <- tryCatch(
       .two_sample_primary_test(groups$group1, groups$group2, test_type, alpha, correct),
@@ -278,7 +285,7 @@ two_sample_adapter <- function() {
     analysis <- .two_sample_analysis(scenario)
     groups <- .two_sample_data(data)
     alpha <- .two_sample_alpha(analysis, scenario)
-    correct <- analysis$correct %||% TRUE
+    correct <- .two_sample_correct(analysis)
     if (is.null(n_boot)) n_boot <- .two_sample_scenario_scalar(scenario, "n_boot", 1000L)
     if (is.null(seed)) seed <- .two_sample_scenario_scalar(scenario, "scenario_seed", 123L)
     n_boot <- .two_sample_validate_numeric(n_boot, "n_boot", integer = TRUE, positive = TRUE)

@@ -262,3 +262,36 @@ testthat::test_that("degenerate Brunner-Munzel p-values fail explicitly", {
   testthat::expect_error(adapter$primary_decision(data, scenario), "non-finite p")
   testthat::expect_error(adapter$run_robustness(data, scenario, n_boot = 5L), "non-finite p")
 })
+
+testthat::test_that("malformed vector analysis and generator settings fail as adapter errors", {
+  adapter_path <- file.path("..", "..", "R", "adapters_two_sample.R")
+  adapter_env <- new.env(parent = globalenv())
+  sys.source(adapter_path, envir = adapter_env)
+  adapter <- adapter_env$two_sample_adapter()
+  data <- list(group1 = 1:6, group2 = 2:7)
+
+  for (test_type in list(NA_character_, c("t.test", "wilcoxon"))) {
+    scenario <- list(parameters = list(analysis = list(test_type = test_type)))
+    testthat::expect_error(
+      adapter$primary_decision(data, scenario), class = "two_sample_adapter_error"
+    )
+  }
+  for (correct in list(NA, c(TRUE, FALSE))) {
+    scenario <- list(parameters = list(analysis = list(
+      test_type = "chisq", correct = correct
+    )))
+    testthat::expect_error(
+      adapter$primary_decision(list(group1 = c(0, 1, 0, 0, 1, 0),
+                                    group2 = c(1, 1, 0, 1, 0, 0)), scenario),
+      class = "two_sample_adapter_error"
+    )
+  }
+  bad_probability <- list(parameters = list(generator = list(
+    n_group1 = 6L, n_group2 = 8L, probability_control = c(0.1, 0.2),
+    probability_treatment = 0.3, distribution = "binary"
+  )))
+  testthat::expect_error(
+    adapter_env$generate_two_sample(bad_probability, seed = 1L),
+    class = "two_sample_adapter_error"
+  )
+})
