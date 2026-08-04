@@ -4,7 +4,19 @@
 # runners use that metadata to classify truth and to retain failures instead of
 # silently dropping datasets that cannot be fitted.
 
+.scenario_parts <- function(x) {
+  if (is.data.frame(x)) {
+    if (nrow(x) != 1L) stop("model scenario must contain one row", call. = FALSE)
+    out <- as.list(x[1L, , drop = FALSE])
+    out$parameters <- x$parameters[[1L]]
+    out$analysis_family <- as.character(x$analysis_family[[1L]])
+    return(out)
+  }
+  x
+}
+
 .model_params <- function(x = list()) {
+  x <- .scenario_parts(x)
   if (!is.list(x)) stop("model generator parameters must be a list", call. = FALSE)
   if (!is.null(x$parameters) && is.list(x$parameters)) x <- x$parameters
   if (!is.null(x$generator) && is.list(x$generator)) x <- x$generator
@@ -17,15 +29,18 @@
 }
 
 .model_analysis <- function(scenario, term = NULL, alpha = 0.05) {
+  scenario <- .scenario_parts(scenario)
   a <- if (is.list(scenario) && is.list(scenario$analysis)) scenario$analysis else list()
   if (is.list(scenario) && is.list(scenario$parameters) &&
       is.list(scenario$parameters$analysis)) {
     a <- utils::modifyList(a, scenario$parameters$analysis)
   }
+  family <- scenario$analysis_family %||% a$family %||% NULL
   list(
     term = if (is.null(term)) a$term %||% "treatment" else term,
     alpha = as.numeric(a$alpha %||% alpha),
-    formula = a$formula
+    formula = a$formula,
+    family = family
   )
 }
 
@@ -114,10 +129,12 @@ generate_binomial <- function(scenario = list(), seed = NULL, ...) {
   baseline <- rnorm(n)
   prevalence <- as.numeric(.model_arg(p, c("prevalence", "baseline_prevalence"), 0.35))
   prevalence <- max(0.01, min(0.99, prevalence))
-  intercept <- as.numeric(.model_arg(p, c("intercept", "baseline_log_odds"), qlogis(prevalence)))
-  effect <- as.numeric(.model_arg(p, c("effect", "log_odds", "log_or"), log(
-    as.numeric(.model_arg(p, c("odds_ratio", "or"), 1.5))
-  )))
+  intercept_arg <- .model_arg(p, c("intercept", "baseline_log_odds"), NULL)
+  intercept <- if (is.null(intercept_arg)) qlogis(prevalence) else as.numeric(intercept_arg)
+  effect_arg <- .model_arg(p, c("effect", "treatment_log_odds", "log_odds", "log_or"), NULL)
+  effect <- if (is.null(effect_arg)) {
+    log(as.numeric(.model_arg(p, c("odds_ratio", "or"), 1.5)))
+  } else as.numeric(effect_arg)
   cov_effect <- as.numeric(.model_arg(p, c("covariate_effect", "prognostic_effect"), 0.25))
   sep <- isTRUE(.model_arg(p, c("separation", "complete_separation"), FALSE))
   eta <- intercept + effect * (as.integer(treatment) - 1L) + cov_effect * baseline
@@ -135,7 +152,7 @@ generate_binomial <- function(scenario = list(), seed = NULL, ...) {
   }
   truth <- list(
     family = "binomial", term = if (length(levels) > 2L) "treatment" else "treatmentB",
-    effect = effect, odds_ratio = exp(effect), prevalence = prevalence,
+    effect = effect, intercept = intercept, odds_ratio = exp(effect), prevalence = prevalence,
     covariate_effect = cov_effect, factor_levels = levels, imbalance = imbalance,
     separation = sep, degenerate_outcome = length(unique(outcome)) < 2L,
     row_id = data$.row_id, target = if (effect == 0) "null" else "effect"
@@ -156,10 +173,12 @@ generate_poisson <- function(scenario = list(), seed = NULL, ...) {
   exposure_on <- !identical(.model_arg(p, c("exposure", "offset"), FALSE), FALSE)
   exposure <- if (exposure_on) runif(n, 0.5, 2.5) else rep(1, n)
   rate <- as.numeric(.model_arg(p, c("rate", "baseline_rate"), 0.8))
-  intercept <- as.numeric(.model_arg(p, "intercept", log(rate)))
-  effect <- as.numeric(.model_arg(p, c("effect", "log_rate", "log_irr"), log(
-    as.numeric(.model_arg(p, c("incidence_rate_ratio", "irr"), 1.5))
-  )))
+  intercept_arg <- .model_arg(p, c("intercept", "baseline_log_rate"), NULL)
+  intercept <- if (is.null(intercept_arg)) log(rate) else as.numeric(intercept_arg)
+  effect_arg <- .model_arg(p, c("effect", "treatment_log_rate", "log_rate", "log_irr"), NULL)
+  effect <- if (is.null(effect_arg)) {
+    log(as.numeric(.model_arg(p, c("incidence_rate_ratio", "irr"), 1.5)))
+  } else as.numeric(effect_arg)
   cov_effect <- as.numeric(.model_arg(p, c("covariate_effect", "prognostic_effect"), 0.15))
   eta <- intercept + effect * (as.integer(treatment) - 1L) + cov_effect * baseline + log(exposure)
   overdisp <- isTRUE(.model_arg(p, c("overdispersion", "overdispersed"), FALSE))
@@ -178,7 +197,7 @@ generate_poisson <- function(scenario = list(), seed = NULL, ...) {
   }
   truth <- list(
     family = "poisson", term = if (length(levels) > 2L) "treatment" else "treatmentB",
-    effect = effect, rate = rate, incidence_rate_ratio = exp(effect),
+    effect = effect, intercept = intercept, rate = rate, incidence_rate_ratio = exp(effect),
     covariate_effect = cov_effect, factor_levels = levels, imbalance = imbalance,
     exposure = exposure_on, exposure_range = range(exposure), overdispersion = overdisp,
     degenerate_outcome = length(unique(outcome)) < 2L,
@@ -197,10 +216,11 @@ generate_poisson <- function(scenario = list(), seed = NULL, ...) {
   outcome ~ treatment + baseline
 }
 
-.model_failure <- function(class, message, fit = NULL, data = NULL) {
+.model_failure <- function(class, message, fit = NULL, data = NULL, stage = "screening") {
   list(
     status = "failed", failed = TRUE, failure_class = as.character(class),
     failure_message = as.character(message), failure = list(class = class, message = message),
+    failure_stage = stage,
     fit = fit, n = if (is.null(data)) NA_integer_ else nrow(data), p_value = NA_real_,
     estimate = NA_real_, conclusion = NA
   )
@@ -268,15 +288,17 @@ primary_decision_lm <- function(data, scenario = list(), term = NULL,
   .screen_lm_fit(data, .model_formula(data, scenario, formula, "lm"), a$term, a$alpha)
 }
 
-.fit_glm_calibration <- function(data, formula, family, obs_weights = NULL) {
+.fit_glm_calibration <- function(data, formula, family, obs_weights = NULL, control = NULL) {
   d <- as.data.frame(data)
   if (!".row_id" %in% names(d)) d$.row_id <- seq_len(nrow(d))
   if (!is.null(obs_weights)) d$.__obs_w__ <- obs_weights
   warnings <- character()
   fit <- withCallingHandlers(
     tryCatch(
-      if (is.null(obs_weights)) stats::glm(formula, data = d, family = family)
-      else stats::glm(formula, data = d, family = family, weights = .__obs_w__),
+      if (is.null(obs_weights) && is.null(control)) stats::glm(formula, data = d, family = family)
+      else if (is.null(obs_weights)) stats::glm(formula, data = d, family = family, control = control)
+      else if (is.null(control)) stats::glm(formula, data = d, family = family, weights = .__obs_w__)
+      else stats::glm(formula, data = d, family = family, weights = .__obs_w__, control = control),
       error = function(e) e
     ),
     warning = function(w) {
@@ -288,12 +310,16 @@ primary_decision_lm <- function(data, scenario = list(), term = NULL,
 }
 
 .screen_glm_fit <- function(data, formula, term, family, alpha = 0.05,
-                            obs_weights = NULL) {
+                            obs_weights = NULL, control = NULL) {
   data <- as.data.frame(data)
   if (!".row_id" %in% names(data)) data$.row_id <- seq_len(nrow(data))
   fam <- if (is.character(family)) as.character(family[[1L]]) else family$family
   if (is.character(family)) family <- switch(fam, binomial = stats::binomial(), poisson = stats::poisson(), family)
   if (!fam %in% c("binomial", "poisson")) return(.model_failure("unsupported_family", "only binomial and poisson are supported", data = data))
+  expected_link <- if (identical(fam, "binomial")) "logit" else "log"
+  if (!identical(family$link, expected_link)) {
+    return(.model_failure("unsupported_link", sprintf("%s models require the %s link", fam, expected_link), data = data))
+  }
   if (!is.null(obs_weights) &&
       (!is.numeric(obs_weights) || length(obs_weights) != nrow(data) ||
        any(!is.finite(obs_weights)) || any(obs_weights <= 0))) {
@@ -303,7 +329,7 @@ primary_decision_lm <- function(data, scenario = list(), term = NULL,
     y <- data$outcome
     if (length(unique(y[!is.na(y)])) < 2L) return(.model_failure("degenerate_outcome", "binomial outcome has fewer than two observed levels", data = data))
   }
-  fitted <- .fit_glm_calibration(data, formula, family, obs_weights)
+  fitted <- .fit_glm_calibration(data, formula, family, obs_weights, control)
   fit <- fitted$fit
   if (inherits(fit, "error")) return(.model_failure("fit_error", conditionMessage(fit), data = data))
   if (!isTRUE(fit$converged)) return(.model_failure("non_convergence", "GLM did not converge", fit, data))
@@ -326,36 +352,45 @@ primary_decision_lm <- function(data, scenario = list(), term = NULL,
 #' @export
 primary_decision_glm <- function(data, scenario = list(), term = NULL,
                                  family = NULL, formula = NULL,
-                                 alpha = NULL, obs_weights = NULL) {
+                                 alpha = NULL, obs_weights = NULL, control = NULL) {
   a <- .model_analysis(scenario, term = term, alpha = alpha %||% 0.05)
   if (is.null(family)) {
-    family_name <- if (is.list(scenario) && is.list(scenario$analysis)) scenario$analysis$family else NULL
-    family <- if (identical(family_name, "poisson")) stats::poisson() else stats::binomial()
+    family <- if (identical(a$family, "poisson")) stats::poisson() else stats::binomial()
   }
   fam_name <- if (is.character(family)) family else family$family
   .screen_glm_fit(data, .model_formula(data, scenario, formula, fam_name),
-                  a$term, family, a$alpha, obs_weights)
+                  a$term, family, a$alpha, obs_weights, control)
 }
 
 run_robustness_lm <- function(data, scenario = list(), formula = NULL, term = NULL, ...) {
   a <- .model_analysis(scenario, term = term)
-  do.call(stabilitest::robustness_lm, c(list(
-    formula = .model_formula(data, scenario, formula, "lm"), data = data, term = a$term
-  ), list(...)))
+  tryCatch(
+    do.call(stabilitest::robustness_lm, c(list(
+      formula = .model_formula(data, scenario, formula, "lm"), data = data, term = a$term
+    ), list(...))),
+    error = function(e) .model_failure("analysis_error", conditionMessage(e), data = data, stage = "robustness")
+  )
 }
 
 run_robustness_glm <- function(data, scenario = list(), formula = NULL, term = NULL,
                                family = NULL, obs_weights = NULL, ...) {
   a <- .model_analysis(scenario, term = term)
   if (is.null(family)) {
-    family_name <- if (is.list(scenario) && is.list(scenario$analysis)) scenario$analysis$family else NULL
-    family <- if (identical(family_name, "poisson")) stats::poisson() else stats::binomial()
+    family <- if (identical(a$family, "poisson")) stats::poisson() else stats::binomial()
   }
   fam_name <- if (is.character(family)) family[[1L]] else family$family
-  do.call(stabilitest::robustness_glm, c(list(
-    formula = .model_formula(data, scenario, formula, fam_name),
-    data = data, term = a$term, family = family, obs_weights = obs_weights
-  ), list(...)))
+  if (is.character(family)) family <- switch(fam_name, binomial = stats::binomial(), poisson = stats::poisson(), family)
+  expected_link <- if (identical(fam_name, "binomial")) "logit" else if (identical(fam_name, "poisson")) "log" else NA_character_
+  if (!is.na(expected_link) && !identical(family$link, expected_link)) {
+    return(.model_failure("unsupported_link", sprintf("%s models require the %s link", fam_name, expected_link), data = data, stage = "robustness"))
+  }
+  tryCatch(
+    do.call(stabilitest::robustness_glm, c(list(
+      formula = .model_formula(data, scenario, formula, fam_name),
+      data = data, term = a$term, family = family, obs_weights = obs_weights
+    ), list(...))),
+    error = function(e) .model_failure("analysis_error", conditionMessage(e), data = data, stage = "robustness")
+  )
 }
 
 lm_model_adapter <- function() list(

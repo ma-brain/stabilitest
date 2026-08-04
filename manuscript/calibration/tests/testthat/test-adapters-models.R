@@ -134,3 +134,88 @@ testthat::test_that("GLM failures are explicit for separation, aliasing, and deg
   testthat::expect_true(isTRUE(fail2$failed) || identical(fail2$status, "failed"))
   testthat::expect_true(is.character(fail2$failure_class))
 })
+
+testthat::test_that("model scenarios include null, moderate, and held-out strata", {
+  env <- new.env(parent = globalenv())
+  sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
+  env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
+  scenarios <- env$calibration_scenarios()
+  model <- scenarios[scenarios$analysis_family %in% c("lm", "binomial", "poisson"), ]
+  testthat::expect_true(all(c("lm", "binomial", "poisson") %in% model$analysis_family))
+  testthat::expect_gte(sum(model$truth_class == "null"), 3L)
+  testthat::expect_gte(sum(model$design_layer == "validation"), 3L)
+  testthat::expect_true(all(vapply(model$parameters, function(x) is.list(x$generator), logical(1))))
+})
+
+testthat::test_that("frozen smoke log-scale aliases control binomial and Poisson truth", {
+  env <- new.env(parent = globalenv())
+  sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
+  env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
+  b <- env$generate_binomial(list(n = 2000L, baseline_log_odds = -2, treatment_log_odds = 0,
+                                   covariate_effect = 0), seed = 21L)
+  testthat::expect_equal(b$truth$intercept, -2, tolerance = 0)
+  testthat::expect_equal(b$truth$effect, 0, tolerance = 0)
+  p <- env$generate_poisson(list(n = 2000L, baseline_log_rate = -1, treatment_log_rate = 0,
+                                 exposure = FALSE, covariate_effect = 0), seed = 22L)
+  testthat::expect_equal(p$truth$intercept, -1, tolerance = 0)
+  testthat::expect_equal(p$truth$effect, 0, tolerance = 0)
+})
+
+testthat::test_that("one-row scenario data frames dispatch Poisson full adapters", {
+  env <- new.env(parent = globalenv())
+  sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
+  env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
+  scenario <- env$calibration_scenarios()
+  scenario <- scenario[scenario$scenario_id == "poisson_core_offset", , drop = FALSE]
+  generated <- env$generate_poisson(scenario$parameters[[1L]], seed = 31L)
+  fit <- suppressWarnings(env$run_robustness_glm(
+    generated$data, scenario, n_boot = 1L, max_removal_pct = 0.10, seed = 31L
+  ))
+  testthat::expect_s3_class(fit, "robustness_model")
+  testthat::expect_identical(fit$family, "poisson")
+  testthat::expect_identical(fit$link, "log")
+})
+
+testthat::test_that("LM and GLM aliases and non-convergence are auditable failures", {
+  env <- new.env(parent = globalenv())
+  sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
+  env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
+  lm_data <- data.frame(outcome = rnorm(24), treatment = factor(rep(c("A", "B"), 12)),
+                        baseline = rnorm(24), alias = rnorm(24))
+  lm_data$alias <- lm_data$baseline
+  lm_fail <- env$primary_decision_lm(lm_data, list(analysis = list(term = "treatmentB")),
+                                    formula = outcome ~ treatment + baseline + alias)
+  testthat::expect_identical(lm_fail$status, "failed")
+  testthat::expect_identical(lm_fail$failure_class, "aliased_term")
+
+  glm_data <- data.frame(outcome = c(rep(0L, 20), rep(1L, 20)),
+                         treatment = factor(rep(c("A", "B"), each = 20)),
+                         baseline = rnorm(40))
+  glm_data$alias <- glm_data$baseline
+  glm_alias <- env$primary_decision_glm(glm_data, list(analysis = list(term = "treatmentB")),
+                                        family = binomial(), formula = outcome ~ treatment + baseline + alias)
+  testthat::expect_identical(glm_alias$status, "failed")
+  testthat::expect_identical(glm_alias$failure_class, "aliased_term")
+
+  nonconv <- env$primary_decision_glm(glm_data, list(analysis = list(term = "treatmentB")),
+                                      family = binomial(), formula = outcome ~ treatment,
+                                      control = glm.control(maxit = 1L))
+  testthat::expect_identical(nonconv$status, "failed")
+  testthat::expect_identical(nonconv$failure_class, "non_convergence")
+})
+
+testthat::test_that("screening rejects unsupported GLM links explicitly", {
+  env <- new.env(parent = globalenv())
+  sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
+  env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
+  dat <- env$generate_binomial(list(n = 30L), seed = 51L)$data
+  fail <- env$primary_decision_glm(dat, list(analysis = list(term = "treatmentB")),
+                                   family = binomial(link = "probit"))
+  testthat::expect_identical(fail$status, "failed")
+  testthat::expect_identical(fail$failure_class, "unsupported_link")
+  testthat::expect_match(fail$failure_message, "logit")
+  full <- env$run_robustness_glm(dat, list(analysis = list(term = "treatmentB")),
+                                 family = binomial(link = "probit"), n_boot = 1L)
+  testthat::expect_identical(full$status, "failed")
+  testthat::expect_identical(full$failure_class, "unsupported_link")
+})
