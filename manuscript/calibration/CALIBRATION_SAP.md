@@ -104,13 +104,17 @@ frozen decision thresholds are:
 - false reassurance is acceptable only when its point estimate is ≤ 5% **and**
   its one-sided 95% Wilson upper bound is ≤ 10%;
 - robust identification is acceptable only when its point estimate is ≥ 70%
-  **and** its one-sided 95% Wilson lower bound is ≥ 60%.
+  **and** its one-sided 95% Wilson lower bound is ≥ 60%;
+- shared mapping acceptance also requires held-out balanced ordinal accuracy
+  ≥ 0.70.  This blocks policies that satisfy FR/RI and median ordering while
+  dumping every `borderline` replicate into `robust` or `fragile` (accuracy
+  2/3) and thereby suppressing family-specific alternatives.
 
 In addition, the median score ordering must agree with the truth ordering in
 core scenarios (`null` ≤ `borderline` ≤ `clear`).  Stress scenarios must show no
-material reversal of that ordering.  A failed threshold or ordering criterion
-marks the candidate indeterminate, even when the shared score band looks
-favorable.
+material reversal of that ordering.  A failed threshold, ordinal-accuracy, or
+ordering criterion marks the candidate indeterminate, even when the shared
+score band looks favorable on the extremes alone.
 
 The family-specific rule is frozen as a five-point and 0.05 rule.  A mapping is
 accepted only when its held-out conclusion rate is at least five percentage

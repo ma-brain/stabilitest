@@ -3,6 +3,33 @@
 CALIBRATION_SHARED_CUTOFFS <- c(55L, 70L)
 CALIBRATION_FAMILY_IMPROVEMENT <- 0.05
 CALIBRATION_MATERIAL_CUTOFF_DIFFERENCE <- 5L
+# Shared policy must show usable three-class ordinal discrimination, not only
+# FR/RI on the extremes. Perfect null+clear with every borderline dumped into
+# robust yields balanced ordinal accuracy 2/3; require ≥ 0.70 so the moderate
+# band contributes meaningfully before shared "passes" and blocks family fits.
+CALIBRATION_SHARED_MIN_BALANCED_ACCURACY <- 0.70
+
+# Internal decision statuses stay stable for existing tests; Phase 6 / package
+# publication vocabulary is exposed via map_calibration_status() / status_public.
+CALIBRATION_STATUS_PUBLIC <- c(
+  validated = "validated_shared",
+  family_specific = "validated_family_specific",
+  uncalibrated = "uncalibrated",
+  bands_not_applicable = "bands_not_applicable"
+)
+
+map_calibration_status <- function(status) {
+  status <- as.character(status)
+  mapped <- unname(CALIBRATION_STATUS_PUBLIC[status])
+  unknown <- is.na(mapped) & !is.na(status)
+  if (any(unknown)) {
+    .threshold_abort(sprintf(
+      "unsupported calibration status for public mapping: %s",
+      paste(unique(status[unknown]), collapse = ", ")
+    ))
+  }
+  mapped
+}
 
 .threshold_abort <- function(message) stop(message, call. = FALSE)
 
@@ -391,8 +418,12 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
       out$shared_false_reassurance_upper[[i]] <= 0.10 &&
       out$shared_robust_identification[[i]] >= 0.70 &&
       out$shared_robust_identification_lower[[i]] >= 0.60
+    # Ordinal gate: FR/RI alone can ignore the moderate/borderline band.
+    shared_ordinal_ok <- isTRUE(is.finite(shared$balanced_ordinal_accuracy)) &&
+      shared$balanced_ordinal_accuracy >= CALIBRATION_SHARED_MIN_BALANCED_ACCURACY
     shared_policy_valid <- shared_training_ok && diagnostics$stratum_complete &&
-      diagnostics$median_ordering_ok && .threshold_constraints_ok(shared)
+      diagnostics$median_ordering_ok && .threshold_constraints_ok(shared) &&
+      shared_ordinal_ok
     accepted <- !shared_policy_valid && diagnostics$stratum_complete && diagnostics$median_ordering_ok &&
       isTRUE(out$improvement_direction_ok[[i]]) &&
       .threshold_constraints_ok(candidate) &&
@@ -413,7 +444,12 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
         out$reason[[i]] <- "shared_mapping_validated"
       } else {
         out$status[[i]] <- "uncalibrated"
-        out$reason[[i]] <- "shared_and_family_specific_constraints_failed"
+        out$reason[[i]] <- if (!shared_ordinal_ok && .threshold_constraints_ok(shared) &&
+                                diagnostics$stratum_complete && diagnostics$median_ordering_ok) {
+          "shared_ordinal_discrimination_failed"
+        } else {
+          "shared_and_family_specific_constraints_failed"
+        }
       }
     }
   }
@@ -424,7 +460,21 @@ freeze_calibration_registry <- function(registry) {
   registry <- .threshold_registry(registry)
   registry <- registry[order(registry$analysis_family), , drop = FALSE]
   rownames(registry) <- NULL
-  list(registry = registry, candidate_hash = .threshold_hash_object(registry), frozen = TRUE)
+  # Hash internal columns only; status_public is a deterministic export view.
+  candidate_hash <- .threshold_hash_object(registry)
+  if ("status" %in% names(registry)) {
+    registry$status_public <- map_calibration_status(registry$status)
+  }
+  list(registry = registry, candidate_hash = candidate_hash, frozen = TRUE)
+}
+
+write_calibration_registry_csv <- function(registry, path) {
+  registry <- .threshold_registry(registry)
+  if (!"status_public" %in% names(registry) && "status" %in% names(registry)) {
+    registry$status_public <- map_calibration_status(registry$status)
+  }
+  utils::write.csv(registry, path, row.names = FALSE)
+  invisible(path)
 }
 
 .threshold_assert_disjoint <- function(training, validation) {
@@ -475,7 +525,7 @@ analyse_calibration <- function(training_replicates, validation_replicates,
       .threshold_abort("unable to create analysis output directory")
     }
     saveRDS(result, file.path(output, "calibration-registry.rds"), version = 2)
-    utils::write.csv(frozen$registry, file.path(output, "calibration-registry.csv"), row.names = FALSE)
+    write_calibration_registry_csv(frozen$registry, file.path(output, "calibration-registry.csv"))
   }
   class(result) <- c("calibration_analysis", "list")
   result
