@@ -68,6 +68,118 @@ pkgload::load_all(
   quiet = TRUE
 )
 
+.simulation_usage <- function() {
+  paste(
+    "Usage: Rscript manuscript/simulation_study.R [options]",
+    "",
+    "Options:",
+    "  --nrep N       replications per scenario (default: 500)",
+    "  --n-boot B     bootstrap iterations (default: 200)",
+    "  --output PATH  destination CSV",
+    "  --smoke        run nrep=2, n_boot=10 to a separate smoke CSV",
+    "  --help         show this message without running",
+    sep = "\n"
+  )
+}
+
+.parse_positive_integer <- function(value, option) {
+  parsed <- suppressWarnings(as.numeric(value))
+  if (length(parsed) != 1L || is.na(parsed) || !is.finite(parsed) ||
+      parsed < 1 || parsed != floor(parsed)) {
+    stop(sprintf("%s must be a positive integer", option), call. = FALSE)
+  }
+  as.integer(parsed)
+}
+
+.parse_simulation_args <- function(args, script_path = .simulation_script_path()) {
+  value_options <- c("--nrep", "--n-boot", "--output")
+  flag_options <- c("--smoke", "--help")
+  known_options <- c(value_options, flag_options)
+  seen <- character()
+  values <- list()
+  index <- 1L
+
+  while (index <= length(args)) {
+    option <- args[[index]]
+    if (!option %in% known_options) {
+      stop(sprintf("Unknown option: %s", option), call. = FALSE)
+    }
+    if (option %in% seen) {
+      stop(sprintf("%s may only be supplied once", option), call. = FALSE)
+    }
+    seen <- c(seen, option)
+
+    if (option %in% value_options) {
+      if (index == length(args) || startsWith(args[[index + 1L]], "--")) {
+        stop(sprintf("%s requires a value", option), call. = FALSE)
+      }
+      values[[option]] <- args[[index + 1L]]
+      index <- index + 2L
+    } else {
+      values[[option]] <- TRUE
+      index <- index + 1L
+    }
+  }
+
+  help <- "--help" %in% seen
+  smoke <- "--smoke" %in% seen
+  if (help && length(seen) > 1L) {
+    stop("--help cannot be combined with run options", call. = FALSE)
+  }
+  if (smoke && any(c("--nrep", "--n-boot") %in% seen)) {
+    stop("--smoke cannot be combined with --nrep or --n-boot", call. = FALSE)
+  }
+
+  nrep <- if (smoke) {
+    2L
+  } else if ("--nrep" %in% seen) {
+    .parse_positive_integer(values[["--nrep"]], "--nrep")
+  } else {
+    500L
+  }
+  n_boot <- if (smoke) {
+    10L
+  } else if ("--n-boot" %in% seen) {
+    .parse_positive_integer(values[["--n-boot"]], "--n-boot")
+  } else {
+    200L
+  }
+
+  default_name <- if (smoke) {
+    "simulation_results_smoke.csv"
+  } else {
+    "simulation_results.csv"
+  }
+  if ("--output" %in% seen) {
+    output_value <- values[["--output"]]
+    if (!nzchar(output_value)) {
+      stop("--output requires a non-empty path", call. = FALSE)
+    }
+    output_directory <- dirname(output_value)
+    if (!dir.exists(output_directory)) {
+      stop("simulation output directory does not exist", call. = FALSE)
+    }
+    output <- file.path(
+      normalizePath(output_directory, mustWork = TRUE),
+      basename(output_value)
+    )
+  } else {
+    output <- file.path(dirname(script_path), default_name)
+    output_directory <- dirname(output)
+  }
+  if (file.access(output_directory, mode = 2L) != 0L) {
+    stop("simulation output directory is not writable", call. = FALSE)
+  }
+
+  list(
+    nrep = nrep,
+    n_boot = n_boot,
+    output = output,
+    smoke = smoke,
+    help = help
+  )
+}
+
 simulate_scenario <- function(d, n_per_group, n_outliers,
                               nrep = 500, n_boot = 200, alpha = 0.05,
                               seed = NULL) {

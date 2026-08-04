@@ -31,6 +31,89 @@ run_rscript <- function(arguments, working_directory) {
   invisible(output)
 }
 
+source(simulation_file)
+
+expect_parse_error <- function(arguments, pattern) {
+  message <- tryCatch(
+    {
+      .parse_simulation_args(arguments, simulation_file)
+      NA_character_
+    },
+    error = conditionMessage
+  )
+  stopifnot(!is.na(message), grepl(pattern, message))
+}
+
+defaults <- .parse_simulation_args(character(), simulation_file)
+stopifnot(
+  defaults$nrep == 500L,
+  defaults$n_boot == 200L,
+  identical(
+    defaults$output,
+    file.path(dirname(simulation_file), "simulation_results.csv")
+  ),
+  !defaults$smoke,
+  !defaults$help
+)
+
+smoke <- .parse_simulation_args("--smoke", simulation_file)
+stopifnot(
+  smoke$nrep == 2L,
+  smoke$n_boot == 10L,
+  identical(
+    smoke$output,
+    file.path(dirname(simulation_file), "simulation_results_smoke.csv")
+  ),
+  smoke$smoke,
+  !smoke$help
+)
+
+custom_output <- file.path(tempdir(), "custom-simulation.csv")
+custom <- .parse_simulation_args(
+  c(
+    "--nrep", "7",
+    "--n-boot", "11",
+    "--output", custom_output
+  ),
+  simulation_file
+)
+stopifnot(
+  custom$nrep == 7L,
+  custom$n_boot == 11L,
+  identical(
+    custom$output,
+    file.path(normalizePath(dirname(custom_output)), basename(custom_output))
+  ),
+  !custom$smoke,
+  !custom$help
+)
+
+help <- .parse_simulation_args("--help", simulation_file)
+stopifnot(help$help)
+
+expect_parse_error("--unknown", "Unknown option")
+expect_parse_error("--nrep", "requires a value")
+expect_parse_error(c("--nrep", "0"), "positive integer")
+expect_parse_error(c("--nrep", "-1"), "positive integer")
+expect_parse_error(c("--nrep", "1.5"), "positive integer")
+expect_parse_error(c("--n-boot", "NaN"), "positive integer")
+expect_parse_error(
+  c("--nrep", "2", "--nrep", "3"),
+  "may only be supplied once"
+)
+expect_parse_error(
+  c("--smoke", "--nrep", "2"),
+  "cannot be combined"
+)
+expect_parse_error(
+  c("--help", "--output", custom_output),
+  "cannot be combined"
+)
+expect_parse_error(
+  c("--output", file.path(tempdir(), "missing", "results.csv")),
+  "output directory does not exist"
+)
+
 run_rscript(shQuote(simulation_file), tempdir())
 
 source_expression <- sprintf(
