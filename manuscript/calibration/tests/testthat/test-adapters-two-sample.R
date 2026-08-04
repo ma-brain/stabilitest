@@ -1,7 +1,7 @@
-if (!requireNamespace("stabilitest", quietly = TRUE)) {
-  test_project_root <- normalizePath(file.path("..", "..", "..", ".."), mustWork = TRUE)
-  pkgload::load_all(test_project_root, quiet = TRUE)
-}
+test_project_root <- normalizePath(file.path("..", "..", "..", ".."), mustWork = TRUE)
+pkgload::load_all(
+  test_project_root, export_all = FALSE, helpers = FALSE, quiet = TRUE
+)
 
 testthat::test_that("two-sample adapters preserve primary-test parity", {
   adapter_path <- file.path("..", "..", "R", "adapters_two_sample.R")
