@@ -28,9 +28,38 @@ calibration_analysis_from_files <- function(training, validation,
   validation <- read_artifact(validation, "validation")
   training_manifest <- read_manifest(training_manifest, "training")
   validation_manifest <- read_manifest(validation_manifest, "validation")
-  analyse_calibration(training, validation,
-                      training_manifest = training_manifest,
-                      validation_manifest = validation_manifest,
-                      output = output, ...)
+  result <- analyse_calibration(training, validation,
+                                training_manifest = training_manifest,
+                                validation_manifest = validation_manifest,
+                                output = output, ...)
+
+  # Non-significant conclusions use a separate, exploratory estimand.  Keep
+  # them out of the significant-result registry and attach diagnostics from
+  # the held-out rows only, so this step cannot refit or alter the frozen
+  # candidate cutoffs.
+  if (exists("analyse_non_significant", mode = "function", inherits = TRUE)) {
+    result$non_significant <- analyse_non_significant(validation)
+    result$non_significant$split <- "validation"
+    result$non_significant_registry <- non_significant_registry(validation)
+    if (!is.null(output)) {
+      saveRDS(result, file.path(output, "calibration-registry.rds"), version = 2)
+      utils::write.csv(result$non_significant_registry,
+                       file.path(output, "non-significant-registry.csv"),
+                       row.names = FALSE)
+    }
+  }
+  result
 }
 
+# Explicit helper for report scripts that already hold an analysis result.
+# This never mutates the significant-result registry or supplies cutoffs.
+attach_non_significant_analysis <- function(result, validation, ...) {
+  if (!is.list(result)) stop("result must be a calibration analysis list", call. = FALSE)
+  if (!exists("analyse_non_significant", mode = "function", inherits = TRUE)) {
+    stop("non-significant analysis helper is not loaded", call. = FALSE)
+  }
+  result$non_significant <- analyse_non_significant(validation, ...)
+  result$non_significant$split <- "validation"
+  result$non_significant_registry <- non_significant_registry(validation, ...)
+  result
+}
