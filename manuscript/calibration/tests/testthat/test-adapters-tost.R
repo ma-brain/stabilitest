@@ -33,3 +33,29 @@ testthat::test_that("TOST truth uses configured margins rather than realized est
   testthat::expect_error(env$generate_tost(endpoint = "prop", paired = TRUE), "paired")
 })
 
+testthat::test_that("TOST generator accepts the scenario equivalence_margin alias", {
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  dat <- env$generate_tost(endpoint = "mean", type = "equivalence",
+                           n_per_group = 20, equivalence_margin = .5, seed = 6)
+  testthat::expect_identical(dat$margin, .5)
+  testthat::expect_error(
+    env$generate_tost(endpoint = "mean", type = "equivalence", margin = .4,
+                      equivalence_margin = .5),
+    "must agree"
+  )
+})
+
+testthat::test_that("degenerate proportion TOSTs have an explicit sparse failure class", {
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  dat <- list(group1 = rep.int(0L, 20), group2 = rep.int(0L, 20),
+              endpoint = "prop", type = "equivalence", delta_L = -.2, delta_U = .2)
+  failed <- env$run_tost_adapter(dat, n_boot = 5, max_removal_pct = .1)
+  testthat::expect_identical(failed$status, "failed")
+  testthat::expect_identical(failed$failure_class, "sparse_degenerate")
+  testthat::expect_error(env$screen_tost(dat, n_boot = 5, max_removal_pct = .1),
+                         "sparse_degenerate")
+})

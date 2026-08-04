@@ -39,3 +39,14 @@ testthat::test_that("Cox calibration adapter records explicit failure classes", 
   testthat::expect_identical(failed2$failure_class, "all_censored")
   testthat::expect_error(env$screen_cox(no_event, term = "treatment"), "event")
 })
+
+testthat::test_that("Cox generator interprets censoring_rate as the censored fraction", {
+  testthat::skip_if_not_installed("survival")
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  dat <- env$generate_cox(n = 200, hazard_ratio = 1, censoring_rate = .2, seed = 41)
+  metadata <- attr(dat, "calibration_metadata")
+  testthat::expect_equal(mean(dat$event == 0L), .2, tolerance = 1 / nrow(dat))
+  testthat::expect_equal(metadata$realized_censoring_rate, mean(dat$event == 0L))
+})

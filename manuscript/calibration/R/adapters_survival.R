@@ -44,8 +44,12 @@ generate_cox <- function(n = 160, hazard_ratio = 1.5, censoring_rate = 0.2,
     censor_time <- rep.int(Inf, n)
     observed_time <- event_time
   } else {
-    # Fixed censoring quantile gives reproducible, approximately configured censoring.
-    censor_time <- rexp(n, rate = -log(max(censoring_rate, 1e-8)) / median(event_time))
+    # Use the empirical (1 - censoring_rate) event-time quantile.  This makes
+    # the configured rate mean what it says: approximately that fraction of
+    # observations are censored, rather than accidentally reversing the rate
+    # through an exponential censoring-time parameterization.
+    censor_time <- stats::quantile(event_time, probs = 1 - censoring_rate,
+                                   names = FALSE, type = 7)
     event <- as.integer(event_time <= censor_time)
     observed_time <- pmin(event_time, censor_time)
   }
@@ -54,6 +58,7 @@ generate_cox <- function(n = 160, hazard_ratio = 1.5, censoring_rate = 0.2,
   attr(dat, "calibration_metadata") <- list(
     distribution = distribution, shape = shape, hazard_ratio = hazard_ratio,
     censoring_rate = censoring_rate, event_rate = mean(event),
+    realized_censoring_rate = mean(event == 0L),
     time_varying_effect = isTRUE(time_varying_effect),
     stress = if (isTRUE(time_varying_effect)) "non_ph" else NULL,
     seed = seed, censoring_seed = censoring_seed,

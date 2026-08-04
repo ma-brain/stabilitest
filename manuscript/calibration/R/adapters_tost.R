@@ -24,10 +24,23 @@ generate_tost <- function(endpoint = c("mean", "prop", "or"),
                           type = c("equivalence", "noninferiority"),
                           n_per_group = 40, n = NULL, mean_difference = NULL,
                           probability_control = 0.4, probability_treatment = NULL,
-                          odds_ratio = NULL, margin = NULL, delta_L = NULL,
+                          odds_ratio = NULL, margin = NULL, equivalence_margin = NULL,
+                          delta_L = NULL,
                           delta_U = NULL, paired = FALSE, higher_is_better = TRUE,
                           seed = NULL, truth_effect = NULL, ...) {
   endpoint <- match.arg(endpoint); type <- match.arg(type)
+  # The scenario registry uses the descriptive `equivalence_margin` key for
+  # the frozen smoke vignette.  Keep `margin` as the public API while accepting
+  # the registry spelling as an alias for equivalence (and reject ambiguity).
+  if (!is.null(equivalence_margin)) {
+    if (type != "equivalence") {
+      stop("equivalence_margin is only supported for equivalence TOST", call. = FALSE)
+    }
+    if (!is.null(margin) && !identical(as.numeric(margin), as.numeric(equivalence_margin))) {
+      stop("margin and equivalence_margin must agree when both are supplied", call. = FALSE)
+    }
+    margin <- equivalence_margin
+  }
   if (endpoint != "mean" && isTRUE(paired)) stop("paired = TRUE is only supported for endpoint = \"mean\"", call. = FALSE)
   n_per_group <- if (is.null(n)) n_per_group else as.integer(n / 2)
   if (!is.numeric(n_per_group) || length(n_per_group) != 1L || n_per_group < 8) stop("n_per_group must be >= 8", call. = FALSE)
@@ -86,6 +99,15 @@ generate_tost <- function(endpoint = c("mean", "prop", "or"),
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
+.tost_prop_degenerate <- function(data) {
+  if (!is.list(data) || is.null(data$group1) || is.null(data$group2)) return(FALSE)
+  # A constant arm gives a zero within-arm variance.  The Wald RD test cannot
+  # form a finite standard error for the all-zero/all-one sparse tables.
+  any(vapply(list(data$group1, data$group2), function(x) {
+    length(x) < 2L || anyNA(x) || length(unique(x)) < 2L
+  }, logical(1L)))
+}
+
 #' Run the configured TOST/NI test for screening.
 #' @export
 screen_tost <- function(data, endpoint = c("mean", "prop", "or"),
@@ -103,6 +125,9 @@ screen_tost <- function(data, endpoint = c("mean", "prop", "or"),
     if (is.null(delta_U)) delta_U <- data$delta_U
   }
   endpoint <- match.arg(endpoint); type <- match.arg(type)
+  if (endpoint == "prop" && .tost_prop_degenerate(data)) {
+    stop("sparse_degenerate: proportion endpoint has a constant arm", call. = FALSE)
+  }
   a <- .tost_args(data, endpoint, type, margin, delta_L, delta_U, paired,
                   higher_is_better, alpha, n_boot, max_removal_pct, seed, list(...))
   res <- tryCatch(do.call(stabilitest::robustness_tost, c(a[setdiff(names(a), "dots")], a$dots)),
@@ -136,7 +161,11 @@ run_tost_adapter <- function(data, endpoint = c("mean", "prop", "or"),
          original_p = screening$analysis$original_p, effective_p = screening$analysis$original_p,
          failure_stage = NA_character_, failure_class = NA_character_, failure_message = NA_character_)
   }, error = function(e) {
-    cls <- if (grepl("sparse|zero|degenerate|variance", conditionMessage(e), ignore.case = TRUE)) "sparse_degenerate" else "test_failure"
+    cls <- if (endpoint == "prop" && .tost_prop_degenerate(data)) {
+      "sparse_degenerate"
+    } else if (grepl("sparse|zero|degenerate|variance", conditionMessage(e), ignore.case = TRUE)) {
+      "sparse_degenerate"
+    } else "test_failure"
     list(status = "failed", screening = NULL, analysis = NULL, original_p = NA_real_, effective_p = NA_real_,
          failure_stage = "screening", failure_class = cls, failure_message = conditionMessage(e))
   })
