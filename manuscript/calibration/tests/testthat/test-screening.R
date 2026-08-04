@@ -95,3 +95,21 @@ testthat::test_that("selection helper is deterministic and excludes failed rows"
   testthat::expect_false(any(selected$status == "failed"))
   testthat::expect_identical(attr(selected, "status"), "complete")
 })
+
+testthat::test_that("screening rejects integers outside the base-R seed range", {
+  bad_scenario <- fake_scenario
+  bad_scenario$scenario_seed <- -.Machine$integer.max - 1
+  testthat::expect_error(
+    screening_env$screen_scenario(
+      bad_scenario, fake_adapter(), c("null::significant" = 1L), max_draws = 1L
+    ),
+    "scenario_seed must be one finite integer"
+  )
+  testthat::expect_error(
+    screening_env$screen_scenario(
+      fake_scenario, fake_adapter(), c("null::significant" = 1L),
+      max_draws = -.Machine$integer.max - 1
+    ),
+    "max_draws must be one positive integer"
+  )
+})

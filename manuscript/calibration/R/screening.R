@@ -6,7 +6,8 @@
 
 .screen_scalar_integer <- function(value, name, positive = FALSE) {
   ok <- is.numeric(value) && length(value) == 1L && !is.na(value) &&
-    is.finite(value) && floor(value) == value && value <= .Machine$integer.max
+    is.finite(value) && floor(value) == value &&
+    value >= -.Machine$integer.max && value <= .Machine$integer.max
   if (positive) ok <- ok && value > 0
   if (!ok) .screen_abort(sprintf("%s must be one %s integer", name,
                                  if (positive) "positive" else "finite"))
