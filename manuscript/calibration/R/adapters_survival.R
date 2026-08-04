@@ -12,11 +12,23 @@ generate_cox <- function(n = 160, hazard_ratio = 1.5, censoring_rate = 0.2,
   if (!requireNamespace("survival", quietly = TRUE))
     stop("Package 'survival' is required for generate_cox()", call. = FALSE)
   distribution <- match.arg(distribution)
-  if (length(n) != 1L || n < 10 || n != as.integer(n)) stop("n must be an integer >= 10", call. = FALSE)
-  if (!is.numeric(censoring_rate) || length(censoring_rate) != 1L || censoring_rate < 0 || censoring_rate > 1)
+  if (!is.numeric(n) || length(n) != 1L || is.na(n) || !is.finite(n) || n < 10 || n > .Machine$integer.max || n != floor(n))
+    stop("n must be an integer >= 10", call. = FALSE)
+  if (!is.numeric(censoring_rate) || length(censoring_rate) != 1L || is.na(censoring_rate) || !is.finite(censoring_rate) || censoring_rate < 0 || censoring_rate > 1)
     stop("censoring_rate must be in [0, 1]", call. = FALSE)
-  if (!is.numeric(hazard_ratio) || length(hazard_ratio) != 1L || hazard_ratio <= 0)
+  if (!is.numeric(hazard_ratio) || length(hazard_ratio) != 1L || is.na(hazard_ratio) || !is.finite(hazard_ratio) || hazard_ratio <= 0)
     stop("hazard_ratio must be positive", call. = FALSE)
+  if (!is.numeric(shape) || length(shape) != 1L || is.na(shape) || !is.finite(shape) || shape <= 0)
+    stop("shape must be positive", call. = FALSE)
+  if (!is.numeric(scale) || length(scale) != 1L || is.na(scale) || !is.finite(scale) || scale <= 0)
+    stop("scale must be positive", call. = FALSE)
+  validate_seed <- function(x, name) {
+    if (!is.numeric(x) || length(x) != 1L || is.na(x) || !is.finite(x) || x < 0 || x > .Machine$integer.max - 1 || x != floor(x))
+      stop(sprintf("%s must be a non-negative integer", name), call. = FALSE)
+    as.integer(x)
+  }
+  if (!is.null(seed)) seed <- validate_seed(seed, "seed")
+  if (!is.null(censoring_seed)) censoring_seed <- validate_seed(censoring_seed, "censoring_seed")
   if (!is.null(seed)) set.seed(seed)
   treatment <- factor(rep(c("control", "treatment"), length.out = n),
                       levels = c("control", "treatment"))
@@ -30,7 +42,7 @@ generate_cox <- function(n = 160, hazard_ratio = 1.5, censoring_rate = 0.2,
   if (is.null(censoring_seed)) censoring_seed <- if (is.null(seed)) NULL else as.integer(seed) + 100000L
   if (!is.null(censoring_seed)) set.seed(censoring_seed)
   if (!is.null(event_rate)) {
-    if (!is.numeric(event_rate) || length(event_rate) != 1L || event_rate < 0 || event_rate > 1)
+    if (!is.numeric(event_rate) || length(event_rate) != 1L || is.na(event_rate) || !is.finite(event_rate) || event_rate < 0 || event_rate > 1)
       stop("event_rate must be in [0, 1]", call. = FALSE)
     event <- rbinom(n, 1, event_rate)
     censor_time <- event_time
@@ -109,6 +121,9 @@ generate_survival <- generate_cox
 #' @export
 screen_cox <- function(data, term = "treatment", formula = NULL, alpha = 0.05) {
   if (!requireNamespace("survival", quietly = TRUE)) stop("Package 'survival' is required", call. = FALSE)
+  if (!is.numeric(alpha) || length(alpha) != 1L || is.na(alpha) ||
+      !is.finite(alpha) || alpha <= 0 || alpha >= 1)
+    stop("alpha must be a single finite number in (0, 1)", call. = FALSE)
   if (is.null(formula)) formula <- .cox_default_formula()
   resolved <- .cox_resolve(formula, data, term)
   spec <- resolved$spec

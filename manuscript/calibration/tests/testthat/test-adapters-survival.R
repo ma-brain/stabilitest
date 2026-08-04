@@ -21,6 +21,8 @@ testthat::test_that("Cox calibration adapter screens single and multi-df terms",
                                              max_removal_pct = .1, seed = 12)
   testthat::expect_equal(multi$p, full_multi$original_p, tolerance = 1e-12)
   testthat::expect_identical(multi$test, "joint_LRT")
+  testthat::expect_error(env$screen_cox(dat, alpha = 0), "alpha")
+  testthat::expect_error(env$screen_cox(dat, alpha = NA_real_), "alpha")
 })
 
 testthat::test_that("Cox calibration adapter records explicit failure classes", {
@@ -58,4 +60,15 @@ testthat::test_that("Cox generator interprets censoring_rate as the censored fra
                                 censoring_seed = 100)
   testthat::expect_identical(same, same_again)
   testthat::expect_false(identical(same$event, different$event))
+})
+
+testthat::test_that("Cox generator rejects malformed shape, size, and seed inputs", {
+  testthat::skip_if_not_installed("survival")
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  testthat::expect_error(env$generate_cox(shape = 0), "shape must be positive")
+  testthat::expect_error(env$generate_cox(n = NA_integer_), "integer >= 10")
+  testthat::expect_error(env$generate_cox(seed = -1), "non-negative integer")
+  testthat::expect_error(env$generate_cox(censoring_seed = 1.5), "non-negative integer")
 })

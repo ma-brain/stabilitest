@@ -20,6 +20,22 @@ testthat::test_that("TOST adapter preserves p_eff and conclusion parity", {
   }
 })
 
+testthat::test_that("TOST screening is primary-test only and validates alpha", {
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  dat <- env$generate_tost(endpoint = "mean", type = "equivalence",
+                           margin = .5, n_per_group = 30, seed = 17)
+  screened <- env$screen_tost(dat, n_boot = 0, max_removal_pct = 0, seed = 99)
+  testthat::expect_true(is.finite(screened$p_eff))
+  testthat::expect_false("score" %in% names(screened$analysis))
+  full <- env$run_tost_adapter(dat, n_boot = 2, max_removal_pct = .1, seed = 99)
+  testthat::expect_true("bootstrap" %in% names(full$analysis))
+  testthat::expect_equal(screened$p_eff, full$analysis$original_p, tolerance = 1e-12)
+  testthat::expect_error(env$screen_tost(dat, alpha = 0), "alpha")
+  testthat::expect_error(env$screen_tost(dat, alpha = NA_real_), "alpha")
+})
+
 testthat::test_that("TOST truth uses configured margins rather than realized estimates", {
   env <- new.env(parent = globalenv())
   sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
@@ -58,4 +74,17 @@ testthat::test_that("degenerate proportion TOSTs have an explicit sparse failure
   testthat::expect_identical(failed$failure_class, "sparse_degenerate")
   testthat::expect_error(env$screen_tost(dat, n_boot = 5, max_removal_pct = .1),
                          "sparse_degenerate")
+})
+
+testthat::test_that("TOST generator rejects malformed bounds, sizes, seeds, and scalars", {
+  env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
+  env$load_calibration(envir = env)
+  testthat::expect_error(env$generate_tost(endpoint = "mean"), "requires margin")
+  testthat::expect_error(env$generate_tost(endpoint = "or", margin = 1), "margin must be > 1")
+  testthat::expect_error(env$generate_tost(endpoint = "mean", delta_L = .2, delta_U = -.2), "strictly less")
+  testthat::expect_error(env$generate_tost(endpoint = "mean", margin = .5, n = 15), "even integer")
+  testthat::expect_error(env$generate_tost(endpoint = "mean", margin = .5, seed = -1), "non-negative integer")
+  testthat::expect_error(env$generate_tost(endpoint = "prop", margin = .2,
+                                           probability_control = NA_real_), "finite numeric")
 })
