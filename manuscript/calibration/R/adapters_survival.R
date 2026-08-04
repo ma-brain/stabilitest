@@ -125,7 +125,8 @@ run_cox_adapter <- function(data, term = "treatment", formula = NULL, alpha = 0.
          original_p = analysis$original_p, effective_p = analysis$original_p,
          failure_stage = NA_character_, failure_class = NA_character_, failure_message = NA_character_)
   }, error = function(e) {
-    hint <- attr(data, "calibration_metadata")$failure_hint
+    metadata <- attr(data, "calibration_metadata")
+    hint <- if (is.list(metadata)) metadata$failure_hint else NULL
     cls <- if (!is.null(hint)) hint else if (grepl("all.*censor", conditionMessage(e), ignore.case = TRUE)) "all_censored" else if (grepl("event", conditionMessage(e), ignore.case = TRUE)) "no_event" else if (grepl("converg|finite", conditionMessage(e), ignore.case = TRUE)) "nonconvergent" else if (grepl("level|factor|term", conditionMessage(e), ignore.case = TRUE)) "vanished_factor" else "model_fit"
     list(status = "failed", screening = NULL, analysis = NULL,
          original_p = NA_real_, effective_p = NA_real_, failure_stage = "screening",

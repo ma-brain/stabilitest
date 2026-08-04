@@ -74,7 +74,33 @@ calibration_scenarios <- function() {
         analysis = list(endpoint = "mean", margin = 0.5, alpha = 0.05)
       )
     )
-  )
+  ) |>
+    tibble::add_row(
+      scenario_id = "tost_prop_equivalence", analysis_family = "tost", endpoint = "risk_difference",
+      design_layer = "validation", data_generator = "generate_tost", primary_adapter = "robustness_tost",
+      robustness_adapter = "tost_prop", truth_class = "clear", target_conclusion = "equivalent",
+      sample_size = 80L, n_boot = 1000L, max_removal_pct = .30, training_split = .7,
+      scenario_seed = 1901L,
+      parameters = list(list(generator = list(n_per_group = 40L, endpoint = "prop",
+                                              type = "equivalence", delta_L = -.15, delta_U = .15,
+                                              probability_control = .5, probability_treatment = .5),
+                              analysis = list(endpoint = "prop", type = "equivalence",
+                                              delta_L = -.15, delta_U = .15, alpha = .05))),
+      .before = Inf
+    ) |>
+    tibble::add_row(
+      scenario_id = "tost_or_noninferiority", analysis_family = "tost", endpoint = "odds_ratio",
+      design_layer = "stress", data_generator = "generate_tost", primary_adapter = "robustness_tost",
+      robustness_adapter = "tost_or", truth_class = "clear", target_conclusion = "noninferior",
+      sample_size = 80L, n_boot = 1000L, max_removal_pct = .30, training_split = .7,
+      scenario_seed = 2001L,
+      parameters = list(list(generator = list(n_per_group = 40L, endpoint = "or",
+                                              type = "noninferiority", margin = 1.5,
+                                              odds_ratio = 1.2),
+                              analysis = list(endpoint = "or", type = "noninferiority",
+                                              margin = 1.5, higher_is_better = TRUE, alpha = .05))),
+      .before = Inf
+    )
   # Endpoint and stress coverage for the model-specific adapters.  The original
   # seven smoke IDs remain frozen; these rows add Weibull/non-PH Cox and binary
   # TOST/NI checks without changing the common artifact schema.
