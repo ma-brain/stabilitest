@@ -173,3 +173,27 @@ testthat::test_that("parallel identity is defined for analysis fields while runt
                              many[, setdiff(names(many), "runtime_seconds")])
   testthat::expect_true(all(one$runtime_seconds >= 0) && all(many$runtime_seconds >= 0))
 })
+
+testthat::test_that("resume never returns a checkpoint for a different replicate set", {
+  env <- new.env(parent = globalenv())
+  for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
+    sys.source(file.path("..", "..", "R", file), envir = env)
+  }
+  scenario <- list(scenario_id = "set-aware", analysis_family = "fake", endpoint = "mean",
+                   design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
+                   sample_size = 3L, n_boot = 2L, max_removal_pct = .3)
+  adapter <- list(
+    generate = function(scenario, seed) list(data = data.frame(x = 1:3)),
+    primary_decision = function(...) list(conclusion = "non_significant"),
+    run_robustness = function(data, ...) list(status = "completed", original_p = .5, effective_p = .5,
+      metrics = list(jackknife_conclusion_stability = 100, worstcase_fragility_component = 100,
+                     worstcase_fragility_k = 3L, worstcase_fragility_pct = 100,
+                     bootstrap_reproducibility = 100, overall_robustness = 100),
+      interpretation_label = "Robust", n = 3L)
+  )
+  root <- tempfile("set-aware-"); dir.create(root)
+  env$run_full_scenario(scenario, adapter, replicate_ids = 1:4, checkpoint_root = root)
+  resumed <- env$run_full_scenario(scenario, adapter, replicate_ids = 5:8,
+                                   checkpoint_root = root, resume = TRUE)
+  testthat::expect_identical(resumed$replicate_id, 5:8)
+})

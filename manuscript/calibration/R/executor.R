@@ -87,11 +87,14 @@ if (!exists("%||%", mode = "function")) `%||%` <- function(x, y) if (is.null(x))
 }
 
 .executor_failure_row <- function(scenario, replicate_id, stage, condition,
-                                  replicate_seed, bootstrap_seed) {
-  new_calibration_failure(
+                                  replicate_seed, bootstrap_seed,
+                                  runtime_seconds = NA_real_) {
+  row <- new_calibration_failure(
     scenario, replicate_id = replicate_id, stage = stage, condition = condition,
     replicate_seed = replicate_seed, bootstrap_seed = bootstrap_seed
   )
+  if (!is.na(runtime_seconds)) row$runtime_seconds <- as.numeric(runtime_seconds)
+  row
 }
 
 .executor_validate_success <- function(result, data) {
@@ -170,7 +173,8 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
       stage <- .executor_value(screening, list(c("failure_stage")), "screening")
       return(.executor_failure_row(values, replicate_id, as.character(stage),
                                    .executor_condition(as.character(cls), msg),
-                                   replicate_seed, bootstrap_seed))
+                                   replicate_seed, bootstrap_seed,
+                                   proc.time()[["elapsed"]] - start))
     }
     screening_conclusion <- .executor_conclusion(screening)
     if (is.na(screening_conclusion)) stop("screening conclusion is missing", call. = FALSE)
@@ -184,7 +188,8 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
       stage <- .executor_value(full, list(c("failure_stage")), "robustness")
       return(.executor_failure_row(values, replicate_id, as.character(stage),
                                    .executor_condition(as.character(cls), msg),
-                                   replicate_seed, bootstrap_seed))
+                                   replicate_seed, bootstrap_seed,
+                                   proc.time()[["elapsed"]] - start))
     }
     validated <- .executor_validate_success(full, data)
     if (!validated$ok) stop(validated$condition)
@@ -217,7 +222,8 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
     condition <- if (identical(class(error)[[1L]], "simpleError")) {
       .executor_condition(cls, conditionMessage(error), stage = stage)
     } else error
-    .executor_failure_row(values, replicate_id, stage, condition, replicate_seed, bootstrap_seed)
+    .executor_failure_row(values, replicate_id, stage, condition, replicate_seed, bootstrap_seed,
+                          proc.time()[["elapsed"]] - start)
   })
   result
 }
@@ -260,8 +266,11 @@ run_full_scenario <- function(scenario, adapter, selected = NULL, replicate_ids 
       tryCatch({ validate_calibration_replicates(existing); existing },
                error = function(error) NULL)
     } else NULL
-    if (!is.null(existing) && checkpoint_complete(path, manifest_hash, target_n)) {
-      return(existing)
+    ids_match <- !is.null(existing) && nrow(existing) == target_n &&
+      identical(sort(as.integer(existing$replicate_id)), sort(replicate_ids)) &&
+      all(existing$scenario_id == values$scenario_id)
+    if (!is.null(existing) && ids_match && checkpoint_complete(path, manifest_hash, target_n)) {
+      return(existing[match(replicate_ids, existing$replicate_id), , drop = FALSE])
     }
   }
   scenario_seed_value <- values$scenario_seed %||% scenario_seed(values$scenario_id, master_seed)
