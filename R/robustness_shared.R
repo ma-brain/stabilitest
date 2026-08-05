@@ -61,8 +61,11 @@ validate_fragility_capacity <- function(max_k) {
   }
 }
 
-# Calibrated bands (simulation Section 3): > 70 Robust; (55, 70] Moderately
-# Robust; <= 55 Fragile. Shared by two-sample, model, and TOST paths.
+# Legacy score bands (simulation Section 3): > 70 Robust; (55, 70]
+# Moderately Robust; <= 55 Fragile.  Two-vector analyses no longer call this
+# unconditional classifier; they use score_label_from_calibration() after an
+# exact registry/applicability check.  Model and TOST paths retain this helper
+# until their metadata migration is completed.
 robustness_band_label <- function(score) {
   dplyr::case_when(
     score > 70 ~ "Robust",
@@ -211,7 +214,9 @@ jackknife_estimate_range <- function(estimate) {
 
 # Cross-class aliases: keep historical primary names and mirror the other
 # family so callers can use either metrics / robustness_metrics and
-# interpretation_label / robustness_interpretation.
+# interpretation_label / robustness_interpretation. Calibration metadata is
+# deliberately not inferred here: each analysis wrapper must attach the exact
+# method-specific resolution before aliases are synchronized.
 align_robustness_result_aliases <- function(out,
                                             style = c("analysis", "model")) {
   style <- match.arg(style)

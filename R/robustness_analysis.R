@@ -486,10 +486,6 @@ robustness_analysis <- function(group1, group2,
     max_k = max_k,
     k_frag_extreme = k_frag_extreme
   )
-  robustness_interpretation <- robustness_band_label(
-    robustness_score$overall_robustness
-  )
-
   # --- sample info ------------------------------------------------------------
   effect_type <- if (is_prop) {
     "prop_diff"
@@ -523,6 +519,29 @@ robustness_analysis <- function(group1, group2,
     info
   }
 
+  # Categorical robustness bands are only calibrated for the documented
+  # default Welch configuration.  Every two-vector result still carries the
+  # numeric score and component metrics, but the label is suppressed whenever
+  # the exact method/conclusion/design has no validated registry entry.
+  calibration_unit <- calibration_unit_for_test(test_type)
+  calibration_endpoint <- switch(
+    effect_type,
+    mean_diff = "mean_difference",
+    hodges_lehmann = "location_shift",
+    prop_diff = "risk_difference",
+    NA_character_
+  )
+  calibration <- resolve_result_calibration(
+    calibration_unit = calibration_unit,
+    endpoint = calibration_endpoint,
+    conclusion_type = superiority_conclusion_type(original_significant),
+    weights = weights,
+    max_removal_pct = max_removal_pct
+  )
+  robustness_interpretation <- score_label_from_calibration(
+    robustness_score$overall_robustness, calibration
+  )
+
   out <- list(
     original_p           = original$p.value,
     original_significant = original_significant,
@@ -533,6 +552,7 @@ robustness_analysis <- function(group1, group2,
 
     robustness_metrics        = robustness_score,
     robustness_interpretation = robustness_interpretation,
+    calibration               = calibration,
     weights                   = weights,
     alpha                     = alpha,
     max_removal_pct           = max_removal_pct,
