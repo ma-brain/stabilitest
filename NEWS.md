@@ -13,6 +13,11 @@
   and `lm_ancova`; the latter is the next independent calibration target.
   Task 15's broad-family tables and manifests remain archived as historical
   evidence and are not used for runtime interpretation.
+* The 0.5.1 production freeze found all seven calibration families
+  `uncalibrated` / `no_feasible_thresholds`. Accordingly, categorical
+  Fragile/Moderate/Robust labels are reserved for statistically significant
+  results that meet the documented Welch configuration; all other results
+  retain numeric scores and component metrics without categorical labels.
 
 ## Correctness
 

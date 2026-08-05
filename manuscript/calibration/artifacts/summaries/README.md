@@ -28,7 +28,8 @@ gitignored `artifacts/raw/assembled/`.
 no integer cutoff pair was feasible; null and clear score distributions do not
 separate (and are inverted for some families). `validation_refit = FALSE`.
 Phase 6 package integration remains blocked pending independent review of this
-outcome.
+outcome. See [TASK15-STEP5-REVIEW.md](TASK15-STEP5-REVIEW.md) for the Step 5
+freeze review (no-go for calibrated bands; conditional go only after provenance fixes).
 
 ## `proportion-run-summary.csv`
 
