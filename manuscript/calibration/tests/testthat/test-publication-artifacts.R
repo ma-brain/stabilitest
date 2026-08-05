@@ -96,6 +96,16 @@ testthat::test_that("published registry records production freeze without refit"
   testthat::expect_true(all(registry$reason == "no_feasible_thresholds"))
 })
 
+testthat::test_that("production hash policy excludes pilot summaries", {
+  root <- normalizePath(file.path("..", "..", "..", ".."), mustWork = TRUE)
+  env <- new.env(parent = globalenv())
+  sys.source(file.path(root, "manuscript", "calibration", "tools", "freeze_and_publish.R"), env)
+  published <- file.path(root, "manuscript", "calibration", "published")
+  targets <- env$production_hash_targets(published)
+  testthat::expect_true("calibration-registry.rds" %in% targets)
+  testthat::expect_false(any(grepl("pilot", targets, ignore.case = TRUE)))
+})
+
 testthat::test_that("reduced publication fixture preserves the locked no-refit flow", {
   root <- normalizePath(file.path("..", "..", "..", ".."), mustWork = TRUE)
   env <- new.env(parent = globalenv())
