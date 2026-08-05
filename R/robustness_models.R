@@ -385,8 +385,11 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 #'     component scores and the overall composite. Alias:
 #'     `robustness_metrics` (same tibble). Shared metric columns match
 #'     [robustness_analysis()] where meanings align.}
-#'   \item{interpretation_label}{`"Robust"`, `"Moderately Robust"`, or
-#'     `"Fragile"`. Alias: `robustness_interpretation`.}
+#'   \item{interpretation_label}{A calibrated categorical label when a
+#'     method-specific calibration is applicable; otherwise `NA`. Alias:
+#'     `robustness_interpretation`.}
+#'   \item{calibration}{Method-specific calibration metadata, including
+#'     applicability, status, cutoffs, version, and provenance.}
 #'   \item{original_estimate}{Term estimate (`NA` for multi-df joint tests).
 #'     Alias: `original_mean_diff`.}
 #'   \item{jackknife, worstcase, bootstrap, removed_rows}{Component analysis
@@ -805,8 +808,12 @@ print.robustness_model <- function(x, ...) {
       cat(sprintf("          IRR = %.3f\n", exp(x$original_estimate)))
     }
   }
-  cat(sprintf("\nOVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
-              m$overall_robustness, x$interpretation_label))
+  cat(sprintf("\nOVERALL ROBUSTNESS: %s\n\n",
+              format_score_interpretation(
+                m$overall_robustness,
+                x[["calibration"]],
+                x$interpretation_label
+              )))
   print_robustness_components(x, m, p_label = "p")
   cat("\n")
   if (length(x$removed_rows) > 0 && m$worstcase_fragility_k <= x$max_k) {

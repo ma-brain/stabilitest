@@ -87,6 +87,34 @@ test_that("non-Welch two-vector methods keep scores but suppress labels", {
   }, logical(1))))
 })
 
+test_that("print and narrative output expose calibration status", {
+  x <- c(2, 2.1, 1.9, 2.2, 2.0, 2.1, 1.8, 2.2, 2.1, 1.9)
+  y <- c(0, 0.1, -0.1, 0.2, 0.0, 0.15, -0.2, 0.25, 0.1, -0.1)
+
+  calibrated <- robustness_analysis(x, y, test_type = "t.test",
+                                    n_boot = 10, seed = 42,
+                                    interpret = TRUE)
+  calibrated_text <- capture.output(print(calibrated))
+  expect_true(any(grepl("Welch calibration", calibrated_text)))
+  expect_true(any(grepl("Robust|Moderately Robust|Fragile",
+                         calibrated_text)))
+
+  uncalibrated <- robustness_analysis(x, y, test_type = "paired.t.test",
+                                      n_boot = 10, seed = 42,
+                                      interpret = TRUE)
+  uncalibrated_text <- capture.output(print(uncalibrated))
+  expect_true(any(grepl("OVERALL ROBUSTNESS: [0-9.]+/100",
+                        uncalibrated_text)))
+  expect_true(any(grepl("categorical bands not calibrated for this method",
+                        uncalibrated_text)))
+  expect_false(any(grepl("\\((Robust|Moderately Robust|Fragile)\\)",
+                         uncalibrated_text)))
+  expect_true(grepl("categorical bands not calibrated for this method",
+                    uncalibrated$interpretation$overall))
+  expect_true(grepl("component metrics",
+                    uncalibrated$interpretation$recommendation))
+})
+
 test_that("Welch labels are suppressed outside the validated design", {
   set.seed(41)
   x <- rep(3, 12) + rnorm(12, 0, .1)

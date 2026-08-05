@@ -242,7 +242,11 @@ test_that("print.robustness_tost works for equivalence and NI", {
                             n_boot = 20, seed = 1)
   expect_output(print(res_eq), "TOST / NON-INFERIORITY")
   expect_output(print(res_eq), "equivalence")
+  expect_output(print(res_eq),
+                "categorical bands not calibrated for this method")
   expect_output(print(res_ni), "noninferiority")
+  expect_output(print(res_ni),
+                "categorical bands not calibrated for this method")
 })
 
 # ==============================================================================

@@ -562,7 +562,9 @@ tost_or_test <- function(group1, group2, type,
 #'   (`original_p` / effective p-value, `original_estimate` /
 #'   `original_mean_diff`, `original_significant`, `metrics` /
 #'   `robustness_metrics`, `interpretation_label` /
-#'   `robustness_interpretation`, jackknife / worst-case / bootstrap tibbles,
+#'   `robustness_interpretation` (always `NA` until a dedicated TOST
+#'   calibration is established), `calibration`, jackknife / worst-case /
+#'   bootstrap tibbles,
 #'   `n`, `max_k`, `max_removal_pct`, `alpha`, `weights`) plus
 #'   TOST/NI metadata (`tost_type`, `endpoint`, `margin` / `delta_L` /
 #'   `delta_U`, one-sided p-values, `(1 - 2 * alpha)` CI, `method`).
@@ -800,8 +802,12 @@ print.robustness_tost <- function(x, ...) {
                        "not non-inferior")))
   }
 
-  cat(sprintf("\nOVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
-              m$overall_robustness, x$interpretation_label))
+  cat(sprintf("\nOVERALL ROBUSTNESS: %s\n\n",
+              format_score_interpretation(
+                m$overall_robustness,
+                x[["calibration"]],
+                x$interpretation_label
+              )))
   print_robustness_components(x, m, p_label = "p_eff")
   cat("\n")
   if (length(x$removed_rows) > 0 && m$worstcase_fragility_k <= x$max_k) {
