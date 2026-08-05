@@ -42,7 +42,7 @@ testthat::test_that("two-sample adapters preserve primary-test parity", {
         alpha = 0.05,
         correct = if (is.null(case$correct)) TRUE else case$correct
       )),
-      analysis_family = "two_sample",
+      analysis_engine = "two_sample",
       scenario_id = paste0("parity_", case_name)
     )
     primary <- adapter$primary_decision(case$data, scenario)
@@ -167,7 +167,7 @@ testthat::test_that("scenario registry includes imbalanced and sparse binary str
   scenario_env <- new.env(parent = globalenv())
   sys.source(scenario_path, envir = scenario_env)
   scenarios <- scenario_env$calibration_scenarios()
-  two_sample <- scenarios[scenarios$analysis_family == "two_sample", , drop = FALSE]
+  two_sample <- scenarios[scenarios$analysis_engine == "two_sample", , drop = FALSE]
   testthat::expect_true(any(grepl("imbalanced", two_sample$scenario_id)))
   testthat::expect_true(any(grepl("sparse", two_sample$scenario_id)))
   generators <- two_sample$parameters[vapply(two_sample$parameters, function(x) {

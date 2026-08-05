@@ -72,7 +72,7 @@ testthat::test_that("selection uses design_layer for train and held-out splits",
   sys.source(file.path("..", "..", "run_calibration.R"), envir = runner_env)
   scenarios <- data.frame(
     scenario_id = c("core-a", "stress-a", "val-a", "core-b"),
-    analysis_family = c("lm", "lm", "lm", "cox"),
+    analysis_engine = c("lm", "lm", "lm", "cox"),
     design_layer = c("core", "stress", "validation", "core"),
     # training_split is schema-only; selection must ignore it.
     training_split = c(0.9, 0.1, 0.5, 0.7),
@@ -134,7 +134,8 @@ testthat::test_that("runner hook seam exposes screening and executor arguments",
   runner_env <- new.env(parent = globalenv())
   sys.source(file.path("..", "..", "run_calibration.R"), envir = runner_env)
   scenario <- data.frame(
-    scenario_id = "hook-scenario", analysis_family = "lm",
+    scenario_id = "hook-scenario", analysis_engine = "lm",
+    calibration_family = "linear_model", calibration_unit = "lm_ancova",
     truth_class = "null", target_conclusion = "non_significant",
     sample_size = 20L, n_boot = 1000L, stringsAsFactors = FALSE
   )
@@ -179,7 +180,9 @@ testthat::test_that("analyse hook records empty selection as unsupported", {
   runner_env$run_full_scenario <- function(...) stop("should not execute", call. = FALSE)
   runner_env$.calibration_adapter_for_scenario <- function(...) list()
   scenario <- data.frame(scenario_id = "binomial_stress_separation",
-                         analysis_family = "binomial", stringsAsFactors = FALSE)
+                         analysis_engine = "binomial",
+                         calibration_family = "generalized_linear_model",
+                         calibration_unit = "glm_binomial", stringsAsFactors = FALSE)
   screened <- list(
     status = "incomplete",
     selected = tibble::tibble(),

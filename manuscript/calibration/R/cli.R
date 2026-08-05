@@ -3,6 +3,8 @@
 CALIBRATION_ENGINES <- c(
   "all", "two_sample", "proportion", "lm", "binomial", "poisson", "cox", "tost"
 )
+# These values select execution adapters.  They are deliberately not
+# calibration identities; method-specific keys live in each scenario row.
 CALIBRATION_PHASES <- c("screen", "analyse", "all")
 CALIBRATION_MODES <- c("smoke", "pilot", "full")
 

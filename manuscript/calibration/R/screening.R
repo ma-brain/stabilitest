@@ -34,7 +34,9 @@
   }
   list(
     scenario_id = as.character(.screen_scenario_value(scenario, "scenario_id")),
-    analysis_family = as.character(.screen_scenario_value(scenario, "analysis_family", "unknown")),
+    analysis_engine = as.character(.screen_scenario_value(scenario, "analysis_engine", "unknown")),
+    calibration_family = as.character(.screen_scenario_value(scenario, "calibration_family", "unknown")),
+    calibration_unit = as.character(.screen_scenario_value(scenario, "calibration_unit", "unknown")),
     endpoint = as.character(.screen_scenario_value(scenario, "endpoint", "unknown")),
     design_layer = as.character(.screen_scenario_value(scenario, "design_layer", "core")),
     truth_class = as.character(.screen_scenario_value(scenario, "truth_class")),

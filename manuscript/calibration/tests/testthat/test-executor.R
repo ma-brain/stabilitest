@@ -4,7 +4,8 @@ testthat::test_that("selected replicate executor emits a complete row", {
     sys.source(file.path("..", "..", "R", file), envir = env)
   }
   scenario <- list(
-    scenario_id = "fake_success", analysis_family = "fake", endpoint = "mean",
+    scenario_id = "fake_success", analysis_engine = "two_sample",
+    calibration_family = "test", calibration_unit = "fake_method", endpoint = "mean",
     design_layer = "core", truth_class = "clear", target_conclusion = "significant",
     sample_size = 8L, n_boot = 5L, max_removal_pct = .3
   )
@@ -36,7 +37,8 @@ testthat::test_that("executor audits full-fit, subset, and non-finite failures",
     sys.source(file.path("..", "..", "R", file), envir = env)
   }
   scenario <- list(
-    scenario_id = "fake_failure", analysis_family = "fake", endpoint = "mean",
+    scenario_id = "fake_failure", analysis_engine = "two_sample",
+    calibration_family = "test", calibration_unit = "fake_method", endpoint = "mean",
     design_layer = "stress", truth_class = "borderline", target_conclusion = "significant",
     sample_size = 4L, n_boot = 5L, max_removal_pct = .3
   )
@@ -71,7 +73,8 @@ testthat::test_that("scenario executor resumes checkpoints and is worker-order i
     sys.source(file.path("..", "..", "R", file), envir = env)
   }
   scenario <- list(
-    scenario_id = "fake_batch", analysis_family = "fake", endpoint = "mean",
+    scenario_id = "fake_batch", analysis_engine = "two_sample",
+    calibration_family = "test", calibration_unit = "fake_method", endpoint = "mean",
     design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
     sample_size = 3L, n_boot = 2L, max_removal_pct = .3
   )
@@ -107,7 +110,8 @@ testthat::test_that("timeout and generated-data failures preserve audit status",
     sys.source(file.path("..", "..", "R", file), envir = env)
   }
   scenario <- list(
-    scenario_id = "fake_timeout", analysis_family = "fake", endpoint = "mean",
+    scenario_id = "fake_timeout", analysis_engine = "two_sample",
+    calibration_family = "test", calibration_unit = "fake_method", endpoint = "mean",
     design_layer = "validation", truth_class = "clear", target_conclusion = "significant",
     sample_size = 2L, n_boot = 2L, max_removal_pct = .3
   )
@@ -129,7 +133,8 @@ testthat::test_that("adapter-declared failure fields and timeout conditions are 
   for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
     sys.source(file.path("..", "..", "R", file), envir = env)
   }
-  scenario <- list(scenario_id = "declared", analysis_family = "fake", endpoint = "mean",
+  scenario <- list(scenario_id = "declared", analysis_engine = "two_sample",
+                   calibration_family = "test", calibration_unit = "fake_method", endpoint = "mean",
                    design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
                    sample_size = 3L, n_boot = 2L, max_removal_pct = .3)
   screening <- list(conclusion = "non_significant")
@@ -155,7 +160,8 @@ testthat::test_that("selected adapter screening results with status ok are accep
   for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
     sys.source(file.path("..", "..", "R", file), envir = env)
   }
-  scenario <- list(scenario_id = "status-ok-screen", analysis_family = "fake",
+  scenario <- list(scenario_id = "status-ok-screen", analysis_engine = "two_sample",
+                   calibration_family = "test", calibration_unit = "fake_method",
                    endpoint = "mean", design_layer = "core", truth_class = "clear",
                    target_conclusion = "significant", sample_size = 3L, n_boot = 2L,
                    max_removal_pct = .3, scenario_seed = 17L)
@@ -184,7 +190,8 @@ testthat::test_that("parallel identity is defined for analysis fields while runt
   for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
     sys.source(file.path("..", "..", "R", file), envir = env)
   }
-  scenario <- list(scenario_id = "identity", analysis_family = "fake", endpoint = "mean",
+  scenario <- list(scenario_id = "identity", analysis_engine = "two_sample",
+                   calibration_family = "test", calibration_unit = "fake_method", endpoint = "mean",
                    design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
                    sample_size = 3L, n_boot = 2L, max_removal_pct = .3)
   adapter <- list(
@@ -208,7 +215,8 @@ testthat::test_that("resume never returns a checkpoint for a different replicate
   for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
     sys.source(file.path("..", "..", "R", file), envir = env)
   }
-  scenario <- list(scenario_id = "set-aware", analysis_family = "fake", endpoint = "mean",
+  scenario <- list(scenario_id = "set-aware", analysis_engine = "two_sample",
+                   calibration_family = "test", calibration_unit = "fake_method", endpoint = "mean",
                    design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
                    sample_size = 3L, n_boot = 2L, max_removal_pct = .3)
   adapter <- list(
@@ -232,7 +240,8 @@ testthat::test_that("executor reads nested analysis metrics from wrapped adapter
   for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
     sys.source(file.path("..", "..", "R", file), envir = env)
   }
-  scenario <- list(scenario_id = "nested-analysis", analysis_family = "cox", endpoint = "hazard",
+  scenario <- list(scenario_id = "nested-analysis", analysis_engine = "cox",
+                   calibration_family = "survival", calibration_unit = "cox_ph", endpoint = "hazard",
                    design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
                    sample_size = 3L, n_boot = 2L, max_removal_pct = .3, scenario_seed = 11L)
   adapter <- list(

@@ -31,7 +31,7 @@
     if (!nrow(selected)) stop(sprintf("unknown calibration scenario: %s", options$scenario), call. = FALSE)
   }
   if (!identical(options$engine, "all")) {
-    selected <- selected[selected$analysis_family == options$engine, , drop = FALSE]
+    selected <- selected[selected$analysis_engine == options$engine, , drop = FALSE]
   }
   # Train/held-out authority is design_layer (not training_split): validation =
   # held-out; core/stress = training.  Pilot further restricts to core only.
@@ -48,7 +48,7 @@
   if (identical(options$mode, "smoke") && is.null(options$scenario)) {
     # Prefer the frozen *_smoke row and retain one row per analysis family.
     selected <- selected[order(!grepl("_smoke$", selected$scenario_id)), , drop = FALSE]
-    selected <- selected[!duplicated(selected$analysis_family), , drop = FALSE]
+    selected <- selected[!duplicated(selected$analysis_engine), , drop = FALSE]
   }
   if (!nrow(selected)) stop("no calibration scenarios match the requested filters", call. = FALSE)
   selected[order(selected$scenario_id), , drop = FALSE]
@@ -78,7 +78,7 @@
 }
 
 .calibration_adapter_for_scenario <- function(scenario, envir = parent.frame()) {
-  family <- as.character(scenario$analysis_family[[1L]])
+  family <- as.character(scenario$analysis_engine[[1L]])
   lookup <- function(name) get(name, envir = envir, inherits = TRUE)
   if (family %in% c("two_sample", "proportion")) {
     adapter <- lookup("two_sample_adapter")()

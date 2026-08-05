@@ -6,7 +6,7 @@
 #' kept in the `parameters` list-column so that the tabular contract remains
 #' stable as scenario families grow.
 #'
-#' Adapter metadata is documentary: the runner dispatches by `analysis_family`.
+#' Adapter metadata is documentary: the runner dispatches by `analysis_engine`.
 #' `primary_adapter` names the screening helper; `robustness_adapter` names the
 #' public `stabilitest::*` entry point the adapters call.
 #'
@@ -471,7 +471,7 @@ calibration_scenarios <- function() {
                                              margin = 1.5, higher_is_better = TRUE, alpha = .05))),
     .before = Inf
   )
-  tibble::add_row(
+  scenarios <- tibble::add_row(
     scenarios,
     scenario_id = "cox_weibull_stress", analysis_family = "cox", endpoint = "hazard_ratio",
     design_layer = "stress", data_generator = "generate_cox", primary_adapter = "screen_cox",
@@ -484,4 +484,79 @@ calibration_scenarios <- function() {
                             analysis = list(term = "treatment", alpha = .05))),
     .before = Inf
   )
+
+  # The execution engine is intentionally broader than the calibration unit.
+  # Derive method-specific identities from the actual analysis parameters after
+  # all frozen rows have been assembled, so future rows cannot silently inherit
+  # a generic two_sample calibration key.
+  scenarios <- .attach_calibration_identity(scenarios)
+  scenarios
 }
+
+.attach_calibration_identity <- function(scenarios) {
+  if (!is.data.frame(scenarios) || !"analysis_family" %in% names(scenarios)) {
+    stop("scenario registry must contain its legacy routing family", call. = FALSE)
+  }
+  analysis_engine <- as.character(scenarios$analysis_family)
+  calibration_family <- character(nrow(scenarios))
+  calibration_unit <- character(nrow(scenarios))
+  for (index in seq_len(nrow(scenarios))) {
+    analysis <- scenarios$parameters[[index]]$analysis %||% list()
+    test_type <- as.character(analysis$test_type %||% "")
+    if (nzchar(test_type)) {
+      mapped <- switch(
+        test_type,
+        "t.test" = c("continuous_parametric", "welch_unpaired"),
+        "paired.t.test" = c("continuous_parametric", "paired_t"),
+        "wilcoxon" = c("rank_nonparametric", "wilcoxon_rank_sum"),
+        "wilcoxon.paired" = c("rank_nonparametric", "wilcoxon_signed_rank"),
+        "brunner_munzel" = c("rank_nonparametric", "brunner_munzel"),
+        "fisher" = c("binary_proportion", "fisher_exact"),
+        "chisq" = c("binary_proportion", "chi_square_2x2"),
+        "prop" = c("binary_proportion", "two_sample_prop"),
+        NULL
+      )
+      if (is.null(mapped)) stop(sprintf("unknown scenario test type: %s", test_type), call. = FALSE)
+      calibration_family[[index]] <- mapped[[1L]]
+      calibration_unit[[index]] <- mapped[[2L]]
+      next
+    }
+    if (identical(analysis_engine[[index]], "lm")) {
+      calibration_family[[index]] <- "linear_model"
+      calibration_unit[[index]] <- "lm_ancova"
+    } else if (identical(analysis_engine[[index]], "binomial")) {
+      calibration_family[[index]] <- "generalized_linear_model"
+      calibration_unit[[index]] <- "glm_binomial"
+    } else if (identical(analysis_engine[[index]], "poisson")) {
+      calibration_family[[index]] <- "generalized_linear_model"
+      calibration_unit[[index]] <- "glm_poisson"
+    } else if (identical(analysis_engine[[index]], "cox")) {
+      calibration_family[[index]] <- "survival"
+      calibration_unit[[index]] <- "cox_ph"
+    } else if (identical(analysis_engine[[index]], "tost")) {
+      endpoint <- as.character(analysis$endpoint %||% "")
+      mapped <- switch(
+        endpoint,
+        "mean" = c("equivalence_noninferiority", "tost_mean"),
+        "prop" = c("equivalence_noninferiority", "tost_risk_difference"),
+        "or" = c("equivalence_noninferiority", "tost_odds_ratio"),
+        NULL
+      )
+      if (is.null(mapped)) stop(sprintf("unknown TOST endpoint: %s", endpoint), call. = FALSE)
+      calibration_family[[index]] <- mapped[[1L]]
+      calibration_unit[[index]] <- mapped[[2L]]
+    } else {
+      stop(sprintf("cannot derive calibration identity for engine: %s", analysis_engine[[index]]), call. = FALSE)
+    }
+  }
+  scenarios$analysis_family <- NULL
+  scenarios$analysis_engine <- analysis_engine
+  scenarios$calibration_family <- calibration_family
+  scenarios$calibration_unit <- calibration_unit
+  scenarios[, c(
+    "scenario_id", "analysis_engine", "calibration_family", "calibration_unit",
+    setdiff(names(scenarios), c("scenario_id", "analysis_engine", "calibration_family", "calibration_unit"))
+  ), drop = FALSE]
+}
+
+`%||%` <- function(left, right) if (is.null(left) || length(left) == 0L) right else left

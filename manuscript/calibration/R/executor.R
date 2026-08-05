@@ -222,7 +222,10 @@ run_selected_replicate <- function(scenario, adapter, replicate_id, data = NULL,
     runtime <- proc.time()[["elapsed"]] - start
     new_calibration_replicate(
       scenario_id = values$scenario_id, replicate_id = replicate_id,
-      analysis_family = values$analysis_family, endpoint = values$endpoint,
+      analysis_engine = values$analysis_engine,
+      calibration_family = values$calibration_family,
+      calibration_unit = values$calibration_unit,
+      endpoint = values$endpoint,
       design_layer = values$design_layer, truth_class = values$truth_class,
       target_conclusion = values$target_conclusion,
       screening_conclusion = screening_conclusion, selected = isTRUE(selected),

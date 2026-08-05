@@ -140,8 +140,8 @@ testthat::test_that("model scenarios include null, moderate, and held-out strata
   sys.source(normalizePath(file.path("..", "..", "R", "load_calibration.R"), mustWork = TRUE), env)
   env$load_calibration(project_root = normalizePath(file.path("..", "..", "..", "..")), envir = env)
   scenarios <- env$calibration_scenarios()
-  model <- scenarios[scenarios$analysis_family %in% c("lm", "binomial", "poisson"), ]
-  testthat::expect_true(all(c("lm", "binomial", "poisson") %in% model$analysis_family))
+  model <- scenarios[scenarios$analysis_engine %in% c("lm", "binomial", "poisson"), ]
+  testthat::expect_true(all(c("lm", "binomial", "poisson") %in% model$analysis_engine))
   testthat::expect_gte(sum(model$truth_class == "null"), 3L)
   testthat::expect_gte(sum(model$design_layer == "validation"), 3L)
   testthat::expect_true(all(vapply(model$parameters, function(x) is.list(x$generator), logical(1))))

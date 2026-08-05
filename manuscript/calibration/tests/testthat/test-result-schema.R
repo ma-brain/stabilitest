@@ -14,7 +14,9 @@ completed_replicate_fixture <- function() {
   schema_env$new_calibration_replicate(
     scenario_id = "two_sample_smoke",
     replicate_id = 1L,
-    analysis_family = "two_sample",
+    analysis_engine = "two_sample",
+    calibration_family = "continuous_parametric",
+    calibration_unit = "welch_unpaired",
     endpoint = "mean_difference",
     design_layer = "core",
     truth_class = "null",
@@ -45,7 +47,8 @@ completed_replicate_fixture <- function() {
 testthat::test_that("replicate constructor emits the common schema and preserves values", {
   replicate <- completed_replicate_fixture()
   expected_columns <- c(
-    "scenario_id", "replicate_id", "analysis_family", "endpoint", "design_layer",
+    "scenario_id", "replicate_id", "analysis_engine", "calibration_family",
+    "calibration_unit", "endpoint", "design_layer",
     "truth_class", "target_conclusion", "screening_conclusion", "selected",
     "analysis_conclusion", "original_p", "effective_p", "jackknife_stability",
     "fragility_component", "fragility_k", "fragility_pct", "bootstrap_reproducibility",
@@ -104,6 +107,24 @@ testthat::test_that("scenario validation rejects malformed registries and accept
   testthat::expect_error(
     schema_env$validate_calibration_scenarios(invalid_split),
     "training_split"
+  )
+})
+
+testthat::test_that("replicate metadata distinguishes routing engines from calibration units", {
+  replicate <- completed_replicate_fixture()
+  testthat::expect_true(schema_env$validate_calibration_replicates(replicate))
+
+  generic <- replicate
+  generic$calibration_unit[[1L]] <- "two_sample"
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(generic),
+    "two_sample.*calibration"
+  )
+
+  incomplete <- replicate[, setdiff(names(replicate), "calibration_unit"), drop = FALSE]
+  testthat::expect_error(
+    schema_env$validate_calibration_replicates(incomplete),
+    "missing required replicate columns.*calibration_unit"
   )
 })
 
@@ -197,10 +218,10 @@ testthat::test_that("replicate validation enforces ID, metadata, and conclusion 
   )
 
   invalid_metadata <- replicate
-  invalid_metadata$analysis_family[[1L]] <- NA_character_
+  invalid_metadata$analysis_engine[[1L]] <- NA_character_
   testthat::expect_error(
     schema_env$validate_calibration_replicates(invalid_metadata),
-    "analysis_family"
+    "analysis_engine"
   )
 
   invalid_metadata <- replicate

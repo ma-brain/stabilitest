@@ -27,7 +27,8 @@ testthat::test_that("executor preserves endpoint-specific TOST conclusions", {
   sys.source(file.path("..", "..", "R", "load_calibration.R"), env)
   env$load_calibration(envir = env)
   scenario <- list(
-    scenario_id = "tost_executor_conclusion", analysis_family = "tost",
+    scenario_id = "tost_executor_conclusion", analysis_engine = "tost",
+    calibration_family = "equivalence_noninferiority", calibration_unit = "tost_mean",
     endpoint = "mean", design_layer = "core", truth_class = "clear",
     target_conclusion = "equivalent", sample_size = 40L, n_boot = 5L,
     max_removal_pct = .1, scenario_seed = 1701L,

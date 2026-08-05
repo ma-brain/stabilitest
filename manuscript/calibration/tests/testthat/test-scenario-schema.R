@@ -8,7 +8,8 @@ testthat::test_that("calibration scenarios satisfy the frozen schema", {
 
   scenarios <- scenario_env$calibration_scenarios()
   required_columns <- c(
-    "scenario_id", "analysis_family", "endpoint", "design_layer",
+    "scenario_id", "analysis_engine", "calibration_family", "calibration_unit",
+    "endpoint", "design_layer",
     "data_generator", "primary_adapter", "robustness_adapter", "truth_class",
     "target_conclusion", "sample_size", "n_boot", "max_removal_pct",
     "training_split", "scenario_seed", "parameters"
@@ -20,8 +21,19 @@ testthat::test_that("calibration scenarios satisfy the frozen schema", {
   testthat::expect_length(unique(scenarios$scenario_id), nrow(scenarios))
   testthat::expect_length(unique(scenarios$scenario_seed), nrow(scenarios))
   testthat::expect_setequal(
-    scenarios$analysis_family,
+    scenarios$analysis_engine,
     c("two_sample", "proportion", "lm", "binomial", "poisson", "cox", "tost")
+  )
+  testthat::expect_false("two_sample" %in% scenarios$calibration_family)
+  testthat::expect_false("two_sample" %in% scenarios$calibration_unit)
+  testthat::expect_true("two_sample" %in% scenarios$analysis_engine)
+  testthat::expect_identical(
+    unique(scenarios$calibration_unit[vapply(
+      scenarios$parameters,
+      function(x) identical(x$analysis$test_type, "t.test"),
+      logical(1)
+    )]),
+    "welch_unpaired"
   )
   testthat::expect_gte(length(scenarios$scenario_id), 7L)
   testthat::expect_true(all(c(
@@ -61,7 +73,7 @@ testthat::test_that("adapter metadata names screening helpers and public APIs", 
     tost = "robustness_tost"
   )
   for (family in names(expected_primary)) {
-    rows <- scenarios[scenarios$analysis_family == family, , drop = FALSE]
+    rows <- scenarios[scenarios$analysis_engine == family, , drop = FALSE]
     testthat::expect_true(nrow(rows) > 0L, info = family)
     testthat::expect_true(
       all(rows$primary_adapter == expected_primary[[family]]),
@@ -86,13 +98,13 @@ testthat::test_that("registry closes Cox, proportion, wilcoxon.paired, and TOST 
   sys.source(file.path("..", "..", "config", "scenarios.R"), envir = scenario_env)
   scenarios <- scenario_env$calibration_scenarios()
 
-  cox <- scenarios[scenarios$analysis_family == "cox", , drop = FALSE]
+  cox <- scenarios[scenarios$analysis_engine == "cox", , drop = FALSE]
   testthat::expect_gte(sum(cox$design_layer == "core"), 3L)
   testthat::expect_true(all(c("null", "borderline", "clear") %in% cox$truth_class[cox$design_layer == "core"]))
   testthat::expect_gte(sum(cox$design_layer == "stress"), 1L)
   testthat::expect_gte(sum(cox$design_layer == "validation"), 1L)
 
-  proportion <- scenarios[scenarios$analysis_family == "proportion", , drop = FALSE]
+  proportion <- scenarios[scenarios$analysis_engine == "proportion", , drop = FALSE]
   testthat::expect_gte(sum(proportion$design_layer == "core"), 1L)
   testthat::expect_gte(sum(proportion$design_layer == "stress"), 1L)
   testthat::expect_gte(sum(proportion$design_layer == "validation"), 1L)
@@ -107,7 +119,7 @@ testthat::test_that("registry closes Cox, proportion, wilcoxon.paired, and TOST 
     "core" %in% scenarios$design_layer[paired_wilcoxon]
   )
 
-  tost <- scenarios[scenarios$analysis_family == "tost", , drop = FALSE]
+  tost <- scenarios[scenarios$analysis_engine == "tost", , drop = FALSE]
   tost_core <- tost[tost$design_layer == "core", , drop = FALSE]
   testthat::expect_gte(nrow(tost_core), 3L)
   testthat::expect_true(all(c("null", "borderline", "clear") %in% tost_core$truth_class))

@@ -9,7 +9,7 @@
     if (nrow(x) != 1L) stop("model scenario must contain one row", call. = FALSE)
     out <- as.list(x[1L, , drop = FALSE])
     out$parameters <- x$parameters[[1L]]
-    out$analysis_family <- as.character(x$analysis_family[[1L]])
+    out$analysis_engine <- as.character(x$analysis_engine[[1L]])
     return(out)
   }
   x
@@ -39,7 +39,7 @@
     scenario$parameters[[1L]] <- parameters
     return(scenario)
   }
-  if (is.null(.model_analysis(scenario)$family)) scenario$analysis_family <- family
+  if (is.null(.model_analysis(scenario)$family)) scenario$analysis_engine <- family
   scenario$analysis <- utils::modifyList(scenario$analysis %||% list(), list(link = link))
   scenario
 }
@@ -74,7 +74,7 @@
       is.list(scenario$parameters$analysis)) {
     a <- utils::modifyList(a, scenario$parameters$analysis)
   }
-  family <- scenario$analysis_family %||% a$family %||% NULL
+  family <- scenario$analysis_engine %||% a$family %||% NULL
   list(
     term = if (is.null(term)) a$term %||% "treatment" else term,
     alpha = as.numeric(a$alpha %||% alpha),

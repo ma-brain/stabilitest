@@ -1,14 +1,16 @@
 # Common schemas for calibration scenario registries and replicate artifacts.
 
 CALIBRATION_SCENARIO_COLUMNS <- c(
-  "scenario_id", "analysis_family", "endpoint", "design_layer",
+  "scenario_id", "analysis_engine", "calibration_family", "calibration_unit",
+  "endpoint", "design_layer",
   "data_generator", "primary_adapter", "robustness_adapter", "truth_class",
   "target_conclusion", "sample_size", "n_boot", "max_removal_pct",
   "training_split", "scenario_seed", "parameters"
 )
 
 CALIBRATION_REPLICATE_COLUMNS <- c(
-  "scenario_id", "replicate_id", "analysis_family", "endpoint", "design_layer",
+  "scenario_id", "replicate_id", "analysis_engine", "calibration_family",
+  "calibration_unit", "endpoint", "design_layer",
   "truth_class", "target_conclusion", "screening_conclusion", "selected",
   "analysis_conclusion", "original_p", "effective_p", "jackknife_stability",
   "fragility_component", "fragility_k", "fragility_pct",
@@ -172,13 +174,18 @@ validate_calibration_scenarios <- function(x) {
                         lower_open = TRUE, upper_open = TRUE)
 
   character_columns <- c(
-    "analysis_family", "endpoint", "data_generator", "primary_adapter",
+    "analysis_engine", "calibration_family", "calibration_unit", "endpoint",
+    "data_generator", "primary_adapter",
     "robustness_adapter", "truth_class", "target_conclusion"
   )
   for (column in character_columns) {
     if (!is.character(x[[column]]) || anyNA(x[[column]]) || any(!nzchar(x[[column]]))) {
       .schema_abort(sprintf("%s must contain non-empty character values", column))
     }
+  }
+  if (any(x$calibration_family == "two_sample") ||
+      any(x$calibration_unit == "two_sample")) {
+    .schema_abort("two_sample is an execution engine only, not a calibration identity")
   }
   if (!is.list(x$parameters) ||
       !all(vapply(x$parameters, is.list, logical(1)))) {
@@ -203,12 +210,17 @@ validate_calibration_replicates <- function(x) {
   }
 
   metadata_columns <- c(
-    "analysis_family", "endpoint", "design_layer", "truth_class", "target_conclusion"
+    "analysis_engine", "calibration_family", "calibration_unit", "endpoint",
+    "design_layer", "truth_class", "target_conclusion"
   )
   for (column in metadata_columns) {
     if (!is.character(x[[column]]) || anyNA(x[[column]]) || any(!nzchar(x[[column]]))) {
       .schema_abort(sprintf("%s must contain non-empty character values", column))
     }
+  }
+  if (any(x$calibration_family == "two_sample") ||
+      any(x$calibration_unit == "two_sample")) {
+    .schema_abort("two_sample is an execution engine only, not a calibration identity")
   }
   if (any(!x$design_layer %in% c("core", "stress", "validation"))) {
     .schema_abort("design_layer must be one of core, stress, or validation")
@@ -388,7 +400,8 @@ new_calibration_failure <- function(scenario, replicate_id, stage, condition,
                                     bootstrap_seed = NA_integer_) {
   scenario_values <- .scenario_row_values(scenario)
   missing <- setdiff(
-    c("scenario_id", "analysis_family", "endpoint", "design_layer",
+    c("scenario_id", "analysis_engine", "calibration_family", "calibration_unit",
+      "endpoint", "design_layer",
       "truth_class", "target_conclusion"),
     names(scenario_values)
   )
@@ -396,7 +409,8 @@ new_calibration_failure <- function(scenario, replicate_id, stage, condition,
     .schema_abort(sprintf("scenario is missing required fields: %s", paste(missing, collapse = ", ")))
   }
   required_metadata <- c(
-    "scenario_id", "analysis_family", "endpoint", "design_layer",
+    "scenario_id", "analysis_engine", "calibration_family", "calibration_unit",
+    "endpoint", "design_layer",
     "truth_class", "target_conclusion"
   )
   for (field in required_metadata) {
@@ -437,7 +451,9 @@ new_calibration_failure <- function(scenario, replicate_id, stage, condition,
   new_calibration_replicate(
     scenario_id = scenario_values$scenario_id,
     replicate_id = replicate_id,
-    analysis_family = scenario_values$analysis_family,
+    analysis_engine = scenario_values$analysis_engine,
+    calibration_family = scenario_values$calibration_family,
+    calibration_unit = scenario_values$calibration_unit,
     endpoint = scenario_values$endpoint,
     design_layer = scenario_values$design_layer,
     truth_class = scenario_values$truth_class,
