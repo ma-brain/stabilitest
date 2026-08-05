@@ -45,7 +45,12 @@ NON_SIGNIFICANT_AUC_SPREAD <- 0.20
 
 .non_significant_validate <- function(data) {
   if (!is.data.frame(data)) .non_significant_abort("replicates must be a data frame")
-  required <- c("analysis_family", "truth_class", "overall_score")
+  # Active executor artifacts use the three-part identity contract.  Do not
+  # silently collapse distinct methods into the historical broad
+  # `analysis_family` field: non-significant diagnostics are grouped by the
+  # exact calibration unit as well.
+  required <- c("analysis_engine", "calibration_family", "calibration_unit",
+                "truth_class", "overall_score")
   missing <- setdiff(required, names(data))
   if (length(missing)) {
     .non_significant_abort(sprintf("replicates missing required columns: %s", paste(missing, collapse = ", ")))
@@ -57,7 +62,8 @@ NON_SIGNIFICANT_AUC_SPREAD <- 0.20
     bad <- !is.na(data$status) & data$status != "completed"
     data <- data[!bad, , drop = FALSE]
   }
-  for (column in c("analysis_family", "truth_class")) {
+  for (column in c("analysis_engine", "calibration_family", "calibration_unit",
+                   "truth_class")) {
     if (!is.character(data[[column]]) || anyNA(data[[column]]) || any(!nzchar(data[[column]]))) {
       .non_significant_abort(sprintf("%s must contain non-missing character values", column))
     }
@@ -116,26 +122,26 @@ NON_SIGNIFICANT_AUC_SPREAD <- 0.20
   candidates[vapply(data[candidates], is.numeric, logical(1))]
 }
 
-.non_significant_family_diagnostics <- function(data, non_sig, auc_threshold) {
-  families <- sort(unique(as.character(data$analysis_family)))
-  if (!length(families)) {
+.non_significant_unit_diagnostics <- function(data, non_sig, auc_threshold) {
+  units <- sort(unique(as.character(data$calibration_unit)))
+  if (!length(units)) {
     return(data.frame(
-      analysis_family = character(), n_non_significant = integer(),
+      calibration_unit = character(), n_non_significant = integer(),
       n_true_null = integer(), n_false_negative = integer(), auc = numeric(),
       auc_pass = logical(), true_null_median = numeric(),
       false_negative_median = numeric(), ordering_difference = numeric(),
       ordering_pass = logical(), stringsAsFactors = FALSE
     ))
   }
-  rows <- lapply(families, function(family) {
-    selected <- non_sig & data$analysis_family == family
+  rows <- lapply(units, function(unit) {
+    selected <- non_sig & data$calibration_unit == unit
     true_null <- selected & data$truth_class == "null"
     false_negative <- selected & data$truth_class != "null"
     auc <- .non_significant_auc(data$overall_score[selected], data$truth_class[selected] == "null")
     null_median <- if (any(true_null)) stats::median(data$overall_score[true_null]) else NA_real_
     fn_median <- if (any(false_negative)) stats::median(data$overall_score[false_negative]) else NA_real_
     data.frame(
-      analysis_family = family,
+      calibration_unit = unit,
       n_non_significant = sum(selected), n_true_null = sum(true_null),
       n_false_negative = sum(false_negative), auc = auc,
       auc_pass = isTRUE(is.finite(auc) && auc >= auc_threshold),
@@ -201,35 +207,35 @@ analyse_non_significant <- function(replicates,
 
   pooled_auc <- .non_significant_auc(data$overall_score[non_sig],
                                      data$truth_class[non_sig] == "null")
-  family <- .non_significant_family_diagnostics(data, non_sig, auc_threshold)
-  valid_family <- family$n_true_null > 0L & family$n_false_negative > 0L
+  unit <- .non_significant_unit_diagnostics(data, non_sig, auc_threshold)
+  valid_unit <- unit$n_true_null > 0L & unit$n_false_negative > 0L
   discrimination <- list(
     auc = pooled_auc,
     threshold = auc_threshold,
-    by_family = family[, c("analysis_family", "n_non_significant", "n_true_null",
-                           "n_false_negative", "auc", "auc_pass"), drop = FALSE],
+    by_calibration_unit = unit[, c("calibration_unit", "n_non_significant", "n_true_null",
+                                   "n_false_negative", "auc", "auc_pass"), drop = FALSE],
     pass = isTRUE(is.finite(pooled_auc) && pooled_auc >= auc_threshold) &&
-      all(family$auc_pass[valid_family]) && any(valid_family)
+      all(unit$auc_pass[valid_unit]) && any(valid_unit)
   )
   ordering <- list(
     expected = "true_null_score_higher_than_false_negative_score",
-    by_family = family[, c("analysis_family", "true_null_median",
-                           "false_negative_median", "ordering_difference",
-                           "ordering_pass"), drop = FALSE],
+    by_calibration_unit = unit[, c("calibration_unit", "true_null_median",
+                                   "false_negative_median", "ordering_difference",
+                                   "ordering_pass"), drop = FALSE],
     pooled_difference = if (any(true_null) && any(false_negative))
       stats::median(data$overall_score[true_null]) - stats::median(data$overall_score[false_negative]) else NA_real_,
     pass = isTRUE(is.finite(if (any(true_null) && any(false_negative))
       stats::median(data$overall_score[true_null]) - stats::median(data$overall_score[false_negative]) else NA_real_)) &&
-      all(family$ordering_pass[valid_family]) && any(valid_family)
+    all(unit$ordering_pass[valid_unit]) && any(valid_unit)
   )
-  auc_values <- family$auc[valid_family & is.finite(family$auc)]
+  auc_values <- unit$auc[valid_unit & is.finite(unit$auc)]
   cross_family_consistency <- list(
-    n_families = sum(valid_family),
-    families = family$analysis_family[valid_family],
+    n_calibration_units = sum(valid_unit),
+    calibration_units = unit$calibration_unit[valid_unit],
     auc_range = if (length(auc_values)) diff(range(auc_values)) else NA_real_,
     max_auc_spread = max_auc_spread,
-    pass = length(auc_values) >= 2L && all(family$auc_pass[valid_family]) &&
-      all(family$ordering_pass[valid_family]) && diff(range(auc_values)) <= max_auc_spread
+    pass = length(auc_values) >= 2L && all(unit$auc_pass[valid_unit]) &&
+      all(unit$ordering_pass[valid_unit]) && diff(range(auc_values)) <= max_auc_spread
   )
 
   sample_group <- if ("n" %in% names(data)) as.character(data$n) else rep("unknown", nrow(data))
@@ -275,9 +281,18 @@ evaluate_non_significant_results <- analyse_non_significant
 
 non_significant_registry <- function(replicates, ...) {
   result <- analyse_non_significant(replicates, ...)
-  families <- sort(unique(as.character(replicates$analysis_family)))
+  units <- sort(unique(as.character(replicates$calibration_unit)))
+  first <- replicates[match(units, replicates$calibration_unit), , drop = FALSE]
+  endpoint <- if ("endpoint" %in% names(first)) {
+    as.character(first$endpoint)
+  } else {
+    rep(NA_character_, length(units))
+  }
   data.frame(
-    analysis_family = families,
+    analysis_engine = as.character(first$analysis_engine),
+    calibration_family = as.character(first$calibration_family),
+    calibration_unit = units,
+    endpoint = endpoint,
     conclusion_type = "non_significant",
     lower_cutoff = NA_real_, upper_cutoff = NA_real_,
     cutoff_fragile = NA_real_, cutoff_robust = NA_real_,

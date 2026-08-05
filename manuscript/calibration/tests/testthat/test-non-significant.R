@@ -9,7 +9,10 @@ sys.source(file.path("..", "..", "analyse_calibration.R"), envir = non_sig_env)
 
 non_sig_fixture <- function() {
   data.frame(
-    analysis_family = rep(c("lm", "cox"), each = 8L),
+    analysis_engine = rep(c("lm", "cox"), each = 8L),
+    calibration_family = rep(c("linear_model", "survival"), each = 8L),
+    calibration_unit = rep(c("lm_ancova", "cox_ph"), each = 8L),
+    endpoint = rep(c("coefficient", "hazard_ratio"), each = 8L),
     truth_class = rep(c("null", "borderline", "clear", "null"), each = 4L),
     target_conclusion = rep("non_significant", 16L),
     analysis_conclusion = rep("non_significant", 16L),
@@ -80,7 +83,7 @@ testthat::test_that("compact p-value artifacts receive an explicit conclusion", 
 
 testthat::test_that("invalid input fails explicitly", {
   testthat::expect_error(non_sig_env$analyse_non_significant(data.frame()),
-                         "required|analysis_family")
+                         "required|calibration_unit")
   bad <- non_sig_fixture()
   bad$overall_score[1L] <- Inf
   testthat::expect_error(non_sig_env$analyse_non_significant(bad), "finite|overall_score")
@@ -101,7 +104,7 @@ testthat::test_that("failed rows with missing metrics are ignored safely", {
 })
 
 testthat::test_that("analysis entrypoint attaches held-out exploratory policy", {
-  base_result <- list(registry = data.frame(analysis_family = "lm"))
+  base_result <- list(registry = data.frame(calibration_unit = "lm_ancova"))
   attached <- non_sig_env$attach_non_significant_analysis(base_result, non_sig_fixture())
   testthat::expect_identical(attached$non_significant$split, "validation")
   testthat::expect_identical(attached$non_significant$status, "bands_not_applicable")
@@ -109,4 +112,7 @@ testthat::test_that("analysis entrypoint attaches held-out exploratory policy", 
   testthat::expect_identical(attached$non_significant_registry$status[[1L]],
                              "bands_not_applicable")
   testthat::expect_true(all(is.na(attached$non_significant_registry$lower_cutoff)))
+  testthat::expect_true(all(c("analysis_engine", "calibration_family",
+                              "calibration_unit", "endpoint") %in%
+                            names(attached$non_significant_registry)))
 })

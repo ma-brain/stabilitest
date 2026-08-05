@@ -37,7 +37,14 @@ calibration_analysis_from_files <- function(training, validation,
   # them out of the significant-result registry and attach diagnostics from
   # the held-out rows only, so this step cannot refit or alter the frozen
   # candidate cutoffs.
-  if (exists("analyse_non_significant", mode = "function", inherits = TRUE)) {
+  # The active executor contract carries the three-part method identity.  A
+  # small number of locked Task 15/reduced-publication fixtures predate that
+  # contract; keep those historical artifacts readable without routing them
+  # through active non-significant diagnostics (which must never infer a
+  # broad-family calibration identity).
+  non_sig_required <- c("analysis_engine", "calibration_family", "calibration_unit")
+  if (exists("analyse_non_significant", mode = "function", inherits = TRUE) &&
+      all(non_sig_required %in% names(validation))) {
     result$non_significant <- analyse_non_significant(validation)
     result$non_significant$split <- "validation"
     result$non_significant_registry <- non_significant_registry(validation)
@@ -47,6 +54,15 @@ calibration_analysis_from_files <- function(training, validation,
                        file.path(output, "non-significant-registry.csv"),
                        row.names = FALSE)
     }
+  } else if (!is.null(output)) {
+    result$non_significant <- list(
+      status = "bands_not_applicable", applicable = FALSE, split = "validation",
+      reason = "historical artifact lacks method-specific calibration identity"
+    )
+    result$non_significant_registry <- data.frame()
+    utils::write.csv(result$non_significant_registry,
+                     file.path(output, "non-significant-registry.csv"),
+                     row.names = FALSE)
   }
   result
 }

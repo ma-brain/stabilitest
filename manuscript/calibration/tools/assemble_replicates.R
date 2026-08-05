@@ -218,8 +218,15 @@ if (.assemble_is_direct()) {
       "\n  ", result$training_audit_path, "\n  ", result$validation_audit_path, "\n", sep = "")
   for (split in c("training", "validation")) {
     x <- result[[split]]
-    cat(sprintf("%s: %d completed replicates across %d scenarios / %d families\n",
+    unit_count <- if ("calibration_unit" %in% names(x)) {
+      length(unique(x$calibration_unit))
+    } else if ("analysis_engine" %in% names(x)) {
+      length(unique(x$analysis_engine))
+    } else {
+      0L
+    }
+    cat(sprintf("%s: %d completed replicates across %d scenarios / %d calibration units\n",
                 split, nrow(x), length(unique(x$scenario_id)),
-                length(unique(x$analysis_family))))
+                unit_count))
   }
 }

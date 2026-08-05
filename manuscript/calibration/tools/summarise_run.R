@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-# Compact, committed summary of a per-family calibration run (resumable chunks).
+# Compact, committed summary of a per-engine calibration run (resumable chunks).
 #
 # Reads the run-results.rds written by run_calibration.R for a training run and
 # (optionally) a held-out validation run, and writes one compact CSV row per
@@ -43,6 +43,11 @@ collect <- function(path, split) {
     tryCatch(as.integer(readRDS(plan_path)$n_boot), error = function(e) NA_integer_)
   } else NA_integer_
   rows <- list()
+  metadata <- function(data, field, default = NA_character_) {
+    if (!is.data.frame(data) || !field %in% names(data) || !nrow(data)) return(default)
+    value <- data[[field]][[1L]]
+    if (length(value) != 1L || is.na(value) || !nzchar(as.character(value))) default else as.character(value)
+  }
   for (i in seq_along(r$analyse)) {
     a <- r$analyse[[i]]; s <- r$screen[[i]]
     sc_status <- if (!is.null(s) && !is.null(attr(s$selected, "status"))) {
@@ -59,17 +64,24 @@ collect <- function(path, split) {
       truth <- if (!is.null(s$screened) && is.data.frame(s$screened) && nrow(s$screened)) {
         as.character(s$screened$truth_class[[1L]])
       } else NA_character_
-      family <- NA_character_
+      analysis_engine <- calibration_family <- calibration_unit <- endpoint <- NA_character_
       layer <- NA_character_
       if (!is.null(s$screened) && is.data.frame(s$screened) &&
-          "analysis_family" %in% names(s$screened) && nrow(s$screened)) {
-        family <- as.character(s$screened$analysis_family[[1L]])
+          nrow(s$screened)) {
+        analysis_engine <- metadata(s$screened, "analysis_engine")
+        calibration_family <- metadata(s$screened, "calibration_family")
+        calibration_unit <- metadata(s$screened, "calibration_unit")
+        endpoint <- metadata(s$screened, "endpoint")
+        layer <- metadata(s$screened, "design_layer")
       }
       rows[[length(rows) + 1L]] <- data.frame(
         split = split,
         design_layer = layer,
         scenario_id = as.character(scenario_id)[[1L]],
-        analysis_family = family,
+        analysis_engine = analysis_engine,
+        calibration_family = calibration_family,
+        calibration_unit = calibration_unit,
+        endpoint = endpoint,
         truth_class = truth,
         screening_conclusion = NA_character_,
         n_boot = plan_n_boot,
@@ -89,9 +101,13 @@ collect <- function(path, split) {
     scenario_failed_total <- sum(a$status != "completed", na.rm = TRUE) + sum(is.na(a$status))
     # which() avoids NA logical-indexing phantom rows for failed replicates
     # whose screening_conclusion is NA.
-    conclusions <- sort(unique(a$screening_conclusion[!is.na(a$screening_conclusion)]))
-    for (concl in conclusions) {
-      sub <- a[which(a$screening_conclusion == concl), , drop = FALSE]
+    units <- sort(unique(a$calibration_unit[!is.na(a$calibration_unit)]))
+    for (unit in units) {
+      conclusions <- sort(unique(a$screening_conclusion[
+        a$calibration_unit == unit & !is.na(a$screening_conclusion)
+      ]))
+      for (concl in conclusions) {
+        sub <- a[which(a$calibration_unit == unit & a$screening_conclusion == concl), , drop = FALSE]
       done <- sub[which(sub$status == "completed"), , drop = FALSE]
       sc <- suppressWarnings(as.numeric(done$overall_score))
       sc <- sc[is.finite(sc)]
@@ -100,7 +116,10 @@ collect <- function(path, split) {
         split = split,
         design_layer = sub$design_layer[1],
         scenario_id = sub$scenario_id[1],
-        analysis_family = sub$analysis_family[1],
+        analysis_engine = sub$analysis_engine[1],
+        calibration_family = sub$calibration_family[1],
+        calibration_unit = sub$calibration_unit[1],
+        endpoint = sub$endpoint[1],
         truth_class = sub$truth_class[1],
         screening_conclusion = concl,
         n_boot = if ("n_boot" %in% names(sub) && !is.na(sub$n_boot[1])) sub$n_boot[1] else plan_n_boot,
@@ -120,6 +139,7 @@ collect <- function(path, split) {
         scenario_status = if (is.null(sc_status)) NA_character_ else sc_status,
         stringsAsFactors = FALSE
       )
+      }
     }
   }
   if (!length(rows)) return(NULL)
