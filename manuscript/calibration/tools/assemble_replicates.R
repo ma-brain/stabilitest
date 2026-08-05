@@ -170,8 +170,12 @@ assemble_replicates <- function(training_out, validation_out, training_audit_out
   sc <- assembly_scenario_registry(scenarios, project_root, envir)
   training <- collect_checkpoint_split("training", checkpoint_root, sc, project_root, validator)
   validation <- collect_checkpoint_split("validation", checkpoint_root, sc, project_root, validator)
-  training_audit_out <- training_audit_out %||% sub("replicates[.]rds$", "audit.rds", training_out)
-  validation_audit_out <- validation_audit_out %||% sub("replicates[.]rds$", "audit.rds", validation_out)
+  audit_path <- function(path) {
+    value <- sub("replicates[.]rds$", "audit.rds", path)
+    if (identical(value, path)) sub("[.]rds$", "-audit.rds", path) else value
+  }
+  training_audit_out <- training_audit_out %||% audit_path(training_out)
+  validation_audit_out <- validation_audit_out %||% audit_path(validation_out)
   paths <- c(training_out, validation_out, training_audit_out, validation_audit_out)
   for (path in paths) dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   saveRDS(training$fitting, training_out, version = 2)
