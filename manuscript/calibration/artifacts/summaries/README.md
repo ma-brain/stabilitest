@@ -68,3 +68,29 @@ Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
   --output manuscript/calibration/artifacts/raw/validation
 Rscript manuscript/calibration/tools/summarise_run.R binomial
 ```
+
+## `lm-run-summary.csv`
+
+Full `lm` family at production `n_boot = 1000`, run with `--workers 6`.
+
+- Command: `run_calibration.R --mode full --phase all --engine lm --workers 6 --resume` for training, then again with `--validation-only`.
+- Wall time: training ~17 min (4 scenarios), held-out validation ~6 min (1 scenario).
+- Completed full robustness analyses: 5,000 (all strata filled; 0 scenario failures).
+
+### Notes
+
+- Null false positives (`lm_core_null` / `significant`) sit near the fragile boundary (median **55.49**; only 13/500 > 70).
+- Clear-effect significant strata score higher (core ANCOVA significant median **64.28**; held-out multi-df significant median **67.44**, 180/500 > 70).
+- Held-out non-significant clear effects are mostly fragile (median **51.97**, 0/500 > 70).
+
+### Reproduce
+
+```sh
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine lm --workers 6 --resume \
+  --output manuscript/calibration/artifacts/raw/training
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine lm --workers 6 --resume --validation-only \
+  --output manuscript/calibration/artifacts/raw/validation
+Rscript manuscript/calibration/tools/summarise_run.R lm
+```
