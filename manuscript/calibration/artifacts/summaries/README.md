@@ -120,3 +120,29 @@ Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
   --output manuscript/calibration/artifacts/raw/validation
 Rscript manuscript/calibration/tools/summarise_run.R tost
 ```
+
+## `poisson-run-summary.csv`
+
+Full `poisson` family at production `n_boot = 1000`, run with `--workers 6`.
+
+- Command: `run_calibration.R --mode full --phase all --engine poisson --workers 6 --resume` for training, then again with `--validation-only`.
+- Wall time: training ~40 min (3 scenarios), held-out validation ~38 min (2 scenarios: `poisson_smoke`, `poisson_validation_multidf`).
+- Completed full robustness analyses: 4,500.
+
+### Notes / expected occupancy limits
+
+- Null false positives (`poisson_core_null` / `significant`) concentrate in the fragile band (median **54.16**; only 2/500 > 70).
+- Clear-effect offset models (`poisson_core_offset` / `significant`) sit mostly moderate (median **61.16**).
+- `poisson_validation_multidf` filled only the `significant` stratum (500/500); non-significant draws were too rare within the 10,000-draw budget (`incomplete`). Those significant replicates all scored > 70 (median **87.91**).
+
+### Reproduce
+
+```sh
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine poisson --workers 6 --resume \
+  --output manuscript/calibration/artifacts/raw/training
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine poisson --workers 6 --resume --validation-only \
+  --output manuscript/calibration/artifacts/raw/validation
+Rscript manuscript/calibration/tools/summarise_run.R poisson
+```
