@@ -33,7 +33,7 @@ library(stabilitest)
 
 A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. Categorical labels are suppressed for uncalibrated methods and conclusions; only an applicable significant `welch_unpaired` result receives the Robust / Moderately Robust / Fragile label. The public `robustness_analysis()` dispatcher is unchanged. `lm_ancova` is the next independent calibration target.
 
-> **Status.** Experimental (v0.5.0). API and calibration metadata may evolve. The current 55/70 bands apply only to the documented significant Welch configuration. The broader Task 15 simulation is historical evidence, not an active calibration for other methods.
+> **Status.** Experimental (v0.5.1). API and calibration metadata may evolve. The current 55/70 bands apply only to the documented significant Welch configuration. The broader Task 15 simulation is historical evidence, not an active calibration for other methods.
 
 ## Pain trial case study
 

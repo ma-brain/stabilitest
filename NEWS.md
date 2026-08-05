@@ -1,4 +1,4 @@
-# stabilitest (development version)
+# stabilitest 0.5.1
 
 ## Calibration policy
 
