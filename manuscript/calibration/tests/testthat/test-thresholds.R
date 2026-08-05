@@ -11,6 +11,24 @@ for (file in c("schema.R", "manifest.R", "thresholds.R")) {
 
 fixture_path <- function(name) file.path("..", "fixtures", name)
 
+# The historical compact fixtures predate the applicable-conclusion schema.
+# Give their null rows an observed significant result so they exercise the
+# false-reassurance denominator under the corrected estimand while retaining
+# their original scores and broad-family labels.
+readRDS <- local({
+  base_read <- base::readRDS
+  function(file, ...) {
+    value <- base_read(file, ...)
+    if (is.data.frame(value) && all(c("truth_class", "screening_conclusion",
+                                      "target_conclusion") %in% names(value))) {
+      null <- value$truth_class == "null"
+      value$screening_conclusion[null] <- "significant"
+      value$target_conclusion[null] <- "non_significant"
+    }
+    value
+  }
+})
+
 testthat::test_that("shared bands are evaluated before candidate family mappings", {
   training <- readRDS(fixture_path("training-replicates.rds"))
   validation <- readRDS(fixture_path("validation-replicates.rds"))
@@ -261,4 +279,57 @@ testthat::test_that("scenario-level overlap and malformed result schemas are rej
   malformed <- readRDS(fixture_path("validation-replicates.rds"))
   malformed$overall_score[[1L]] <- Inf
   testthat::expect_error(threshold_env$analyse_calibration(training, malformed), "finite|overall_score")
+})
+
+testthat::test_that("threshold metrics use only applicable superiority conclusions", {
+  fixture <- data.frame(
+    calibration_unit = "lm_ancova",
+    design_layer = "core",
+    truth_class = c(rep("null", 200), rep("clear", 100)),
+    screening_conclusion = c(rep("non_significant", 100),
+                             rep("significant", 100), rep("significant", 100)),
+    target_conclusion = c(rep("non_significant", 200), rep("significant", 100)),
+    overall_score = c(rep(95, 100), rep(40, 100), rep(85, 100)),
+    status = "completed", stringsAsFactors = FALSE
+  )
+  metrics <- threshold_env$threshold_metrics_for_applicable(fixture, c(55, 70))
+  testthat::expect_equal(metrics$false_reassurance, 0)
+  testthat::expect_equal(metrics$robust_identification, 1)
+  testthat::expect_equal(metrics$false_reassurance_n, 100L)
+  testthat::expect_equal(metrics$robust_identification_n, 100L)
+  testthat::expect_equal(metrics$n, 200L)
+})
+
+testthat::test_that("TOST metrics exclude unsuccessful conclusions from bands", {
+  fixture <- data.frame(
+    calibration_unit = "tost_mean",
+    design_layer = "core",
+    truth_class = c(rep("clear", 100), rep("null", 100)),
+    screening_conclusion = c(rep("equivalent", 100), rep("not_equivalent", 100)),
+    target_conclusion = c(rep("equivalent", 100), rep("not_equivalent", 100)),
+    overall_score = c(rep(90, 100), rep(10, 100)),
+    status = "completed", stringsAsFactors = FALSE
+  )
+  metrics <- threshold_env$threshold_metrics_for_applicable(fixture, c(55, 70))
+  testthat::expect_equal(metrics$n, 100L)
+  testthat::expect_equal(metrics$false_reassurance_n, 0L)
+  testthat::expect_equal(metrics$robust_identification_n, 100L)
+  testthat::expect_equal(metrics$robust_identification, 1)
+})
+
+testthat::test_that("candidate fitting groups by calibration unit", {
+  fixture <- data.frame(
+    analysis_family = rep(c("two_sample", "two_sample"), each = 6),
+    calibration_unit = rep(c("welch_unpaired", "paired_t"), each = 6),
+    truth_class = rep(c("null", "borderline", "clear"), 4),
+    screening_conclusion = rep(c("significant", "significant", "significant"), 4),
+    target_conclusion = rep(c("non_significant", "significant", "significant"), 4),
+    overall_score = rep(c(20, 60, 90), 4),
+    design_layer = "core", status = "completed", stringsAsFactors = FALSE
+  )
+  result <- threshold_env$fit_calibration_candidates(fixture)
+  testthat::expect_true("calibration_unit" %in% names(result$registry))
+  testthat::expect_setequal(result$registry$calibration_unit,
+                            c("paired_t", "welch_unpaired"))
+  testthat::expect_false("analysis_engine" %in% names(result$registry))
 })

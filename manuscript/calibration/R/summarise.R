@@ -42,6 +42,69 @@
   x
 }
 
+.summary_observed_conclusion <- function(replicates) {
+  columns <- intersect(c("screening_conclusion", "analysis_conclusion", "conclusion"), names(replicates))
+  if (!length(columns)) return(rep(NA_character_, nrow(replicates)))
+  observed <- rep(NA_character_, nrow(replicates))
+  for (column in columns) {
+    value <- vapply(replicates[[column]], .summary_conclusion, character(1))
+    fill <- is.na(observed) & !is.na(value) & nzchar(value)
+    observed[fill] <- value[fill]
+  }
+  observed
+}
+
+band_applicable_conclusion <- function(data) {
+  observed <- .summary_observed_conclusion(data)
+  if (all(is.na(observed))) return(rep(TRUE, nrow(data)))
+  observed %in% c("significant", "equivalent", "noninferior")
+}
+
+.summary_is_tost <- function(data) {
+  if ("calibration_unit" %in% names(data) &&
+      any(grepl("^tost_", as.character(data$calibration_unit)))) return(TRUE)
+  if (!"target_conclusion" %in% names(data)) return(FALSE)
+  target <- tolower(gsub("[- ]", "_", as.character(data$target_conclusion)))
+  any(target %in% c("equivalent", "noninferior", "not_equivalent", "inferior"))
+}
+
+.summary_applicable_metrics <- function(rows) {
+  applicable <- band_applicable_conclusion(rows)
+  if (length(applicable)) rows <- rows[applicable, , drop = FALSE]
+  if (!nrow(rows)) {
+    return(c(false_reassurance = 0L, false_reassurance_n = 0L,
+             false_reassurance_point = NA_real_, false_reassurance_lower = NA_real_,
+             false_reassurance_upper = NA_real_, false_reassurance_mc_se = NA_real_,
+             robust_identification = 0L, robust_identification_n = 0L,
+             robust_identification_point = NA_real_, robust_identification_lower = NA_real_,
+             robust_identification_upper = NA_real_, robust_identification_mc_se = NA_real_))
+  }
+  target <- if ("target_conclusion" %in% names(rows)) {
+    tolower(gsub("[- ]", "_", as.character(rows$target_conclusion)))
+  } else rep(NA_character_, nrow(rows))
+  truth <- as.character(rows$truth_class)
+  tost <- .summary_is_tost(rows)
+  if (tost) {
+    false_universe <- target %in% c("not_equivalent", "inferior") & truth == "null"
+    if (!any(false_universe)) false_universe <- target %in% c("not_equivalent", "inferior")
+    id_universe <- target %in% c("equivalent", "noninferior") & truth == "clear"
+    if (!any(id_universe)) id_universe <- target %in% c("equivalent", "noninferior")
+  } else {
+    false_universe <- truth == "null"
+    id_universe <- truth == "clear" & (is.na(target) | target == "significant")
+  }
+  false_rows <- !is.na(rows$.score_band) & rows$.score_band %in% c("moderate", "robust") & false_universe
+  id_rows <- !is.na(rows$.score_band) & rows$.score_band == "robust" & id_universe
+  false <- .summary_rate(sum(false_rows), sum(false_universe, na.rm = TRUE))
+  identified <- .summary_rate(sum(id_rows), sum(id_universe, na.rm = TRUE))
+  c(false_reassurance = sum(false_rows), false_reassurance_n = sum(false_universe, na.rm = TRUE),
+    false_reassurance_point = false$point, false_reassurance_lower = false$lower,
+    false_reassurance_upper = false$upper, false_reassurance_mc_se = false$mc_se,
+    robust_identification = sum(id_rows), robust_identification_n = sum(id_universe, na.rm = TRUE),
+    robust_identification_point = identified$point, robust_identification_lower = identified$lower,
+    robust_identification_upper = identified$upper, robust_identification_mc_se = identified$mc_se)
+}
+
 .summary_operating_row <- function(x) {
   n <- nrow(x)
   if (n == 0L) {
@@ -74,21 +137,12 @@
 }
 
 .summary_operating_metrics <- function(rows) {
-  false_universe <- rows$truth_class == "null" | !rows$.target_supported
-  id_universe <- rows$.target_supported & rows$truth_class != "null"
-  false_rows <- !is.na(rows$.score_band) & rows$.score_band %in% c("moderate", "robust") & false_universe
-  id_rows <- !is.na(rows$.score_band) & rows$.score_band == "robust" & id_universe
-  false <- .summary_rate(sum(false_rows), sum(false_universe, na.rm = TRUE))
-  identified <- .summary_rate(sum(id_rows), sum(id_universe, na.rm = TRUE))
-  c(false_reassurance = sum(false_rows), false_reassurance_n = sum(false_universe, na.rm = TRUE),
-    false_reassurance_point = false$point, false_reassurance_lower = false$lower,
-    false_reassurance_upper = false$upper, false_reassurance_mc_se = false$mc_se,
-    robust_identification = sum(id_rows), robust_identification_n = sum(id_universe, na.rm = TRUE),
-    robust_identification_point = identified$point, robust_identification_lower = identified$lower,
-    robust_identification_upper = identified$upper, robust_identification_mc_se = identified$mc_se)
+  .summary_applicable_metrics(rows)
 }
 
 .summary_band_metrics <- function(rows) {
+  applicable <- band_applicable_conclusion(rows)
+  rows <- rows[applicable, , drop = FALSE]
   calibration <- .summary_rate(sum(rows$.target_supported, na.rm = TRUE), nrow(rows))
   c(calibration_rate = calibration$point,
     calibration_rate_point = calibration$point, calibration_rate_lower = calibration$lower,
@@ -102,13 +156,16 @@
 score_operating_characteristics <- function(replicates, cutoffs = c(55, 70)) {
   cutoffs <- .summary_cutoffs(cutoffs)
   x <- .summary_score_data(replicates, cutoffs)
-  false_universe <- ("truth_class" %in% names(x) & x$truth_class == "null") | !x$.target_supported
-  false <- !is.na(x$.score_band) & x$.score_band %in% c("moderate", "robust") & false_universe
-  identification_universe <- x$.target_supported & x$truth_class != "null"
-  identified <- !is.na(x$.score_band) & x$.score_band == "robust" & identification_universe
+  applicable <- band_applicable_conclusion(x)
+  applicable_rows <- x[applicable, , drop = FALSE]
+  applicable_metrics <- .summary_applicable_metrics(x)
+  false <- applicable_metrics[["false_reassurance"]]
+  false_universe <- applicable_metrics[["false_reassurance_n"]]
+  identified <- applicable_metrics[["robust_identification"]]
+  identification_universe <- applicable_metrics[["robust_identification_n"]]
   false_ci <- .summary_rate(sum(false), sum(false_universe, na.rm = TRUE))
   id_ci <- .summary_rate(sum(identified), sum(identification_universe, na.rm = TRUE))
-  ordinal <- .summary_ordinal(x)
+  ordinal <- .summary_ordinal(applicable_rows)
   truth_levels <- c("null", "borderline", "clear")
   by_truth <- do.call(rbind, lapply(truth_levels, function(truth) {
     rows <- x[x$truth_class == truth, , drop = FALSE]
@@ -117,8 +174,9 @@ score_operating_characteristics <- function(replicates, cutoffs = c(55, 70)) {
                   stringsAsFactors = FALSE)
   }))
   rownames(by_truth) <- NULL
-  by_family <- if ("analysis_family" %in% names(x)) {
-    .summary_group_table(x, "analysis_family", function(rows) {
+  identity_column <- if ("calibration_unit" %in% names(x)) "calibration_unit" else "analysis_family"
+  by_unit <- if (identity_column %in% names(x)) {
+    .summary_group_table(x, identity_column, function(rows) {
       .summary_operating_metrics(rows)
     })
   } else data.frame()
@@ -140,7 +198,7 @@ score_operating_characteristics <- function(replicates, cutoffs = c(55, 70)) {
     balanced_ordinal_missing_truth = ordinal$missing_truth,
     ordinal_accuracy = ordinal$accuracy,
     weighted_ordinal_accuracy = ordinal$weighted_accuracy,
-    by_truth = by_truth, by_family = by_family, by_band = by_band
+    by_truth = by_truth, by_calibration_unit = by_unit, by_family = by_unit, by_band = by_band
   )
 }
 
@@ -149,6 +207,8 @@ score_operating_characteristics <- function(replicates, cutoffs = c(55, 70)) {
 check_median_ordering <- function(replicates) {
   .summary_required(replicates, c("overall_score", "truth_class"))
   x <- .summary_as_completed(replicates)
+  applicable <- band_applicable_conclusion(x)
+  x <- x[applicable, , drop = FALSE]
   if (nrow(x) == 0L) {
     return(list(ordered = FALSE, complete = FALSE, core_ordered = FALSE,
                 stress_ordered = NA, medians = setNames(rep(NA_real_, 3L),

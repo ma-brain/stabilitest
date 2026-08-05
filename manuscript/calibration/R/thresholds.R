@@ -114,7 +114,8 @@ map_calibration_status <- function(status) {
 .threshold_data <- function(replicates, split = c("training", "validation"), allow_empty = FALSE) {
   split <- match.arg(split)
   if (!is.data.frame(replicates)) .threshold_abort("replicates must be a data frame")
-  required <- c("analysis_family", "truth_class", "overall_score")
+  identity <- if ("calibration_unit" %in% names(replicates)) "calibration_unit" else "analysis_family"
+  required <- c(identity, "truth_class", "overall_score")
   missing <- setdiff(required, names(replicates))
   if (length(missing)) .threshold_abort(sprintf("replicates missing columns: %s", paste(missing, collapse = ", ")))
   if (identical(split, "training") && "design_layer" %in% names(replicates) &&
@@ -125,14 +126,60 @@ map_calibration_status <- function(status) {
     bad <- !replicates$status %in% c("completed", NA_character_)
     replicates <- replicates[!bad, , drop = FALSE]
   }
+  if (any(!is.finite(replicates$overall_score))) {
+    .threshold_abort("overall_score must contain finite values")
+  }
   if (!allow_empty && !nrow(replicates)) .threshold_abort(sprintf("no usable %s replicates", split))
-  if (!is.character(replicates$analysis_family) || anyNA(replicates$analysis_family)) {
-    .threshold_abort("analysis_family must be non-missing character")
+  if (!is.character(replicates[[identity]]) || anyNA(replicates[[identity]]) ||
+      any(!nzchar(replicates[[identity]]))) {
+    .threshold_abort(sprintf("%s must be non-missing character", identity))
   }
   if (!is.character(replicates$truth_class) || anyNA(replicates$truth_class)) {
     .threshold_abort("truth_class must be non-missing character")
   }
   replicates
+}
+
+.threshold_identity_column <- function(data) {
+  if ("calibration_unit" %in% names(data)) "calibration_unit" else "analysis_family"
+}
+
+.threshold_normalise_conclusion <- function(value) {
+  value <- as.character(value)
+  value <- tolower(gsub("[- ]", "_", value))
+  value[value %in% c("noninferiority", "non_inferiority")] <- "noninferior"
+  value
+}
+
+.threshold_observed_conclusion <- function(data) {
+  columns <- intersect(c("screening_conclusion", "analysis_conclusion", "conclusion"), names(data))
+  if (!length(columns)) return(rep(NA_character_, nrow(data)))
+  observed <- rep(NA_character_, nrow(data))
+  for (column in columns) {
+    value <- .threshold_normalise_conclusion(data[[column]])
+    fill <- is.na(observed) & !is.na(value) & nzchar(value)
+    observed[fill] <- value[fill]
+  }
+  observed
+}
+
+# Categorical bands are meaningful only for a successful observed conclusion:
+# superiority rows must be significant, while TOST rows must establish
+# equivalence or non-inferiority.  Data sets without a conclusion column are
+# retained for legacy score-only diagnostics, where every row is applicable.
+band_applicable_conclusion <- function(data) {
+  observed <- .threshold_observed_conclusion(data)
+  if (all(is.na(observed))) return(rep(TRUE, nrow(data)))
+  observed %in% c("significant", "equivalent", "noninferior")
+}
+
+.threshold_is_tost <- function(data) {
+  identity <- if ("calibration_unit" %in% names(data)) as.character(data$calibration_unit) else character()
+  if (length(identity) && any(grepl("^tost_", identity))) return(rep(TRUE, nrow(data)))
+  target <- if ("target_conclusion" %in% names(data)) {
+    .threshold_normalise_conclusion(data$target_conclusion)
+  } else rep(NA_character_, nrow(data))
+  target %in% c("equivalent", "noninferior", "not_equivalent", "inferior")
 }
 
 .threshold_expected <- function(truth, target = NULL) {
@@ -175,12 +222,27 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
   usable <- is.finite(replicates$overall_score)
   if (!any(usable)) {
     return(list(n = 0L, balanced_ordinal_accuracy = NA_real_, false_reassurance = NA_real_,
-                robust_identification = NA_real_, false_reassurance_upper = NA_real_,
+                robust_identification = NA_real_, false_reassurance_n = 0L,
+                robust_identification_n = 0L, false_reassurance_count = 0L,
+                robust_identification_count = 0L, false_reassurance_upper = NA_real_,
                 robust_identification_lower = NA_real_, median_score = NA_real_, status = "failed"))
   }
-  score <- as.numeric(replicates$overall_score[usable])
-  truth <- as.character(replicates$truth_class[usable])
-  target <- if ("target_conclusion" %in% names(replicates)) replicates$target_conclusion[usable] else NULL
+  data <- replicates[usable, , drop = FALSE]
+  applicable <- band_applicable_conclusion(data)
+  if (length(applicable) && any(!applicable)) data <- data[applicable, , drop = FALSE]
+  if (!nrow(data)) {
+    return(list(n = 0L, balanced_ordinal_accuracy = NA_real_, false_reassurance = NA_real_,
+                robust_identification = NA_real_, false_reassurance_n = 0L,
+                robust_identification_n = 0L, false_reassurance_count = 0L,
+                robust_identification_count = 0L, false_reassurance_upper = NA_real_,
+                robust_identification_lower = NA_real_, median_score = NA_real_,
+                status = "ok", cutoffs = cutoffs))
+  }
+  score <- as.numeric(data$overall_score)
+  truth <- as.character(data$truth_class)
+  target <- if ("target_conclusion" %in% names(data)) {
+    .threshold_normalise_conclusion(data$target_conclusion)
+  } else NULL
   expected <- .threshold_expected(truth, target)
   observed <- .threshold_ordinal(score, cutoffs)
   known <- !is.na(expected)
@@ -189,22 +251,39 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
     if (!any(rows)) NA_real_ else mean(observed[rows] == class)
   }, numeric(1))
   balanced <- if (all(is.na(per_class))) NA_real_ else mean(per_class, na.rm = TRUE)
-  null_rows <- truth == "null"
-  if (!any(null_rows) && !is.null(target)) {
-    null_rows <- target %in% c("not_supported", "non_significant", "not_equivalent", "inferior")
+  tost <- .threshold_is_tost(data)
+  if (length(tost) && any(tost)) {
+    successful_target <- !is.null(target) & target %in% c("equivalent", "noninferior")
+    failed_target <- !is.null(target) & target %in% c("not_equivalent", "inferior")
+    null_rows <- failed_target & truth == "null"
+    if (!any(null_rows) && !is.null(target)) null_rows <- failed_target
+    clear_rows <- successful_target & truth == "clear"
+    if (!any(clear_rows) && !is.null(target)) clear_rows <- successful_target
+  } else {
+    null_rows <- truth == "null"
+    clear_rows <- truth == "clear"
+    if (!any(clear_rows) && !is.null(target)) clear_rows <- target == "significant"
+    if (!is.null(target)) {
+      null_rows <- null_rows & (target %in% c("non_significant", "significant") | is.na(target))
+      clear_rows <- clear_rows & target %in% c("significant")
+    }
   }
-  false <- if (!any(null_rows)) 0 else mean(observed[null_rows] >= 1L, na.rm = TRUE)
-  clear_rows <- truth == "clear"
-  if (!any(clear_rows) && !is.null(target)) {
-    clear_rows <- target %in% c("significant", "equivalent", "noninferior")
-  }
-  robust <- if (!any(clear_rows)) NA_real_ else mean(observed[clear_rows] == 2L, na.rm = TRUE)
-  list(n = sum(usable), balanced_ordinal_accuracy = as.numeric(balanced),
+  false_n <- sum(null_rows, na.rm = TRUE)
+  robust_n <- sum(clear_rows, na.rm = TRUE)
+  false_count <- sum(observed[null_rows] >= 1L, na.rm = TRUE)
+  robust_count <- sum(observed[clear_rows] == 2L, na.rm = TRUE)
+  false <- if (!false_n) 0 else false_count / false_n
+  robust <- if (!robust_n) NA_real_ else robust_count / robust_n
+  list(n = nrow(data), balanced_ordinal_accuracy = as.numeric(balanced),
        false_reassurance = as.numeric(false), robust_identification = as.numeric(robust),
-       false_reassurance_upper = .threshold_wilson(sum(observed[null_rows] >= 1L, na.rm = TRUE), sum(null_rows), "upper"),
-       robust_identification_lower = .threshold_wilson(sum(observed[clear_rows] == 2L, na.rm = TRUE), sum(clear_rows), "lower"),
+       false_reassurance_n = as.integer(false_n), robust_identification_n = as.integer(robust_n),
+       false_reassurance_count = as.integer(false_count), robust_identification_count = as.integer(robust_count),
+       false_reassurance_upper = .threshold_wilson(false_count, false_n, "upper"),
+       robust_identification_lower = .threshold_wilson(robust_count, robust_n, "lower"),
        median_score = stats::median(score), status = "ok", cutoffs = cutoffs)
 }
+
+threshold_metrics_for_applicable <- .threshold_metrics
 
 .threshold_constraints_ok <- function(metrics) {
   isTRUE(is.finite(metrics$false_reassurance)) && metrics$false_reassurance <= 0.05 &&
@@ -213,10 +292,10 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
     isTRUE(is.finite(metrics$robust_identification_lower)) && metrics$robust_identification_lower >= 0.60
 }
 
-.threshold_row <- function(family, cutoffs = c(NA_integer_, NA_integer_), status = "uncalibrated",
-                           reason = NA_character_, training = NULL, shared = NULL) {
-  data.frame(
-    analysis_family = as.character(family),
+.threshold_row <- function(identity, cutoffs = c(NA_integer_, NA_integer_), status = "uncalibrated",
+                           reason = NA_character_, training = NULL, shared = NULL,
+                           identity_column = "analysis_family") {
+  row <- data.frame(
     lower_cutoff = as.integer(cutoffs[[1L]]), upper_cutoff = as.integer(cutoffs[[2L]]),
     shared_lower = 55L, shared_upper = 70L,
     training_balanced_accuracy = if (is.null(training)) NA_real_ else training$balanced_ordinal_accuracy,
@@ -235,9 +314,12 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
     median_ordering_ok = NA, stratum_complete = NA, improvement_direction_ok = NA,
     status = as.character(status), reason = as.character(reason), stringsAsFactors = FALSE
   )
+  cbind(setNames(data.frame(as.character(identity), stringsAsFactors = FALSE), identity_column), row)
 }
 
 .threshold_validation_diagnostics <- function(data, minimum_stratum_n = 100L) {
+  applicable <- band_applicable_conclusion(data)
+  if (length(applicable)) data <- data[applicable, , drop = FALSE]
   truths <- c("null", "borderline", "clear")
   counts <- table(factor(data$truth_class, levels = truths))
   complete <- all(as.numeric(counts) >= as.integer(minimum_stratum_n))
@@ -260,6 +342,8 @@ classify_score_band <- function(score, cutoffs = CALIBRATION_SHARED_CUTOFFS) {
 
 .threshold_stratum_accuracy <- function(data, cutoffs) {
   truths <- c("null", "borderline", "clear")
+  applicable <- band_applicable_conclusion(data)
+  if (length(applicable)) data <- data[applicable, , drop = FALSE]
   observed <- .threshold_ordinal(data$overall_score, cutoffs)
   vapply(seq_along(truths), function(i) {
     rows <- data$truth_class == truths[[i]] & is.finite(data$overall_score)
@@ -308,22 +392,24 @@ fit_calibration_candidates <- function(training_replicates,
                                         shared_cutoffs = CALIBRATION_SHARED_CUTOFFS,
                                         sap = list(), training_manifest = NULL) {
   shared_cutoffs <- .threshold_cutoffs(shared_cutoffs, "shared_cutoffs")
-  if (!is.data.frame(training_replicates) || !"analysis_family" %in% names(training_replicates)) {
-    .threshold_abort("training replicates must contain analysis_family")
+  identity_column <- .threshold_identity_column(training_replicates)
+  if (!is.data.frame(training_replicates) || !identity_column %in% names(training_replicates)) {
+    .threshold_abort(sprintf("training replicates must contain %s", identity_column))
   }
-  all_families <- sort(unique(as.character(training_replicates$analysis_family)))
+  all_families <- sort(unique(as.character(training_replicates[[identity_column]])))
   data <- .threshold_data(training_replicates, "training")
   families <- all_families
   shared_by_family <- setNames(lapply(families, function(f) {
-    .threshold_metrics(data[data$analysis_family == f, , drop = FALSE], shared_cutoffs)
+    .threshold_metrics(data[data[[identity_column]] == f, , drop = FALSE], shared_cutoffs)
   }), families)
   rows <- lapply(families, function(f) {
-    fit <- fit_family_thresholds(data[data$analysis_family == f, , drop = FALSE], shared_cutoffs)
+    fit <- fit_family_thresholds(data[data[[identity_column]] == f, , drop = FALSE], shared_cutoffs)
     if (identical(fit$status, "uncalibrated")) {
-      return(.threshold_row(f, reason = fit$reason, shared = shared_by_family[[f]]))
+      return(.threshold_row(f, reason = fit$reason, shared = shared_by_family[[f]],
+                            identity_column = identity_column))
     }
     .threshold_row(f, fit$cutoffs, status = "candidate", training = fit$candidate,
-                   shared = shared_by_family[[f]])
+                   shared = shared_by_family[[f]], identity_column = identity_column)
   })
   registry <- do.call(rbind, rows)
   rownames(registry) <- NULL
@@ -347,18 +433,20 @@ evaluate_calibration_registry <- function(replicates, registry,
                                           use_shared_for_uncalibrated = FALSE) {
   data <- .threshold_data(replicates, "validation")
   registry <- .threshold_registry(registry)
-  required <- c("analysis_family", "lower_cutoff", "upper_cutoff")
+  identity_column <- .threshold_identity_column(data)
+  registry_identity <- if (identity_column %in% names(registry)) identity_column else "analysis_family"
+  required <- c(registry_identity, "lower_cutoff", "upper_cutoff")
   if (length(setdiff(required, names(registry)))) .threshold_abort("registry missing threshold columns")
-  rows <- lapply(sort(unique(data$analysis_family)), function(f) {
-    group <- data[data$analysis_family == f, , drop = FALSE]
-    row <- registry[registry$analysis_family == f, , drop = FALSE]
+  rows <- lapply(sort(unique(data[[identity_column]])), function(f) {
+    group <- data[data[[identity_column]] == f, , drop = FALSE]
+    row <- registry[registry[[registry_identity]] == f, , drop = FALSE]
     if (!nrow(row) || is.na(row$lower_cutoff[[1L]])) {
-      return(data.frame(analysis_family = f, status = "uncalibrated",
+      return(data.frame(setNames(list(f), identity_column), status = "uncalibrated",
                         cutoffs = I(list(c(NA_integer_, NA_integer_))),
                         balanced_ordinal_accuracy = NA_real_, n = nrow(group)))
     }
     m <- .threshold_metrics(group, c(row$lower_cutoff[[1L]], row$upper_cutoff[[1L]]))
-    data.frame(analysis_family = f, status = "evaluated",
+    data.frame(setNames(list(f), identity_column), status = "evaluated",
                cutoffs = I(list(c(row$lower_cutoff[[1L]], row$upper_cutoff[[1L]]))),
                balanced_ordinal_accuracy = m$balanced_ordinal_accuracy, n = m$n)
   })
@@ -385,9 +473,11 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
     .threshold_abort("minimum_stratum_n must be a positive integer")
   }
   out <- registry
+  identity_column <- .threshold_identity_column(data)
+  registry_identity <- if (identity_column %in% names(out)) identity_column else "analysis_family"
   for (i in seq_len(nrow(out))) {
-    family <- out$analysis_family[[i]]
-    group <- data[data$analysis_family == family, , drop = FALSE]
+    family <- out[[registry_identity]][[i]]
+    group <- data[data[[identity_column]] == family, , drop = FALSE]
     shared <- .threshold_metrics(group, shared_cutoffs)
     diagnostics <- .threshold_validation_diagnostics(group, minimum_stratum_n)
     out$shared_heldout_accuracy[[i]] <- shared$balanced_ordinal_accuracy
@@ -467,7 +557,8 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
 
 freeze_calibration_registry <- function(registry) {
   registry <- .threshold_registry(registry)
-  registry <- registry[order(registry$analysis_family), , drop = FALSE]
+  identity_column <- .threshold_identity_column(registry)
+  registry <- registry[order(registry[[identity_column]]), , drop = FALSE]
   rownames(registry) <- NULL
   # Hash internal columns only; status_public is a deterministic export view.
   candidate_hash <- .threshold_hash_object(registry)
@@ -502,7 +593,9 @@ analyse_calibration <- function(training_replicates, validation_replicates,
                                 training_manifest = NULL, validation_manifest = NULL,
                                 shared_cutoffs = CALIBRATION_SHARED_CUTOFFS,
                                 output = NULL, minimum_stratum_n = 100L, ...) {
-  if (exists("validate_calibration_replicates", mode = "function", inherits = TRUE)) {
+  if (exists("validate_calibration_replicates", mode = "function", inherits = TRUE) &&
+      all(c("analysis_engine", "calibration_family", "calibration_unit") %in% names(training_replicates)) &&
+      all(c("analysis_engine", "calibration_family", "calibration_unit") %in% names(validation_replicates))) {
     validate_calibration_replicates(training_replicates)
     validate_calibration_replicates(validation_replicates)
   }
@@ -555,10 +648,11 @@ validate_heldout_calibration <- validate_calibration_candidates
 
 evaluate_shared_bands <- function(replicates, shared_cutoffs = CALIBRATION_SHARED_CUTOFFS) {
   data <- .threshold_data(replicates, "validation")
-  families <- sort(unique(data$analysis_family))
+  identity_column <- .threshold_identity_column(data)
+  families <- sort(unique(data[[identity_column]]))
   rows <- lapply(families, function(f) {
-    m <- .threshold_metrics(data[data$analysis_family == f, , drop = FALSE], shared_cutoffs)
-    data.frame(analysis_family = f, lower_cutoff = shared_cutoffs[[1L]],
+    m <- .threshold_metrics(data[data[[identity_column]] == f, , drop = FALSE], shared_cutoffs)
+    data.frame(setNames(list(f), identity_column), lower_cutoff = shared_cutoffs[[1L]],
                upper_cutoff = shared_cutoffs[[2L]], status = m$status,
                balanced_ordinal_accuracy = m$balanced_ordinal_accuracy,
                false_reassurance = m$false_reassurance,

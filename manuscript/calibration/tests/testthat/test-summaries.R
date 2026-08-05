@@ -27,23 +27,27 @@ testthat::test_that("operating characteristics report false reassurance and iden
   reps <- data.frame(
     scenario_id = rep(c("null-a", "clear-a", "borderline-a"), each = 4),
     truth_class = rep(c("null", "clear", "borderline"), each = 4),
-    target_conclusion = rep(c("non_significant", "significant", "significant"), each = 4),
-    screening_conclusion = rep(c("non_significant", "significant", "significant"), each = 4),
+    target_conclusion = c(rep("non_significant", 4), rep("significant", 8)),
+    screening_conclusion = c(rep("significant", 2), rep("non_significant", 2),
+                             rep("significant", 8)),
     analysis_family = "fixture",
-    overall_score = c(40, 60, 80, 50, 80, 90, 75, 60, 65, 70, 45, 55),
+    calibration_unit = "lm_ancova",
+    overall_score = c(60, 80, 95, 95, 80, 90, 75, 60, 65, 70, 45, 55),
     status = "completed", stringsAsFactors = FALSE
   )
   out <- score_operating_characteristics(reps, c(55, 70))
   expect_true(is.data.frame(out$by_truth))
   expect_equal(out$cutoffs, c(55, 70))
   expect_equal(out$false_reassurance$count, 2L)
-  expect_equal(out$false_reassurance$n, 4L)
+  expect_equal(out$false_reassurance$n, 2L)
   expect_equal(out$robust_identification$count, 3L)
-  expect_equal(out$robust_identification$n, 8L)
-  expect_equal(out$by_truth$false_reassurance_point[out$by_truth$truth_class == "null"], 0.5)
+  expect_equal(out$robust_identification$n, 4L)
+  expect_equal(out$by_truth$false_reassurance_point[out$by_truth$truth_class == "null"], 1)
   expect_true(all(c("false_reassurance_lower", "false_reassurance_upper",
                     "false_reassurance_mc_se", "robust_identification_lower") %in%
                   names(out$by_family)))
+  expect_true("calibration_unit" %in% names(out$by_calibration_unit))
+  expect_equal(out$by_calibration_unit$calibration_unit, "lm_ancova")
   expect_true(all(c("fragile", "moderate", "robust", "calibration_rate_point",
                     "calibration_rate_lower", "calibration_rate_upper",
                     "calibration_rate_mc_se") %in% names(out$by_band)))
