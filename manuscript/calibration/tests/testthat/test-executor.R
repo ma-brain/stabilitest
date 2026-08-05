@@ -226,3 +226,41 @@ testthat::test_that("resume never returns a checkpoint for a different replicate
                                    checkpoint_root = root, resume = TRUE)
   testthat::expect_identical(resumed$replicate_id, 5:8)
 })
+
+testthat::test_that("executor reads nested analysis metrics from wrapped adapters", {
+  env <- new.env(parent = globalenv())
+  for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
+    sys.source(file.path("..", "..", "R", file), envir = env)
+  }
+  scenario <- list(scenario_id = "nested-analysis", analysis_family = "cox", endpoint = "hazard",
+                   design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
+                   sample_size = 3L, n_boot = 2L, max_removal_pct = .3, scenario_seed = 11L)
+  adapter <- list(
+    generate = function(scenario, seed) list(data = data.frame(x = 1:3)),
+    primary_decision = function(...) list(conclusion = "non_significant"),
+    run_robustness = function(data, ...) list(
+      status = "completed",
+      original_p = 0.4,
+      effective_p = 0.4,
+      analysis = list(
+        original_p = 0.4,
+        original_significant = FALSE,
+        n = 3L,
+        interpretation_label = "Fragile",
+        metrics = list(
+          jackknife_conclusion_stability = 88,
+          worstcase_fragility_component = 40,
+          worstcase_fragility_k = 1L,
+          worstcase_fragility_pct = 10,
+          bootstrap_reproducibility = 55,
+          overall_robustness = 61
+        )
+      )
+    )
+  )
+  out <- env$run_selected_replicate(scenario, adapter, replicate_id = 1L, n_boot = 2L)
+  testthat::expect_identical(out$status, "completed")
+  testthat::expect_equal(out$jackknife_stability, 88)
+  testthat::expect_equal(out$overall_score, 61)
+  testthat::expect_identical(out$assigned_label, "Fragile")
+})

@@ -173,3 +173,30 @@ Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
   --output manuscript/calibration/artifacts/raw/validation
 Rscript manuscript/calibration/tools/summarise_run.R two_sample
 ```
+
+## `cox-run-summary.csv`
+
+Full `cox` family at production `n_boot = 1000`, run with `--workers 6`.
+
+- Command: `run_calibration.R --mode full --phase all --engine cox --workers 6 --resume` for training, then again with `--validation-only`.
+- Wall time: training ~36 min after executor fix (4 scenarios), held-out validation ~9 min (`cox_smoke`).
+- Completed full robustness analyses: 4,552.
+
+### Notes
+
+- First attempt failed every replicate: `run_cox_adapter()` nests the `robustness_surv` payload under `$analysis`, and the executor only read top-level `metrics`. Executor now resolves nested `analysis$metrics` / labels / `n`.
+- `cox_core_clear` is `incomplete` on the non-significant stratum (52/500) — false negatives are rare for a clear HR.
+- Null false positives (`cox_core_null` / significant) sit in the fragile band (median **54.02**; only 1/500 > 70).
+- Clear significant median **69.74** (227/500 > 70); Weibull stress significant median **65.53**.
+
+### Reproduce
+
+```sh
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine cox --workers 6 --resume \
+  --output manuscript/calibration/artifacts/raw/training
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine cox --workers 6 --resume --validation-only \
+  --output manuscript/calibration/artifacts/raw/validation
+Rscript manuscript/calibration/tools/summarise_run.R cox
+```

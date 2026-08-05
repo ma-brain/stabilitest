@@ -85,8 +85,16 @@ if (!exists("%||%", mode = "function")) `%||%` <- function(x, y) if (is.null(x))
 
 .executor_metric <- function(result, names, default = NA_real_) {
   paths <- lapply(names, function(name) c("metrics", name))
-  paths <- c(paths, lapply(names, function(name) c("robustness_metrics", name)),
-             lapply(names, function(name) c(name)))
+  paths <- c(
+    paths,
+    lapply(names, function(name) c("robustness_metrics", name)),
+    # Adapters such as run_cox_adapter() wrap screening + robustness under
+    # $analysis; look there before falling back to top-level fields.
+    lapply(names, function(name) c("analysis", "metrics", name)),
+    lapply(names, function(name) c("analysis", "robustness_metrics", name)),
+    lapply(names, function(name) c("analysis", name)),
+    lapply(names, function(name) c(name))
+  )
   .executor_value(result, paths, default)
 }
 
@@ -121,7 +129,9 @@ if (!exists("%||%", mode = "function")) `%||%` <- function(x, y) if (is.null(x))
     }
   }
   metric_values$fragility_k <- as.integer(metric_values$fragility_k)
-  n_value <- .executor_value(result, list(c("n"), c("sample_info", "n")), nrow(data))
+  n_value <- .executor_value(result, list(
+    c("n"), c("sample_info", "n"), c("analysis", "n"), c("analysis", "sample_info", "n")
+  ), nrow(data))
   if (!is.numeric(n_value) || length(n_value) != 1L || !is.finite(n_value) ||
       floor(n_value) != n_value || n_value < 1) {
     return(list(ok = FALSE, condition = .executor_condition(
@@ -129,7 +139,10 @@ if (!exists("%||%", mode = "function")) `%||%` <- function(x, y) if (is.null(x))
     )))
   }
   conclusion <- if (!is.null(result$analysis_conclusion)) result$analysis_conclusion else
-    .executor_value(result, list(c("conclusion"), c("original_significant")))
+    .executor_value(result, list(
+      c("conclusion"), c("original_significant"),
+      c("analysis", "conclusion"), c("analysis", "original_significant")
+    ))
   if (is.null(conclusion) || length(conclusion) == 0L || (length(conclusion) == 1L && is.na(conclusion))) {
     conclusion <- .executor_conclusion(result)
   }
@@ -139,7 +152,11 @@ if (!exists("%||%", mode = "function")) `%||%` <- function(x, y) if (is.null(x))
   if (is.null(conclusion) || length(conclusion) == 0L || (length(conclusion) == 1L && is.na(conclusion))) {
     conclusion <- list(significant = isTRUE(.executor_conclusion(result) == "significant"))
   }
-  label <- .executor_value(result, list(c("assigned_label"), c("interpretation_label"), c("robustness_interpretation")), NA_character_)
+  label <- .executor_value(result, list(
+    c("assigned_label"), c("interpretation_label"), c("robustness_interpretation"),
+    c("analysis", "assigned_label"), c("analysis", "interpretation_label"),
+    c("analysis", "robustness_interpretation")
+  ), NA_character_)
   if (is.na(label) || !nzchar(as.character(label))) label <- "Unassigned"
   list(ok = TRUE, metrics = metric_values, n = as.integer(n_value),
        conclusion = conclusion, label = as.character(label))
