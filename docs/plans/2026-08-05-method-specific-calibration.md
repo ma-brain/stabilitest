@@ -110,7 +110,7 @@ Welch row is:
 
 ```csv
 family,calibration_unit,endpoint,conclusion_type,status,cutoff_fragile,cutoff_robust,version,source,supported_conditions
-continuous_parametric,welch_unpaired,mean_difference,significant,validated_method_specific,55,70,welch-2026-1,manuscript/simulation_results.csv,"independent groups; Welch test; significant superiority conclusion; default score definition and weights; original documented simulation scope"
+continuous_parametric,welch_unpaired,mean_difference,significant,validated_method_specific,55,70,welch-2026-1,git:f26e559:manuscript/robustness_analysis_manuscript.md,"Section 3; independent groups; Welch test; significant superiority conclusion; default score definition and weights; original documented simulation scope"
 ```
 
 All other rows use `status = uncalibrated`, empty cutoffs, version
