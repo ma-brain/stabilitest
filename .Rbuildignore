@@ -3,9 +3,11 @@
 ^.*\.Rproj$
 ^\.github$
 ^\.git$
+^AGENTS\.md$
 ^docs$
 ^doc$
 ^Meta$
+^tools$
 ^manuscript$
 ^vignettes/.*\.html$
 ^vignettes/.*\.R$
