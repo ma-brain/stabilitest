@@ -142,6 +142,12 @@ validate_calibration_registry <- function(registry) {
 }
 
 .active_calibration_registry_contract <- data.frame(
+  family = c(
+    rep("continuous_parametric", 2), rep("rank_nonparametric", 3),
+    rep("binary_proportion", 3), "linear_model",
+    rep("generalized_linear_model", 2), "survival",
+    rep("equivalence_noninferiority", 6)
+  ),
   calibration_unit = c(
     "welch_unpaired", "paired_t", "wilcoxon_rank_sum",
     "wilcoxon_signed_rank", "brunner_munzel", "fisher_exact",
@@ -162,6 +168,9 @@ validate_calibration_registry <- function(registry) {
     "equivalence", "noninferiority", "equivalence", "noninferiority"
   ),
   status = c("validated_method_specific", rep("uncalibrated", 17)),
+  cutoff_fragile = c(55, rep(NA_real_, 17)),
+  cutoff_robust = c(70, rep(NA_real_, 17)),
+  version = c("welch-2026-1", rep("taxonomy-2026-1", 17)),
   stringsAsFactors = FALSE
 )
 

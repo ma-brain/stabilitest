@@ -116,8 +116,9 @@ Results outside those conditions are `uncalibrated`, even if they were produced
 by `test_type = "t.test"`. Documentation must describe this as narrow empirical
 support, not general validation under all Welch-test assumptions.
 
-The active registry records provenance as an immutable Git object reference to
-the committed manuscript section that reports this calibration. The earlier
+The active registry records provenance as the immutable Git object reference
+`git:f26e559f098efa9ba0fe6b143f419d076ffb50fc:manuscript/robustness_analysis_manuscript.md`
+to the committed manuscript section that reports this calibration. The earlier
 `manuscript/simulation_results.csv` name is not present in the repository and
 must not be used as a dangling validated source.
 

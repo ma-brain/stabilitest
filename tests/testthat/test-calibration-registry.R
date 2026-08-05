@@ -81,9 +81,16 @@ test_that("the installed registry contains no generic two_sample key", {
 test_that("the installed registry exactly matches the active taxonomy", {
   registry <- load_calibration_registry()
   actual <- registry[c(
-    "calibration_unit", "endpoint", "conclusion_type", "status"
+    "family", "calibration_unit", "endpoint", "conclusion_type", "status",
+    "cutoff_fragile", "cutoff_robust", "version"
   )]
   expected <- data.frame(
+    family = c(
+      rep("continuous_parametric", 2), rep("rank_nonparametric", 3),
+      rep("binary_proportion", 3), "linear_model",
+      rep("generalized_linear_model", 2), "survival",
+      rep("equivalence_noninferiority", 6)
+    ),
     calibration_unit = c(
       "welch_unpaired", "paired_t", "wilcoxon_rank_sum",
       "wilcoxon_signed_rank", "brunner_munzel", "fisher_exact",
@@ -104,6 +111,9 @@ test_that("the installed registry exactly matches the active taxonomy", {
       "equivalence", "noninferiority", "equivalence", "noninferiority"
     ),
     status = c("validated_method_specific", rep("uncalibrated", 17)),
+    cutoff_fragile = c(55, rep(NA_real_, 17)),
+    cutoff_robust = c(70, rep(NA_real_, 17)),
+    version = c("welch-2026-1", rep("taxonomy-2026-1", 17)),
     stringsAsFactors = FALSE
   )
   row.names(actual) <- NULL
@@ -117,7 +127,10 @@ test_that("the Welch row cites durable tracked provenance", {
 
   expect_identical(
     welch$source,
-    "git:f26e559:manuscript/robustness_analysis_manuscript.md"
+    paste0(
+      "git:f26e559f098efa9ba0fe6b143f419d076ffb50fc:",
+      "manuscript/robustness_analysis_manuscript.md"
+    )
   )
   expect_match(welch$supported_conditions, "Section 3", fixed = TRUE)
 })
@@ -132,7 +145,10 @@ test_that("the Welch row cites durable tracked provenance", {
     cutoff_fragile = 55,
     cutoff_robust = 70,
     version = "welch-2026-1",
-    source = "manuscript/simulation_results.csv",
+    source = paste0(
+      "git:f26e559f098efa9ba0fe6b143f419d076ffb50fc:",
+      "manuscript/robustness_analysis_manuscript.md"
+    ),
     supported_conditions = "independent Welch comparison",
     stringsAsFactors = FALSE
   )
@@ -203,6 +219,26 @@ test_that("active registry validation rejects incomplete taxonomies", {
     validate_active_calibration_registry(registry[-1, ]),
     "active calibration registry must exactly match"
   )
+})
+
+test_that("active registry validation locks family and Welch calibration", {
+  registry <- load_calibration_registry()
+  welch <- registry$calibration_unit == "welch_unpaired"
+  mutations <- list(
+    family = "two_sample",
+    cutoff_fragile = 54,
+    cutoff_robust = 71,
+    version = "welch-untracked"
+  )
+
+  for (field in names(mutations)) {
+    changed <- registry
+    changed[welch, field] <- mutations[[field]]
+    expect_error(
+      validate_active_calibration_registry(changed),
+      "active calibration registry must exactly match"
+    )
+  }
 })
 
 test_that("registry validation requires finite ordered validated cutoffs", {
