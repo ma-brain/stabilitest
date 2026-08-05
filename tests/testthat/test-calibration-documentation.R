@@ -42,6 +42,9 @@ test_that("stale broad calibration claims are rejected unless historical", {
     "score bands are shared",
     "bands were calibrated by simulation",
     "calibrated interpretation bands.*(all|every|shared)",
+    "anchors (its )?summary score to an empirical calibration",
+    "For a significant primary result: score > 70",
+    "empirical calibration that distinguishes chance",
     "calibration (family|unit).{0,40}two_sample",
     "two_sample.{0,40}calibration (family|unit)"
   )
