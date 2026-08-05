@@ -13,6 +13,15 @@ assembly_project_root <- function(root = NULL) {
   normalizePath(root, mustWork = TRUE)
 }
 
+assembly_script_root <- function(fallback = getwd()) {
+  file_args <- sub("^--file=", "", grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE))
+  script <- file_args[basename(file_args) == "assemble_replicates.R"]
+  if (length(script) == 1L && file.exists(script[[1L]])) {
+    return(normalizePath(file.path(dirname(script[[1L]]), "..", ".."), mustWork = TRUE))
+  }
+  assembly_project_root(fallback)
+}
+
 assembly_checkpoint_dir <- function(split, checkpoint_root = NULL, project_root = getwd()) {
   if (length(split) != 1L || is.na(split) || !split %in% c("training", "validation")) {
     stop("split must be training or validation", call. = FALSE)
@@ -194,7 +203,7 @@ assemble_replicates <- function(training_out, validation_out, training_audit_out
 }
 
 if (.assemble_is_direct()) {
-  root <- assembly_project_root()
+  root <- assembly_script_root()
   loader <- file.path(root, "manuscript", "calibration", "R", "load_calibration.R")
   env <- new.env(parent = globalenv())
   sys.source(loader, envir = env)

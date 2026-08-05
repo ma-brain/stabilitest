@@ -53,6 +53,11 @@ testthat::test_that("publication tools are source-safe and preserve audit rows",
   testthat::expect_identical(manifest$excluded_replicates, 1L)
   testthat::expect_true(any(grepl("missing", manifest$unsupported)))
 
+  complete_manifest <- freeze_env$build_publication_manifest(
+    "training", FALSE, result$fitting, data.frame(), scenarios[1, , drop = FALSE]
+  )
+  testthat::expect_length(complete_manifest$unsupported, 0L)
+
   summary_path <- tempfile(fileext = ".csv")
   freeze_env$write_failure_summary(result$audit, result$audit, summary_path)
   summary <- utils::read.csv(summary_path, stringsAsFactors = FALSE)

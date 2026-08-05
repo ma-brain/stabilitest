@@ -6,6 +6,15 @@
 
 `%||%` <- function(left, right) if (is.null(left)) right else left
 
+publication_script_root <- function(fallback = getwd()) {
+  file_args <- sub("^--file=", "", grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE))
+  script <- file_args[basename(file_args) == "freeze_and_publish.R"]
+  if (length(script) == 1L && file.exists(script[[1L]])) {
+    return(normalizePath(file.path(dirname(script[[1L]]), "..", ".."), mustWork = TRUE))
+  }
+  normalizePath(fallback, mustWork = TRUE)
+}
+
 publication_assembly_status <- function(status) {
   status <- as.integer(status)
   if (length(status) != 1L || is.na(status) || status != 0L) {
@@ -27,7 +36,8 @@ publication_split_scenarios <- function(scenarios, split) {
   else scenarios[scenarios$design_layer != "validation", , drop = FALSE]
 }
 
-publication_unsupported_reasons <- function(audit, scenarios = NULL, split = "training") {
+publication_unsupported_reasons <- function(audit, scenarios = NULL, split = "training",
+                                            replicates = NULL) {
   values <- character()
   if (is.data.frame(audit) && nrow(audit) && "status" %in% names(audit)) {
     unsupported <- audit[as.character(audit$status) == "unsupported", , drop = FALSE]
@@ -38,13 +48,20 @@ publication_unsupported_reasons <- function(audit, scenarios = NULL, split = "tr
   }
   if (is.data.frame(scenarios) && nrow(scenarios) && "scenario_id" %in% names(scenarios)) {
     sc <- publication_split_scenarios(scenarios, split)
-    seen <- if (is.data.frame(audit) && nrow(audit) && "scenario_id" %in% names(audit)) {
-      unique(as.character(audit$scenario_id))
-    } else character()
+    seen <- unique(c(
+      if (is.data.frame(audit) && nrow(audit) && "scenario_id" %in% names(audit)) {
+        as.character(audit$scenario_id)
+      } else character(),
+      if (is.data.frame(replicates) && nrow(replicates) && "scenario_id" %in% names(replicates)) {
+        as.character(replicates$scenario_id)
+      } else character()
+    ))
     # Missing checkpoint scenarios are represented by audit rows; this branch
     # is retained for callers that provide a sparse audit fixture.
-    values <- c(values, paste0(setdiff(as.character(sc$scenario_id), seen),
-                               ": no full checkpoint for scenario"))
+    missing <- setdiff(as.character(sc$scenario_id), seen)
+    if (length(missing)) {
+      values <- c(values, paste0(missing, ": no full checkpoint for scenario"))
+    }
   }
   unique(values[nzchar(values)])
 }
@@ -80,7 +97,7 @@ build_publication_manifest <- function(split, validation_only, replicates, audit
     minimum_heldout_stratum = as.integer(minimum_heldout_stratum),
     attempted_replicates = as.integer(attempted), completed_replicates = as.integer(completed),
     failed_replicates = as.integer(failed), excluded_replicates = as.integer(excluded),
-    unsupported = publication_unsupported_reasons(audit, scenarios, split),
+    unsupported = publication_unsupported_reasons(audit, scenarios, split, replicates),
     reduced_fixture = FALSE
   )
 }
@@ -133,9 +150,9 @@ write_output_hashes <- function(published, path = file.path(published, "output-h
 
 hash_production_artifacts <- write_output_hashes
 
-freeze_and_publish <- function(project_root = getwd(), reassemble = FALSE,
+freeze_and_publish <- function(project_root = NULL, reassemble = FALSE,
                                assembly_runner = "Rscript", envir = NULL) {
-  root <- normalizePath(project_root, mustWork = TRUE)
+  root <- publication_script_root(project_root %||% getwd())
   loader <- file.path(root, "manuscript", "calibration", "R", "load_calibration.R")
   if (is.null(envir)) {
     envir <- new.env(parent = globalenv())
