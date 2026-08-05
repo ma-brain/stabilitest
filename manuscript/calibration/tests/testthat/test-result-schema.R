@@ -129,6 +129,11 @@ testthat::test_that("replicate validation rejects malformed completed artifacts"
     "overall_score"
   )
 
+  float_overshoot <- replicate
+  float_overshoot$original_p[[1L]] <- 1 + .Machine$double.eps
+  float_overshoot$effective_p[[1L]] <- 1 + .Machine$double.eps
+  testthat::expect_true(schema_env$validate_calibration_replicates(float_overshoot))
+
   invalid_status <- replicate
   invalid_status$status[[1L]] <- "done"
   testthat::expect_error(

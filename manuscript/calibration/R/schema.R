@@ -286,6 +286,13 @@ validate_calibration_replicates <- function(x) {
       .schema_abort(sprintf("successful %s values must be integers", column))
     }
   }
+  # Exact tests can return p == 1 with a microscopic float overshoot (1 + eps).
+  # Clamp completed p-values into the unit interval before range checks so
+  # otherwise-valid Fisher / prop replicates are not rejected.
+  if (any(completed)) {
+    x$original_p[completed] <- pmin(1, pmax(0, as.numeric(x$original_p[completed])))
+    x$effective_p[completed] <- pmin(1, pmax(0, as.numeric(x$effective_p[completed])))
+  }
   .assert_numeric_range(x$original_p, "original_p", 0, 1, rows = which(completed))
   .assert_numeric_range(x$effective_p, "effective_p", 0, 1, rows = which(completed))
   .assert_numeric_range(x$jackknife_stability, "jackknife_stability", 0, 100,

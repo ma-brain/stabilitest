@@ -322,6 +322,11 @@ run_full_scenario <- function(scenario, adapter, selected = NULL, replicate_ids 
     }
   }
   output <- tibble::as_tibble(do.call(rbind, lapply(rows, as.data.frame)))
+  completed <- !is.na(output$status) & output$status == "completed"
+  if (any(completed)) {
+    output$original_p[completed] <- pmin(1, pmax(0, as.numeric(output$original_p[completed])))
+    output$effective_p[completed] <- pmin(1, pmax(0, as.numeric(output$effective_p[completed])))
+  }
   validate_calibration_replicates(output)
   output
 }

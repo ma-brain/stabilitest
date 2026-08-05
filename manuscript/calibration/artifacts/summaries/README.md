@@ -146,3 +146,30 @@ Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
   --output manuscript/calibration/artifacts/raw/validation
 Rscript manuscript/calibration/tools/summarise_run.R poisson
 ```
+
+## `two_sample-run-summary.csv`
+
+Full `two_sample` family at production `n_boot = 1000`, run with `--workers 6`.
+
+- Command: `run_calibration.R --mode full --phase all --engine two_sample --workers 6 --resume` for training, then again with `--validation-only`.
+- Wall time: training ~62 min (11 scenarios), held-out validation ~52 min (6 scenarios).
+- Completed full robustness analyses: ~13.6k after recovering the imbalanced-binary stress checkpoint.
+
+### Notes / expected occupancy limits
+
+- Several clear-effect and null scenarios are `incomplete` because the opposite screening conclusion is rare within the 10,000-draw budget (e.g. `two_sample_core_clear_n80`, `two_sample_stress_clear_n80`, `two_sample_validation_clear_n100`).
+- `two_sample_stress_imbalanced_binary` initially failed post-analysis schema validation: Fisher/prop `original_p` values of 1 landed at `1 + eps` in floating point. Schema/executor now clamp completed p-values into `[0, 1]`; the checkpoint (503 replicates) was recovered into the summary (`incomplete` occupancy: 500 non-significant / 3 significant).
+- Null false positives remain near-moderate rather than fragile in several strata (e.g. smoke significant median **57.86**; core null significant median **64.89**).
+- Clear significant strata often score high when filled (core clear significant median **77.27**; stress clear significant median **82.38**; validation clear all 500 score 100).
+
+### Reproduce
+
+```sh
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine two_sample --workers 6 --resume \
+  --output manuscript/calibration/artifacts/raw/training
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine two_sample --workers 6 --resume --validation-only \
+  --output manuscript/calibration/artifacts/raw/validation
+Rscript manuscript/calibration/tools/summarise_run.R two_sample
+```
