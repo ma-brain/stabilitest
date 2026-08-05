@@ -128,6 +128,15 @@ validate_calibration_registry <- function(registry) {
   invisible(registry)
 }
 
+.parse_calibration_cutoff <- function(values) {
+  missing <- is.na(values) | !nzchar(trimws(as.character(values)))
+  parsed <- suppressWarnings(as.numeric(as.character(values)))
+  if (any(!missing & is.na(parsed))) {
+    stop("calibration cutoffs must be numeric or missing", call. = FALSE)
+  }
+  parsed
+}
+
 load_calibration_registry <- function(path = NULL) {
   if (is.null(path)) {
     path <- system.file(
@@ -145,8 +154,12 @@ load_calibration_registry <- function(path = NULL) {
     check.names = FALSE,
     na.strings = c("", "NA")
   )
-  registry$cutoff_fragile <- as.numeric(registry$cutoff_fragile)
-  registry$cutoff_robust <- as.numeric(registry$cutoff_robust)
+  registry$cutoff_fragile <- .parse_calibration_cutoff(
+    registry$cutoff_fragile
+  )
+  registry$cutoff_robust <- .parse_calibration_cutoff(
+    registry$cutoff_robust
+  )
   validate_calibration_registry(registry)
   registry
 }

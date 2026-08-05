@@ -124,3 +124,19 @@ test_that("load_calibration_registry validates an explicit path", {
 
   expect_identical(load_calibration_registry(path), registry)
 })
+
+test_that("registry loading rejects malformed cutoff text before coercion", {
+  for (status in c("uncalibrated", "bands_not_applicable")) {
+    registry <- .valid_calibration_registry()
+    registry$status <- status
+    registry$cutoff_fragile <- "not-a-cutoff"
+    registry$cutoff_robust <- NA_character_
+    path <- tempfile(fileext = ".csv")
+    utils::write.csv(registry, path, row.names = FALSE, na = "")
+
+    expect_error(
+      load_calibration_registry(path),
+      "calibration cutoffs must be numeric or missing"
+    )
+  }
+})
