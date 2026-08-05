@@ -1,10 +1,26 @@
 # Analysis-specific calibration
 
 This directory freezes the scenario contract and statistical analysis plan for
-calibrating `stabilitest` scores separately for the seven supported analysis
-families: two-sample, proportion, linear model, binomial, Poisson, Cox, and
-TOST.  The contract is defined by `config/scenarios.R`; each row has one nested
-`parameters` object containing generator and analysis settings.
+calibrating `stabilitest` scores by method-specific calibration unit.  The
+current taxonomy separates execution engines from calibration identities (for
+example, `welch_unpaired`, `paired_t`, and `fisher_exact`), so a broad
+`two_sample` category is not an active calibration target.  The contract is
+defined by `config/scenarios.R`; each row has one nested `parameters` object
+containing generator and analysis settings.
+
+## Active registry and historical publication boundary
+
+`inst/extdata/calibration-registry.csv` is the only active runtime registry.
+It is deliberately conservative: only the narrowly documented significant
+Welch configuration currently has categorical cutoffs.  Other methods retain
+numeric scores and component metrics while categorical labels remain
+suppressed until that exact method and conclusion have been calibrated.
+
+The files under `published/` are the immutable Task 15 broad-family
+publication freeze.  They retain the historical `two_sample` row and are
+preserved for provenance, not runtime lookup.  The inspected Task 15
+validation rows cannot be reused as fresh held-out confirmation; any reanalysis
+of them is exploratory.
 
 The scenario table is deliberately independent of generated data.  Calibration
 runners must use the current checkout (via `R/load_calibration.R`), preserve the

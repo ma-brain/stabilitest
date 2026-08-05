@@ -1,3 +1,6 @@
+test_project_root <- normalizePath(file.path("..", "..", "..", ".."), mustWork = TRUE)
+pkgload::load_all(test_project_root, export_all = FALSE, helpers = FALSE, quiet = TRUE)
+
 testthat::test_that("published training and validation manifests are compact and paired", {
   published <- file.path("..", "..", "published")
   training_path <- file.path(published, "training-manifest.dput")
@@ -52,6 +55,22 @@ testthat::test_that("published training and validation manifests are compact and
   }
 })
 
+testthat::test_that("Task 15 publication is explicitly historical and inactive", {
+  published <- file.path("..", "..", "published")
+  archive_note <- readLines(file.path(published, "README.md"), warn = FALSE)
+  testthat::expect_true(any(grepl("historical", archive_note, ignore.case = TRUE)))
+  testthat::expect_true(any(grepl("not active", archive_note, ignore.case = TRUE)))
+  testthat::expect_true(file.exists(file.path(published, "calibration-registry.csv")))
+
+  active <- stabilitest:::load_calibration_registry()
+  historical <- utils::read.csv(
+    file.path(published, "calibration-registry.csv"),
+    stringsAsFactors = FALSE
+  )
+  testthat::expect_false(any(active$calibration_unit == "two_sample"))
+  testthat::expect_true(any(historical$analysis_family == "two_sample"))
+})
+
 testthat::test_that("published registry records production freeze without refit", {
   published <- file.path("..", "..", "published")
   training <- dget(file.path(published, "training-manifest.dput"))
@@ -95,10 +114,13 @@ testthat::test_that("reduced publication fixture preserves the locked no-refit f
     minimum_stratum_n = 100L
   )
   testthat::expect_identical(result$validation$refit, FALSE)
+  # These are deterministic hashes of the reduced fixture after the
+  # calibration-unit and applicable-conclusion schema changes.  The published
+  # Task 15 hashes above remain immutable historical artifacts.
   testthat::expect_identical(result$candidate_hash,
-                             "a0a017fcb1bd8e2a6f11dcde16b4aea2")
+                             "a989adce37ff2ae727ba010bb724625c")
   testthat::expect_identical(result$registry_hash,
-                             "690467ca331d162feea16386b5921a3a")
+                             "ca9c9f1cd0ad951774df68ff09940886")
   testthat::expect_true(file.exists(file.path(output, "calibration-registry.csv")))
   testthat::expect_true(file.exists(file.path(output, "non-significant-registry.csv")))
 })
