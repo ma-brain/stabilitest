@@ -14,6 +14,10 @@
   "supported_conditions"
 )
 
+.is_scalar_character <- function(value) {
+  is.character(value) && length(value) == 1L && !is.na(value)
+}
+
 calibration_unit_for_test <- function(test_type) {
   units <- c(
     "t.test" = "welch_unpaired",
@@ -25,7 +29,7 @@ calibration_unit_for_test <- function(test_type) {
     "chisq" = "chi_square_2x2",
     "prop" = "two_sample_prop"
   )
-  if (length(test_type) != 1L || is.na(test_type) ||
+  if (!.is_scalar_character(test_type) ||
       !test_type %in% names(units)) {
     stop("unknown calibration test type", call. = FALSE)
   }
@@ -33,6 +37,10 @@ calibration_unit_for_test <- function(test_type) {
 }
 
 calibration_unit_for_model <- function(engine, family = NULL) {
+  if (!.is_scalar_character(engine) ||
+      (!is.null(family) && !.is_scalar_character(family))) {
+    stop("unknown model calibration unit", call. = FALSE)
+  }
   if (identical(engine, "lm")) return("lm_ancova")
   if (identical(engine, "cox")) return("cox_ph")
   if (identical(engine, "glm") && identical(family, "binomial")) {
@@ -50,7 +58,7 @@ calibration_unit_for_tost <- function(endpoint) {
     prop = "tost_risk_difference",
     or = "tost_odds_ratio"
   )
-  if (length(endpoint) != 1L || is.na(endpoint) ||
+  if (!.is_scalar_character(endpoint) ||
       !endpoint %in% names(units)) {
     stop("unknown TOST calibration endpoint", call. = FALSE)
   }
@@ -59,6 +67,8 @@ calibration_unit_for_tost <- function(endpoint) {
 
 validate_calibration_registry <- function(registry) {
   if (!is.data.frame(registry) ||
+      length(names(registry)) != length(.calibration_registry_columns) ||
+      anyDuplicated(names(registry)) ||
       !setequal(names(registry), .calibration_registry_columns)) {
     stop(
       paste(
@@ -67,6 +77,9 @@ validate_calibration_registry <- function(registry) {
       ),
       call. = FALSE
     )
+  }
+  if (nrow(registry) == 0L) {
+    stop("calibration registry must contain at least one row", call. = FALSE)
   }
 
   key_columns <- c("calibration_unit", "endpoint", "conclusion_type")
@@ -128,6 +141,53 @@ validate_calibration_registry <- function(registry) {
   invisible(registry)
 }
 
+.active_calibration_registry_contract <- data.frame(
+  calibration_unit = c(
+    "welch_unpaired", "paired_t", "wilcoxon_rank_sum",
+    "wilcoxon_signed_rank", "brunner_munzel", "fisher_exact",
+    "chi_square_2x2", "two_sample_prop", "lm_ancova", "glm_binomial",
+    "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
+    "tost_risk_difference", "tost_risk_difference", "tost_odds_ratio",
+    "tost_odds_ratio"
+  ),
+  endpoint = c(
+    "mean_difference", "mean_difference", "location_shift",
+    "location_shift", "location_shift", "risk_difference",
+    "risk_difference", "risk_difference", "coefficient", "coefficient",
+    "coefficient", "hazard_ratio", "mean_difference", "mean_difference",
+    "risk_difference", "risk_difference", "odds_ratio", "odds_ratio"
+  ),
+  conclusion_type = c(
+    rep("significant", 12), "equivalence", "noninferiority",
+    "equivalence", "noninferiority", "equivalence", "noninferiority"
+  ),
+  status = c("validated_method_specific", rep("uncalibrated", 17)),
+  stringsAsFactors = FALSE
+)
+
+validate_active_calibration_registry <- function(registry) {
+  validate_calibration_registry(registry)
+  contract_columns <- names(.active_calibration_registry_contract)
+  actual <- registry[contract_columns]
+  expected <- .active_calibration_registry_contract
+  sort_rows <- function(x) {
+    keys <- x[c("calibration_unit", "endpoint", "conclusion_type")]
+    x[do.call(order, keys), , drop = FALSE]
+  }
+  actual <- sort_rows(actual)
+  expected <- sort_rows(expected)
+  row.names(actual) <- NULL
+  row.names(expected) <- NULL
+
+  if (!identical(actual, expected)) {
+    stop(
+      "active calibration registry must exactly match the approved taxonomy",
+      call. = FALSE
+    )
+  }
+  invisible(registry)
+}
+
 .parse_calibration_cutoff <- function(values) {
   missing <- is.na(values) | !nzchar(trimws(as.character(values)))
   parsed <- suppressWarnings(as.numeric(as.character(values)))
@@ -138,7 +198,8 @@ validate_calibration_registry <- function(registry) {
 }
 
 load_calibration_registry <- function(path = NULL) {
-  if (is.null(path)) {
+  active_registry <- is.null(path)
+  if (active_registry) {
     path <- system.file(
       "extdata", "calibration-registry.csv", package = "stabilitest"
     )
@@ -161,5 +222,6 @@ load_calibration_registry <- function(path = NULL) {
     registry$cutoff_robust
   )
   validate_calibration_registry(registry)
+  if (active_registry) validate_active_calibration_registry(registry)
   registry
 }

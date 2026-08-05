@@ -36,6 +36,37 @@ test_that("model and TOST wrappers map independently of execution engine", {
                "unknown TOST calibration endpoint")
 })
 
+test_that("mapping helpers reject non-character and non-scalar inputs", {
+  invalid_test_types <- list(
+    factor("fisher"), 1, list("fisher"), NA_character_, character(),
+    c("t.test", "fisher")
+  )
+  for (value in invalid_test_types) {
+    expect_error(calibration_unit_for_test(value),
+                 "unknown calibration test type")
+  }
+
+  invalid_engines <- list(
+    factor("lm"), 1, list("lm"), NA_character_, character(), c("lm", "cox")
+  )
+  for (value in invalid_engines) {
+    expect_error(calibration_unit_for_model(value),
+                 "unknown model calibration unit")
+  }
+  for (value in list(factor("binomial"), 1, list("binomial"))) {
+    expect_error(calibration_unit_for_model("glm", family = value),
+                 "unknown model calibration unit")
+  }
+
+  invalid_endpoints <- list(
+    factor("or"), 1, list("or"), NA_character_, character(), c("mean", "or")
+  )
+  for (value in invalid_endpoints) {
+    expect_error(calibration_unit_for_tost(value),
+                 "unknown TOST calibration endpoint")
+  }
+})
+
 test_that("the installed registry contains no generic two_sample key", {
   registry <- load_calibration_registry()
 
@@ -45,6 +76,50 @@ test_that("the installed registry contains no generic two_sample key", {
     "status", "cutoff_fragile", "cutoff_robust", "version", "source",
     "supported_conditions"
   ) %in% names(registry)))
+})
+
+test_that("the installed registry exactly matches the active taxonomy", {
+  registry <- load_calibration_registry()
+  actual <- registry[c(
+    "calibration_unit", "endpoint", "conclusion_type", "status"
+  )]
+  expected <- data.frame(
+    calibration_unit = c(
+      "welch_unpaired", "paired_t", "wilcoxon_rank_sum",
+      "wilcoxon_signed_rank", "brunner_munzel", "fisher_exact",
+      "chi_square_2x2", "two_sample_prop", "lm_ancova", "glm_binomial",
+      "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
+      "tost_risk_difference", "tost_risk_difference", "tost_odds_ratio",
+      "tost_odds_ratio"
+    ),
+    endpoint = c(
+      "mean_difference", "mean_difference", "location_shift",
+      "location_shift", "location_shift", "risk_difference",
+      "risk_difference", "risk_difference", "coefficient", "coefficient",
+      "coefficient", "hazard_ratio", "mean_difference", "mean_difference",
+      "risk_difference", "risk_difference", "odds_ratio", "odds_ratio"
+    ),
+    conclusion_type = c(
+      rep("significant", 12), "equivalence", "noninferiority",
+      "equivalence", "noninferiority", "equivalence", "noninferiority"
+    ),
+    status = c("validated_method_specific", rep("uncalibrated", 17)),
+    stringsAsFactors = FALSE
+  )
+  row.names(actual) <- NULL
+
+  expect_identical(actual, expected)
+})
+
+test_that("the Welch row cites durable tracked provenance", {
+  registry <- load_calibration_registry()
+  welch <- registry[registry$calibration_unit == "welch_unpaired", ]
+
+  expect_identical(
+    welch$source,
+    "git:f26e559:manuscript/robustness_analysis_manuscript.md"
+  )
+  expect_match(welch$supported_conditions, "Section 3", fixed = TRUE)
 })
 
 .valid_calibration_registry <- function() {
@@ -103,6 +178,31 @@ test_that("registry validation rejects missing required columns", {
 
   expect_error(validate_calibration_registry(registry),
                "required columns")
+})
+
+test_that("registry validation rejects duplicate column names", {
+  registry <- .valid_calibration_registry()
+  registry$duplicate_family <- registry$family
+  names(registry)[ncol(registry)] <- "family"
+
+  expect_error(validate_calibration_registry(registry),
+               "exactly the required columns")
+})
+
+test_that("registry validation rejects an empty registry", {
+  registry <- .valid_calibration_registry()[0, ]
+
+  expect_error(validate_calibration_registry(registry),
+               "must contain at least one row")
+})
+
+test_that("active registry validation rejects incomplete taxonomies", {
+  registry <- load_calibration_registry()
+
+  expect_error(
+    validate_active_calibration_registry(registry[-1, ]),
+    "active calibration registry must exactly match"
+  )
 })
 
 test_that("registry validation requires finite ordered validated cutoffs", {
