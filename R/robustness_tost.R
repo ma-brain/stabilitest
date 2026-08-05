@@ -741,6 +741,18 @@ robustness_tost <- function(group1, group2,
   }
   out$model <- out$method
   out$type <- out$method
+  calibration_endpoint <- switch(
+    endpoint,
+    mean = "mean_difference",
+    prop = "risk_difference",
+    or = "odds_ratio"
+  )
+  out <- attach_result_calibration(
+    out,
+    calibration_unit = calibration_unit_for_tost(endpoint),
+    endpoint = calibration_endpoint,
+    conclusion_type = tost_conclusion_type(type, out$original_significant)
+  )
   class(out) <- c("robustness_tost", "robustness_model", "list")
   out
 }

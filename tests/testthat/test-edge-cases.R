@@ -308,6 +308,50 @@ test_that("print.robustness_model smoke tests for lm and surv", {
   expect_true(any(grepl("HR =", out_s)))
 })
 
+test_that("model engines attach uncalibrated method-specific metadata", {
+  set.seed(2027)
+  n <- 30
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n)
+  )
+  dat$y <- 4 * (dat$arm == "A") + 0.2 * dat$x + rnorm(n, sd = 0.25)
+  lm_result <- robustness_lm(y ~ arm + x, dat, term = "armA",
+                             n_boot = 5, seed = 1)
+
+  dat$binary <- c(rep(c(1, 0, 0), 5),
+                  c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0))
+  binomial_result <- robustness_glm(binary ~ arm + x, dat, term = "armA",
+                                    family = binomial(), n_boot = 5, seed = 2)
+
+  dat$count <- rpois(n, exp(1 + 1.5 * (dat$arm == "A") + 0.1 * dat$x))
+  poisson_result <- robustness_glm(count ~ arm + x, dat, term = "armA",
+                                   family = poisson(), n_boot = 5, seed = 3)
+
+  skip_if_not_installed("survival")
+  surv_dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    time = c(rexp(n / 2, rate = 0.25), rexp(n / 2, rate = 0.03)),
+    event = 1L
+  )
+  cox_result <- robustness_surv(survival::Surv(time, event) ~ arm,
+                                surv_dat, term = "armA", n_boot = 5, seed = 4)
+
+  results <- list(lm_result, binomial_result, poisson_result, cox_result)
+  expected_units <- c("lm_ancova", "glm_binomial", "glm_poisson", "cox_ph")
+  expect_identical(
+    unname(vapply(results, function(x) x$calibration$calibration_unit,
+                  character(1))),
+    expected_units
+  )
+  for (result in results) {
+    expect_identical(result$calibration$status, "uncalibrated")
+    expect_false(result$calibration$applicable)
+    expect_true(is.na(result$interpretation_label))
+    expect_true(is.finite(result$metrics$overall_robustness))
+  }
+})
+
 # --- robustness_lm edges ------------------------------------------------------
 
 test_that("robustness_lm rejects small n, bad weights, and missing terms", {

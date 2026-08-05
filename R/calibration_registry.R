@@ -466,3 +466,26 @@ score_label_from_calibration <- function(score, calibration) {
   if (score > cutoff_fragile) return("Moderately Robust")
   "Fragile"
 }
+
+# Attach method-specific calibration metadata after a model/TOST wrapper has
+# identified its exact endpoint and observed conclusion.  The shared scoring
+# engine deliberately does not infer categorical bands: model and TOST methods
+# are currently uncalibrated, while unsuccessful conclusions are inapplicable.
+attach_result_calibration <- function(out, calibration_unit, endpoint,
+                                      conclusion_type) {
+  if (!is.list(out)) {
+    stop("result must be a list", call. = FALSE)
+  }
+  calibration <- resolve_result_calibration(
+    calibration_unit = calibration_unit,
+    endpoint = endpoint,
+    conclusion_type = conclusion_type,
+    weights = out$weights,
+    max_removal_pct = out$max_removal_pct
+  )
+  out$calibration <- calibration
+  out$interpretation_label <- score_label_from_calibration(
+    out$metrics$overall_robustness, calibration
+  )
+  align_robustness_result_aliases(out, style = "model")
+}

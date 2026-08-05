@@ -346,10 +346,9 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
     worstcase = worstcase,
     bootstrap = bootstrap,
     removed_rows = removed_rows,
-    metrics = metrics,
-    interpretation_label = robustness_band_label(metrics$overall_robustness)
+    metrics = metrics
   )
-  align_robustness_result_aliases(out, style = "model")
+  out
 }
 
 # ------------------------------------------------------------------------------
@@ -455,6 +454,12 @@ robustness_lm <- function(formula, data, term,
   )
   out$model <- paste(deparse(formula), collapse = " ")
   out$type <- "Linear model (lm)"
+  out <- attach_result_calibration(
+    out,
+    calibration_unit = calibration_unit_for_model("lm"),
+    endpoint = "coefficient",
+    conclusion_type = superiority_conclusion_type(out$original_significant)
+  )
   class(out) <- c("robustness_model", "list")
   out
 }
@@ -557,6 +562,12 @@ robustness_surv <- function(formula, data, term,
   )
   out$model <- paste(deparse(formula), collapse = " ")
   out$type <- "Cox proportional hazards"
+  out <- attach_result_calibration(
+    out,
+    calibration_unit = calibration_unit_for_model("cox"),
+    endpoint = "hazard_ratio",
+    conclusion_type = superiority_conclusion_type(out$original_significant)
+  )
   class(out) <- c("robustness_model", "list")
   out
 }
@@ -728,6 +739,12 @@ robustness_glm <- function(formula, data, term,
   out$family <- fam_name
   out$link <- link_name
   out$type <- sprintf("GLM (%s, %s)", fam_name, link_name)
+  out <- attach_result_calibration(
+    out,
+    calibration_unit = calibration_unit_for_model("glm", family = fam_name),
+    endpoint = "coefficient",
+    conclusion_type = superiority_conclusion_type(out$original_significant)
+  )
   class(out) <- c("robustness_model", "list")
   out
 }

@@ -120,6 +120,33 @@ test_that("paired TOST runs and is seed-reproducible", {
   expect_true(a$original_significant)
 })
 
+test_that("TOST attaches endpoint metadata and suppresses bands", {
+  g1 <- c(0.0, 0.1, -0.1, 0.05, -0.05, 0.02, -0.02, 0.08,
+          -0.08, 0.0, 0.03, -0.03, 0.06, -0.06, 0.01, -0.01,
+          0.04, -0.04, 0.07, -0.07)
+  g2 <- c(0.02, -0.02, 0.05, -0.05, 0.0, 0.1, -0.1, 0.03,
+          -0.03, 0.01, -0.01, 0.04, -0.04, 0.06, -0.06, 0.08,
+          -0.08, 0.0, 0.02, -0.02)
+  successful <- robustness_tost(g1, g2, type = "equivalence", margin = 1,
+                                n_boot = 5, seed = 1)
+  expect_identical(successful$calibration$calibration_unit, "tost_mean")
+  expect_identical(successful$calibration$status, "uncalibrated")
+  expect_false(successful$calibration$applicable)
+  expect_true(is.na(successful$interpretation_label))
+  expect_true(is.finite(successful$metrics$overall_robustness))
+
+  set.seed(2)
+  unsuccessful <- robustness_tost(rnorm(20, 0, 0.05),
+                                  rnorm(20, 2, 0.05),
+                                  type = "equivalence", margin = 0.2,
+                                  n_boot = 5, seed = 2)
+  expect_identical(unsuccessful$calibration$calibration_unit, "tost_mean")
+  expect_identical(unsuccessful$calibration$status, "bands_not_applicable")
+  expect_false(unsuccessful$calibration$applicable)
+  expect_true(is.na(unsuccessful$interpretation_label))
+  expect_true(is.finite(unsuccessful$metrics$overall_robustness))
+})
+
 test_that("p_eff adapter flips with the TOST conclusion under jackknife", {
   # Equivalent full sample; leave-one-out should usually keep equivalence
   set.seed(5)
