@@ -94,3 +94,29 @@ Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
   --output manuscript/calibration/artifacts/raw/validation
 Rscript manuscript/calibration/tools/summarise_run.R lm
 ```
+
+## `tost-run-summary.csv`
+
+Full `tost` family at production `n_boot = 1000`, run with `--workers 6`.
+
+- Command: `run_calibration.R --mode full --phase all --engine tost --workers 6 --resume` for training, then again with `--validation-only`.
+- Wall time: training ~8 min (4 scenarios), held-out validation ~1 min (1 scenario).
+- Completed full robustness analyses: 4,009.
+
+### Notes / expected occupancy limits
+
+- `tost_core_outside_margin` (truth outside the equivalence margin) filled only 9/500 in the `equivalent` stratum — false equivalence is rare, so screening hit its budget (`incomplete` by design). The filled `not_equivalent` stratum scores high (median **83.98**, 465/500 > 70).
+- Held-out `tost_prop_equivalence` filled only the `not_equivalent` stratum (500/500); the `equivalent` stratum stayed empty within the 10,000-draw budget (`incomplete`). Those not-equivalent replicates all scored 100 under the shared bands — treat as an occupancy/diagnostic signal, not a calibrated equivalence map.
+- Near-margin true equivalence (`tost_core_borderline_near_margin` / `equivalent`) concentrates below the fragile cutoff (median **50.71**, 0/500 > 70).
+
+### Reproduce
+
+```sh
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine tost --workers 6 --resume \
+  --output manuscript/calibration/artifacts/raw/training
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine tost --workers 6 --resume --validation-only \
+  --output manuscript/calibration/artifacts/raw/validation
+Rscript manuscript/calibration/tools/summarise_run.R tost
+```
