@@ -90,6 +90,13 @@ format_score_interpretation <- function(score, calibration = NULL,
     ))
   }
 
+  if (identical(calibration$status, "bands_not_applicable")) {
+    return(sprintf(
+      "%.1f/100 (no categorical band assigned because observed conclusion is not eligible)",
+      score
+    ))
+  }
+
   if (!isTRUE(calibration$applicable) ||
       !identical(calibration$status, "validated_method_specific")) {
     return(sprintf(

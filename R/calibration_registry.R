@@ -450,7 +450,9 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
 }
 
 score_label_from_calibration <- function(score, calibration) {
-  if (!is.list(calibration) || !isTRUE(calibration$applicable) ||
+  if (!is.list(calibration) ||
+      !isTRUE(calibration$applicable) ||
+      !identical(calibration$status, "validated_method_specific") ||
       !is.numeric(score) || length(score) != 1L || !is.finite(score)) {
     return(NA_character_)
   }

@@ -667,6 +667,8 @@ generate_interpretation <- function(x) {
   calibration <- x[["calibration"]]
   recommendation <- if (is.null(calibration) || !is.list(calibration)) {
     "Calibration status is unknown for this legacy result. Review the numeric score and component metrics; no categorical robustness recommendation is assigned."
+  } else if (identical(calibration$status, "bands_not_applicable")) {
+    "No categorical band is assigned because the observed conclusion is not eligible. Review the numeric score and component metrics; no categorical robustness recommendation is assigned."
   } else if (!isTRUE(calibration$applicable) ||
              !identical(calibration$status, "validated_method_specific")) {
     "Categorical bands are not calibrated for this method. Review the numeric score and component metrics; no categorical robustness recommendation is assigned."

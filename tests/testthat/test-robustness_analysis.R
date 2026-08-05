@@ -115,6 +115,25 @@ test_that("print and narrative output expose calibration status", {
                     uncalibrated$interpretation$recommendation))
 })
 
+test_that("inapplicable conclusions have a distinct display status", {
+  result <- robustness_analysis(
+    seq(-1, 1, length.out = 12), seq(-1, 1, length.out = 12),
+    test_type = "t.test", n_boot = 10, seed = 41, interpret = TRUE
+  )
+  text <- capture.output(print(result))
+  expect_true(any(grepl(
+    "no categorical band assigned because observed conclusion is not eligible",
+    text
+  )))
+  expect_false(any(grepl(
+    "categorical bands not calibrated for this method", text
+  )))
+  expect_true(grepl(
+    "observed conclusion is not eligible",
+    result$interpretation$recommendation
+  ))
+})
+
 test_that("Welch labels are suppressed outside the validated design", {
   set.seed(41)
   x <- rep(3, 12) + rnorm(12, 0, .1)

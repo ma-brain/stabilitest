@@ -312,7 +312,8 @@ test_that("print.robustness_model smoke tests for lm and surv", {
   expect_true(any(grepl("MODEL-BASED ROBUSTNESS ANALYSIS", out_lm)))
   expect_true(any(grepl("Linear model", out_lm)))
   expect_true(any(grepl("OVERALL ROBUSTNESS", out_lm)))
-  expect_true(any(grepl("categorical bands not calibrated for this method",
+  expect_true(any(grepl(
+    "categorical bands not calibrated for this method|no categorical band assigned",
                         out_lm)))
 
   skip_if_not_installed("survival")

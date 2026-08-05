@@ -383,10 +383,22 @@ test_that("caller-supplied malformed registries fail closed", {
 
 test_that("malformed calibration metadata suppresses score labels", {
   malformed <- list(
-    list(applicable = TRUE, cutoff_fragile = NA_real_, cutoff_robust = 70),
-    list(applicable = TRUE, cutoff_fragile = 55, cutoff_robust = Inf),
-    list(applicable = TRUE, cutoff_fragile = c(55, 56), cutoff_robust = 70),
-    list(applicable = TRUE, cutoff_fragile = 70, cutoff_robust = 55),
+    list(applicable = TRUE, status = NULL,
+         cutoff_fragile = 55, cutoff_robust = 70),
+    list(applicable = TRUE, status = "uncalibrated",
+         cutoff_fragile = 55, cutoff_robust = 70),
+    list(applicable = TRUE, status = "bands_not_applicable",
+         cutoff_fragile = 55, cutoff_robust = 70),
+    list(applicable = TRUE, status = "not_a_status",
+         cutoff_fragile = 55, cutoff_robust = 70),
+    list(applicable = TRUE, status = "validated_method_specific",
+         cutoff_fragile = NA_real_, cutoff_robust = 70),
+    list(applicable = TRUE, status = "validated_method_specific",
+         cutoff_fragile = 55, cutoff_robust = Inf),
+    list(applicable = TRUE, status = "validated_method_specific",
+         cutoff_fragile = c(55, 56), cutoff_robust = 70),
+    list(applicable = TRUE, status = "validated_method_specific",
+         cutoff_fragile = 70, cutoff_robust = 55),
     NULL
   )
   for (calibration in malformed) {
