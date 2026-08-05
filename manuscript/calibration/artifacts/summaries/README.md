@@ -43,3 +43,28 @@ Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
   --engine proportion --workers 4 --resume --validation-only \
   --output manuscript/calibration/artifacts/raw/validation
 ```
+
+## `binomial-run-summary.csv`
+
+Full `binomial` family at production `n_boot = 1000`, run with `--workers 6`.
+
+- Command: `run_calibration.R --mode full --phase all --engine binomial --workers 6 --resume` for training, then again with `--validation-only`.
+- Completed full robustness analyses: 4,000 (500 per conclusion × 4 usable scenarios × 2 splits for the validation scenario).
+- `binomial_stress_separation` is recorded as `incomplete` / unsupported: `separation = TRUE` forces perfect separation, so all 10,000 screening draws fail with GLM non-convergence. That is an expected stress diagnostic, not a runner failure. The runner now records empty selections as unsupported instead of aborting the family.
+
+### Notes
+
+- Null false positives (`binomial_core_null` / `significant`) concentrate below the fragile band (median score 54.94; only 6/500 > 70).
+- Clear-effect significant strata remain mostly moderate under the shared 55/70 bands (core significant median 59.43; validation significant median 59.71).
+
+### Reproduce
+
+```sh
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine binomial --workers 6 --resume \
+  --output manuscript/calibration/artifacts/raw/training
+Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
+  --engine binomial --workers 6 --resume --validation-only \
+  --output manuscript/calibration/artifacts/raw/validation
+Rscript manuscript/calibration/tools/summarise_run.R binomial
+```
