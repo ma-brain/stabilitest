@@ -395,7 +395,16 @@ validate_calibration_candidates <- function(candidates, validation_replicates,
     out$stratum_complete[[i]] <- diagnostics$stratum_complete
     if (is.na(out$lower_cutoff[[i]]) || !nrow(group)) {
       out$status[[i]] <- "uncalibrated"
-      out$reason[[i]] <- if (!nrow(group)) "no_validation_replicates" else "training_fit_failed"
+      # Preserve the training-fit reason (e.g. no_feasible_thresholds) when
+      # cutoffs never left NA; only invent training_fit_failed as a fallback.
+      prior <- out$reason[[i]]
+      out$reason[[i]] <- if (!nrow(group)) {
+        "no_validation_replicates"
+      } else if (is.character(prior) && length(prior) == 1L && !is.na(prior) && nzchar(prior)) {
+        prior
+      } else {
+        "training_fit_failed"
+      }
       next
     }
     candidate <- .threshold_metrics(group, c(out$lower_cutoff[[i]], out$upper_cutoff[[i]]))

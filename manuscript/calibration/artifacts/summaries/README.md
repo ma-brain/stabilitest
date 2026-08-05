@@ -7,8 +7,28 @@ to survive a fresh environment), these summaries are intentionally committed so
 partial progress is not lost between chunks.
 
 These are **diagnostic snapshots of partial runs**, not publication artifacts.
-They do not replace the locked training → freeze → held-out analysis, which
-still requires re-running the full replicate compute for every family.
+They do not replace the locked training → freeze → held-out analysis.
+
+## Freeze / publish (Task 15 steps 2–4)
+
+After all seven family checkpoints exist, assemble → freeze → held-out evaluate
+once (no refit):
+
+```sh
+Rscript manuscript/calibration/tools/assemble_replicates.R
+Rscript manuscript/calibration/tools/freeze_and_publish.R
+```
+
+Committed outputs live under `manuscript/calibration/published/` (manifests,
+registry CSVs, `output-hashes.txt`). Assembled replicate RDS files stay under
+gitignored `artifacts/raw/assembled/`.
+
+**Production freeze result (2026-08-05):** all seven families are
+`uncalibrated` / `no_feasible_thresholds`. Under the locked FR/RI constraints
+no integer cutoff pair was feasible; null and clear score distributions do not
+separate (and are inverted for some families). `validation_refit = FALSE`.
+Phase 6 package integration remains blocked pending independent review of this
+outcome.
 
 ## `proportion-run-summary.csv`
 

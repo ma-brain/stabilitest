@@ -44,18 +44,15 @@ Rscript manuscript/calibration/run_calibration.R --mode full --phase all \
   --engine all --workers <N> --resume --validation-only \
   --output manuscript/calibration/artifacts/raw/validation
 
-# Analyse and freeze: fit candidates from the training artifacts.
-Rscript manuscript/calibration/analyse_calibration.R \
-  --training manuscript/calibration/artifacts/raw/training \
-  --freeze-candidate manuscript/calibration/artifacts/raw/candidate-registry.rds
-
-# Validate and publish the frozen candidate map; --publish writes compact
-# tables, figures, and the audit manifest.
-Rscript manuscript/calibration/analyse_calibration.R \
-  --candidate manuscript/calibration/artifacts/raw/candidate-registry.rds \
-  --validation manuscript/calibration/artifacts/raw/validation \
-  --publish manuscript/calibration/published
+# After per-family full runs (checkpoints under artifacts/raw/*/checkpoints),
+# assemble replicates, freeze candidates, and publish held-out results once:
+Rscript manuscript/calibration/tools/assemble_replicates.R
+Rscript manuscript/calibration/tools/freeze_and_publish.R
 ```
+
+Policy helpers live in `analyse_calibration.R` /
+`calibration_analysis_from_files()` for tests and report scripts. Use the
+assemble / freeze tools above for production publish.
 
 The smoke command is intended for wiring checks only; the pilot command is for
 checking stratum occupancy and Monte Carlo precision before committing a full

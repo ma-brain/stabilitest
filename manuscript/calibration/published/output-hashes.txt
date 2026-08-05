@@ -1,4 +1,6 @@
-d86eec336aa432956aa7828db3bea714  manuscript/calibration/published/training-manifest.dput
-e5f34706e971866b0b11f8fe09b9c8ee  manuscript/calibration/published/validation-manifest.dput
-1cb2b6f1a0301adafaef8aa546b33175  manuscript/calibration/published/calibration-registry.csv
-38d5ea4e90c8124bcf1bafc7d70630ef  manuscript/calibration/published/non-significant-registry.csv
+d95f23c13537e81233074452664ee556  manuscript/calibration/published/training-manifest.dput
+40fec517f0333ad02b1d3688d5ec1c9e  manuscript/calibration/published/validation-manifest.dput
+5acde99492c8d5ebe33fe5feb2dcd1b8  manuscript/calibration/published/calibration-registry.csv
+f1e5fad974100edbe08154ef3cfdcb11  manuscript/calibration/published/non-significant-registry.csv
+4c7060997487270d46a918834ac04a05  manuscript/calibration/published/pilot-runtime-summary.csv
+9c5b89898c685d419354e55ed79f7474  manuscript/calibration/published/pilot-failure-summary.csv
