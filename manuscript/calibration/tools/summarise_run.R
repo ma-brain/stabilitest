@@ -45,9 +45,47 @@ collect <- function(path, split) {
   rows <- list()
   for (i in seq_along(r$analyse)) {
     a <- r$analyse[[i]]; s <- r$screen[[i]]
-    if (!is.data.frame(a) || !nrow(a)) next
-    sc_status <- attr(s$selected, "status")
+    sc_status <- if (!is.null(s) && !is.null(attr(s$selected, "status"))) {
+      attr(s$selected, "status")
+    } else {
+      attr(a, "status")
+    }
     denom <- if (!is.null(s$denominator)) s$denominator else NA_integer_
+    # Empty analyse tables (e.g. universal screening failure under separation)
+    # still belong in the committed summary as unsupported diagnostics.
+    if (!is.data.frame(a) || !nrow(a)) {
+      scenario_id <- if (!is.null(s$scenario_id)) s$scenario_id else attr(a, "scenario_id")
+      if (is.null(scenario_id) || !nzchar(as.character(scenario_id)[[1L]])) next
+      truth <- if (!is.null(s$screened) && is.data.frame(s$screened) && nrow(s$screened)) {
+        as.character(s$screened$truth_class[[1L]])
+      } else NA_character_
+      family <- NA_character_
+      layer <- NA_character_
+      if (!is.null(s$screened) && is.data.frame(s$screened) &&
+          "analysis_family" %in% names(s$screened) && nrow(s$screened)) {
+        family <- as.character(s$screened$analysis_family[[1L]])
+      }
+      rows[[length(rows) + 1L]] <- data.frame(
+        split = split,
+        design_layer = layer,
+        scenario_id = as.character(scenario_id)[[1L]],
+        analysis_family = family,
+        truth_class = truth,
+        screening_conclusion = NA_character_,
+        n_boot = plan_n_boot,
+        screened = denom,
+        selected = 0L,
+        completed = 0L,
+        failed = if (!is.null(s$failed_screening)) as.integer(s$failed_screening) else NA_integer_,
+        score_mean = NA_real_, score_median = NA_real_, score_sd = NA_real_,
+        score_min = NA_real_, score_max = NA_real_,
+        n_fragile_le55 = 0L, n_moderate_55_70 = 0L, n_robust_gt70 = 0L,
+        scenario_failed_total = if (!is.null(s$failed_screening)) as.integer(s$failed_screening) else NA_integer_,
+        scenario_status = if (is.null(sc_status)) "unsupported" else as.character(sc_status),
+        stringsAsFactors = FALSE
+      )
+      next
+    }
     scenario_failed_total <- sum(a$status != "completed", na.rm = TRUE) + sum(is.na(a$status))
     # which() avoids NA logical-indexing phantom rows for failed replicates
     # whose screening_conclusion is NA.

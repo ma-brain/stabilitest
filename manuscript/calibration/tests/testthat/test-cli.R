@@ -173,6 +173,31 @@ testthat::test_that("screening targets include both conclusion outcomes per trut
   )
 })
 
+testthat::test_that("analyse hook records empty selection as unsupported", {
+  runner_env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "run_calibration.R"), envir = runner_env)
+  runner_env$run_full_scenario <- function(...) stop("should not execute", call. = FALSE)
+  runner_env$.calibration_adapter_for_scenario <- function(...) list()
+  scenario <- data.frame(scenario_id = "binomial_stress_separation",
+                         analysis_family = "binomial", stringsAsFactors = FALSE)
+  screened <- list(
+    status = "incomplete",
+    selected = tibble::tibble(),
+    missing = list(list(stratum = "borderline::significant", available = 0L, target = 500L, needed = 500L)),
+    failed_screening = 10000L,
+    completed_screening = 0L
+  )
+  out <- runner_env$.calibration_default_analyse(
+    scenario, plan = list(n_boot = 1000L), options = list(workers = 1L, resume = FALSE, master_seed = 1L, output = tempdir()),
+    project_root = tempdir(), screened = screened, envir = runner_env
+  )
+  testthat::expect_true(is.data.frame(out))
+  testthat::expect_identical(nrow(out), 0L)
+  testthat::expect_identical(attr(out, "status"), "unsupported")
+  testthat::expect_identical(attr(out, "reason"), "no_selected_replicates")
+  testthat::expect_identical(attr(out, "failed_screening"), 10000L)
+})
+
 testthat::test_that("manifest hashes and records provenance", {
   manifest_env <- new.env(parent = globalenv())
   sys.source(file.path("..", "..", "R", "manifest.R"), envir = manifest_env)

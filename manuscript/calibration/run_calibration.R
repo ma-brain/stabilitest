@@ -176,6 +176,19 @@
     return(NULL)
   }
   selected <- screened$selected
+  # Stress scenarios such as complete separation can exhaust screening with
+  # zero usable replicates. Record an empty analyse table with diagnostics
+  # instead of aborting the whole multi-scenario run.
+  if (!is.data.frame(selected) || nrow(selected) < 1L) {
+    empty <- tibble::tibble()
+    attr(empty, "status") <- "unsupported"
+    attr(empty, "reason") <- "no_selected_replicates"
+    attr(empty, "screening_status") <- screened$status %||% NA_character_
+    attr(empty, "missing") <- screened$missing %||% list()
+    attr(empty, "failed_screening") <- screened$failed_screening %||% NA_integer_
+    attr(empty, "completed_screening") <- screened$completed_screening %||% NA_integer_
+    return(empty)
+  }
   execute(
     scenario, adapter, selected = selected, master_seed = options$master_seed,
     workers = options$workers, checkpoint_root = file.path(options$output, "checkpoints", "full"),
@@ -255,8 +268,18 @@ run_calibration <- function(args = commandArgs(trailingOnly = TRUE), project_roo
       scenario <- selected[index, , drop = FALSE]
       adapter <- if (is.function(analyse_hook)) .calibration_adapter_for_scenario(scenario, runner_env) else NULL
       screened <- if (!is.null(results$screen)) results$screen[[index]] else NULL
-      .calibration_call_hook(analyse_hook, scenario, plan, options, root,
-                             adapter = adapter, screened = screened, envir = runner_env)
+      tryCatch(
+        .calibration_call_hook(analyse_hook, scenario, plan, options, root,
+                               adapter = adapter, screened = screened, envir = runner_env),
+        error = function(error) {
+          failed <- tibble::tibble()
+          attr(failed, "status") <- "failed"
+          attr(failed, "reason") <- "analyse_error"
+          attr(failed, "failure_message") <- conditionMessage(error)
+          attr(failed, "scenario_id") <- as.character(scenario$scenario_id[[1L]])
+          failed
+        }
+      )
     })
   }
   saveRDS(results, file.path(output, "run-results.rds"), version = 2)

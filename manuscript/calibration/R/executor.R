@@ -260,7 +260,10 @@ run_full_scenario <- function(scenario, adapter, selected = NULL, replicate_ids 
     else replicate_ids <- seq_along(selected)
   }
   replicate_ids <- as.integer(replicate_ids)
-  if (length(replicate_ids) < 1L || anyNA(replicate_ids) || any(replicate_ids < 1L) || anyDuplicated(replicate_ids)) {
+  if (length(replicate_ids) < 1L) {
+    .executor_abort("replicate_ids is empty; screening selected no replicates")
+  }
+  if (anyNA(replicate_ids) || any(replicate_ids < 1L) || anyDuplicated(replicate_ids)) {
     .executor_abort("replicate_ids must be unique positive integers")
   }
   workers <- as.integer(workers)
