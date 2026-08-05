@@ -276,3 +276,87 @@ test_that("registry loading rejects malformed cutoff text before coercion", {
     )
   }
 })
+
+test_that("only supported significant Welch results receive cutoffs", {
+  supported <- resolve_result_calibration(
+    calibration_unit = "welch_unpaired",
+    endpoint = "mean_difference",
+    conclusion_type = "significant",
+    weights = c(jackknife = .4, fragility = .4, bootstrap = .2),
+    max_removal_pct = .30
+  )
+  expect_true(supported$applicable)
+  expect_identical(supported$status, "validated_method_specific")
+  expect_equal(c(supported$cutoff_fragile, supported$cutoff_robust), c(55, 70))
+
+  nonsig <- resolve_result_calibration(
+    "welch_unpaired", "mean_difference", "non_significant",
+    c(jackknife = .4, fragility = .4, bootstrap = .2), .30
+  )
+  expect_false(nonsig$applicable)
+  expect_identical(nonsig$status, "bands_not_applicable")
+
+  custom_weights <- resolve_result_calibration(
+    "welch_unpaired", "mean_difference", "significant",
+    c(jackknife = .5, fragility = .3, bootstrap = .2), .30
+  )
+  expect_false(custom_weights$applicable)
+  expect_identical(custom_weights$status, "uncalibrated")
+  expect_true(all(is.na(c(custom_weights$cutoff_fragile,
+                          custom_weights$cutoff_robust))))
+})
+
+test_that("uncalibrated methods fail closed", {
+  x <- resolve_result_calibration(
+    "paired_t", "mean_difference", "significant",
+    c(jackknife = .4, fragility = .4, bootstrap = .2), .30
+  )
+  expect_false(x$applicable)
+  expect_identical(x$status, "uncalibrated")
+  expect_true(all(is.na(c(x$cutoff_fragile, x$cutoff_robust))))
+
+  expect_identical(superiority_conclusion_type(TRUE), "significant")
+  expect_identical(superiority_conclusion_type(FALSE), "non_significant")
+  expect_identical(tost_conclusion_type("equivalence", TRUE), "equivalence")
+  expect_identical(tost_conclusion_type("equivalence", FALSE),
+                   "not_equivalent")
+  expect_identical(tost_conclusion_type("noninferiority", TRUE),
+                   "noninferiority")
+  expect_identical(tost_conclusion_type("noninferiority", FALSE),
+                   "not_non_inferior")
+})
+
+test_that("non-significant and unsuccessful conclusions are band-inapplicable", {
+  cases <- list(
+    c("welch_unpaired", "mean_difference", "non_significant"),
+    c("tost_mean", "mean_difference", "not_equivalent"),
+    c("tost_risk_difference", "risk_difference", "not_non_inferior"),
+    c("tost_odds_ratio", "odds_ratio", "not_non_inferior")
+  )
+  for (case in cases) {
+    result <- resolve_result_calibration(
+      case[[1]], case[[2]], case[[3]],
+      c(jackknife = .4, fragility = .4, bootstrap = .2), .30
+    )
+    expect_false(result$applicable)
+    expect_identical(result$status, "bands_not_applicable")
+    expect_true(all(is.na(c(result$cutoff_fragile, result$cutoff_robust))))
+  }
+})
+
+test_that("score labels require applicable calibration", {
+  calibrated <- resolve_result_calibration(
+    "welch_unpaired", "mean_difference", "significant",
+    c(jackknife = .4, fragility = .4, bootstrap = .2), .30
+  )
+  expect_identical(score_label_from_calibration(80, calibrated), "Robust")
+  expect_identical(score_label_from_calibration(60, calibrated),
+                   "Moderately Robust")
+  expect_identical(score_label_from_calibration(55, calibrated), "Fragile")
+
+  uncalibrated <- resolve_result_calibration(
+    "paired_t", "mean_difference", "significant",
+    c(jackknife = .4, fragility = .4, bootstrap = .2), .30
+  )
+  expect_true(is.na(score_label_from_calibration(80, uncalibrated)))
+})

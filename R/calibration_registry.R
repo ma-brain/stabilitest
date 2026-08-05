@@ -234,3 +234,217 @@ load_calibration_registry <- function(path = NULL) {
   if (active_registry) validate_active_calibration_registry(registry)
   registry
 }
+
+# Return the observed superiority conclusion in the vocabulary used by the
+# registry.  Keeping this conversion in one place prevents a logical result
+# from being mistaken for a calibration key downstream.
+superiority_conclusion_type <- function(significant) {
+  if (!is.logical(significant) || length(significant) != 1L ||
+      is.na(significant)) {
+    stop("significant must be a single non-missing logical", call. = FALSE)
+  }
+  if (isTRUE(significant)) "significant" else "non_significant"
+}
+
+# Return the observed TOST/NI conclusion in the vocabulary used by the
+# registry.  Failed superiority/equivalence decisions are intentionally kept
+# distinct so they can be marked band-inapplicable rather than treated as
+# an uncalibrated success.
+tost_conclusion_type <- function(type, successful) {
+  if (!.is_scalar_character(type) ||
+      !type %in% c("equivalence", "noninferiority", "non_inferiority",
+                   "non-inferiority")) {
+    stop("unknown TOST conclusion type", call. = FALSE)
+  }
+  if (!is.logical(successful) || length(successful) != 1L ||
+      is.na(successful)) {
+    stop("successful must be a single non-missing logical", call. = FALSE)
+  }
+  canonical <- if (identical(type, "equivalence")) {
+    "equivalence"
+  } else {
+    "noninferiority"
+  }
+  if (isTRUE(successful)) canonical else if (canonical == "equivalence") {
+    "not_equivalent"
+  } else {
+    "not_non_inferior"
+  }
+}
+
+# Descriptive aliases used by callers that prefer the longer mapping-helper
+# names.  They remain internal implementation details (the public dispatcher
+# is unchanged).
+conclusion_type_for_superiority <- superiority_conclusion_type
+conclusion_type_for_tost <- tost_conclusion_type
+
+.uncalibrated_result <- function(unit, endpoint, conclusion, status,
+                                 reason) {
+  if (!.is_scalar_character(unit)) unit <- NA_character_
+  if (!.is_scalar_character(endpoint)) endpoint <- NA_character_
+  if (!.is_scalar_character(conclusion)) conclusion <- NA_character_
+  if (!.is_scalar_character(status) || !status %in% .calibration_statuses) {
+    status <- "uncalibrated"
+  }
+  if (!.is_scalar_character(reason)) reason <- "No applicable calibration"
+  list(
+    version = "taxonomy-2026-1",
+    family = NA_character_,
+    calibration_unit = unit,
+    endpoint = endpoint,
+    conclusion_type = conclusion,
+    status = status,
+    applicable = FALSE,
+    cutoff_fragile = NA_real_,
+    cutoff_robust = NA_real_,
+    source = NA_character_,
+    supported_conditions = reason
+  )
+}
+
+.registry_result <- function(row, status = row$status, applicable = FALSE,
+                             reason = NULL) {
+  reason <- if (is.null(reason)) row$supported_conditions else reason
+  list(
+    version = as.character(row$version),
+    family = as.character(row$family),
+    calibration_unit = as.character(row$calibration_unit),
+    endpoint = as.character(row$endpoint),
+    conclusion_type = as.character(row$conclusion_type),
+    status = as.character(status),
+    applicable = isTRUE(applicable),
+    cutoff_fragile = if (isTRUE(applicable)) as.numeric(row$cutoff_fragile) else NA_real_,
+    cutoff_robust = if (isTRUE(applicable)) as.numeric(row$cutoff_robust) else NA_real_,
+    source = as.character(row$source),
+    supported_conditions = as.character(reason)
+  )
+}
+
+.canonical_conclusion_type <- function(conclusion) {
+  if (!.is_scalar_character(conclusion)) return(NA_character_)
+  switch(
+    conclusion,
+    significant = "significant",
+    non_significant = "non_significant",
+    `non-significant` = "non_significant",
+    equivalence = "equivalence",
+    equivalent = "equivalence",
+    not_equivalence = "not_equivalent",
+    not_equivalent = "not_equivalent",
+    `not-equivalent` = "not_equivalent",
+    noninferiority = "noninferiority",
+    non_inferiority = "noninferiority",
+    `non-inferiority` = "noninferiority",
+    non_inferior = "noninferiority",
+    `non-inferior` = "noninferiority",
+    not_noninferiority = "not_non_inferior",
+    `not-noninferiority` = "not_non_inferior",
+    not_non_inferior = "not_non_inferior",
+    `not-non-inferior` = "not_non_inferior",
+    NA_character_
+  )
+}
+
+.default_calibration_weights <- c(
+  jackknife = 0.4, fragility = 0.4, bootstrap = 0.2
+)
+
+.is_default_calibration_design <- function(weights, max_removal_pct) {
+  weights_ok <- is.numeric(weights) && length(weights) == 3L &&
+    !is.null(names(weights)) && !anyNA(names(weights)) &&
+    !anyDuplicated(names(weights)) &&
+    setequal(names(weights), names(.default_calibration_weights)) &&
+    all(is.finite(weights)) &&
+    isTRUE(all.equal(
+      unname(weights[names(.default_calibration_weights)]),
+      unname(.default_calibration_weights), tolerance = 1e-8
+    ))
+  removal_ok <- is.numeric(max_removal_pct) &&
+    length(max_removal_pct) == 1L && is.finite(max_removal_pct) &&
+    isTRUE(all.equal(as.numeric(max_removal_pct), 0.30, tolerance = 1e-8))
+  weights_ok && removal_ok
+}
+
+# Resolve a result to exactly one registry row.  Resolution is deliberately
+# fail-closed: only the narrow validated Welch configuration receives cutoffs;
+# every other method/configuration retains scores but has no categorical bands.
+resolve_result_calibration <- function(calibration_unit, endpoint,
+                                       conclusion_type, weights,
+                                       max_removal_pct,
+                                       registry = NULL) {
+  unit <- if (.is_scalar_character(calibration_unit)) {
+    calibration_unit
+  } else {
+    NA_character_
+  }
+  endpoint_value <- if (.is_scalar_character(endpoint)) endpoint else NA_character_
+  conclusion <- .canonical_conclusion_type(conclusion_type)
+
+  if (is.null(registry)) {
+    registry <- tryCatch(load_calibration_registry(), error = function(e) NULL)
+  }
+  if (is.null(registry)) {
+    return(.uncalibrated_result(
+      unit, endpoint_value, conclusion,
+      "uncalibrated", "Calibration registry could not be loaded"
+    ))
+  }
+
+  # A non-significant superiority result, or an unsuccessful equivalence/NI
+  # result, has no robustness band by definition.  It is not a missing row.
+  if (identical(conclusion, "non_significant") ||
+      identical(conclusion, "not_equivalent") ||
+      identical(conclusion, "not_non_inferior")) {
+    return(.uncalibrated_result(
+      unit, endpoint_value, conclusion,
+      "bands_not_applicable", "Observed conclusion is not eligible for bands"
+    ))
+  }
+
+  if (is.na(unit) || is.na(endpoint_value) || is.na(conclusion)) {
+    return(.uncalibrated_result(
+      unit, endpoint_value, conclusion,
+      "uncalibrated", "Malformed calibration key"
+    ))
+  }
+
+  matches <- registry[
+    registry$calibration_unit == unit &
+      registry$endpoint == endpoint_value &
+      registry$conclusion_type == conclusion,
+    , drop = FALSE
+  ]
+  if (nrow(matches) != 1L) {
+    return(.uncalibrated_result(
+      unit, endpoint_value, conclusion,
+      "uncalibrated", "No exact method-specific calibration entry"
+    ))
+  }
+  row <- matches[1L, , drop = FALSE]
+
+  if (!identical(as.character(row$status), "validated_method_specific")) {
+    return(.registry_result(row, status = as.character(row$status),
+                            applicable = FALSE))
+  }
+  if (!.is_default_calibration_design(weights, max_removal_pct)) {
+    result <- .registry_result(
+      row, status = "uncalibrated", applicable = FALSE,
+      reason = "Observed score configuration is outside the validated design"
+    )
+    result$version <- "taxonomy-2026-1"
+    result$source <- NA_character_
+    return(result)
+  }
+
+  .registry_result(row, status = "validated_method_specific", applicable = TRUE)
+}
+
+score_label_from_calibration <- function(score, calibration) {
+  if (!isTRUE(calibration$applicable) ||
+      !is.numeric(score) || length(score) != 1L || is.na(score)) {
+    return(NA_character_)
+  }
+  if (score > calibration$cutoff_robust) return("Robust")
+  if (score > calibration$cutoff_fragile) return("Moderately Robust")
+  "Fragile"
+}
