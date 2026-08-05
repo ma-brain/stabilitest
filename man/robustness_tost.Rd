@@ -70,7 +70,10 @@ a named list with the shared model-engine fields
 (\code{original_p} / effective p-value, \code{original_estimate} /
 \code{original_mean_diff}, \code{original_significant}, \code{metrics} /
 \code{robustness_metrics}, \code{interpretation_label} /
-\code{robustness_interpretation}, jackknife / worst-case / bootstrap tibbles,
+\code{robustness_interpretation} (currently always \code{NA}; scores and component
+metrics remain available until a dedicated TOST calibration is
+established), \code{calibration}, jackknife / worst-case /
+bootstrap tibbles,
 \code{n}, \code{max_k}, \code{max_removal_pct}, \code{alpha}, \code{weights}) plus
 TOST/NI metadata (\code{tost_type}, \code{endpoint}, \code{margin} / \code{delta_L} /
 \code{delta_U}, one-sided p-values, \code{(1 - 2 * alpha)} CI, \code{method}).
@@ -121,8 +124,9 @@ decision, not of a two-sided superiority test.
 Binary methods use \strong{Wald} normal approximations (RD or log OR), which can
 be anticonservative with sparse tables; Farrington–Manning score and exact
 unconditional procedures are not implemented. Rank-based TOST is still
-deferred. Composite score bands are \strong{not} separately calibrated for
-equivalence/NI conclusions (any endpoint). The fragility component requires
+deferred. Composite score bands are \strong{not} calibrated for equivalence/NI
+conclusions (any endpoint), and labels are suppressed while those units are
+uncalibrated. The fragility component requires
 at least one deletion that retains four pairs or eight unpaired observations;
 otherwise the analysis raises an insufficient-sample error.
 }

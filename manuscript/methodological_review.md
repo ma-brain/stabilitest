@@ -2,7 +2,7 @@
 
 **Scope:** Critical review of the January 2026 `robustness_analysis.R` and manuscript as of 2026-01-22. Issues are ordered by severity. Each issue states the problem, why it matters, and the resolution implemented in the July 2026 revision (manuscript v2.0).
 
-**Current layout (this repository):** the revised two-sample engine lives in `R/robustness_analysis.R`; model-based extensions (ANCOVA / Cox) in `R/robustness_models.R`; the revised manuscript in `manuscript/robustness_analysis_manuscript.md`. Simulation design for Section 3 is intended as `manuscript/simulation_study.R` (or a package vignette equivalent). Calibrated interpretation bands in the package and manuscript: score > 70 robust; (55, 70] moderately robust; ≤ 55 fragile. Case-study bootstrap figures use `n_boot = 2000` and `seed = 14` (package default seed remains 123).
+**Current layout (this repository):** the revised two-sample engine lives in `R/robustness_analysis.R`; model-based extensions (ANCOVA / Cox) in `R/robustness_models.R`; the revised manuscript in `manuscript/robustness_analysis_manuscript.md`. Simulation design for Section 3 is intended as `manuscript/simulation_study.R` (or a package vignette equivalent). The Task 15 review recorded the historical score bands (> 70 robust; (55, 70] moderately robust; ≤ 55 fragile); the active registry now applies them only to an applicable significant Welch result. Other methods retain numeric scores/components with labels suppressed. Case-study bootstrap figures use `n_boot = 2000` and `seed = 14` (package default seed remains 123).
 
 ---
 

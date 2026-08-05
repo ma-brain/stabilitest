@@ -68,8 +68,10 @@ analysis size.
 Complete or quasi-complete separation is handled only via \code{converged}
 and finite p-values: failed full-data fits error; failed subsets are
 skipped. Firth / bias-reduced logistic regression is not supported.
-Score bands are shared with the ANCOVA / Cox engines and are not
-separately calibrated for GLM.
+Numeric scores and component metrics remain available for every GLM
+result, but the \code{glm_binomial} and \code{glm_poisson} units are currently
+uncalibrated and their categorical labels are suppressed (\code{NA}). The
+historical Task 15 broad-family score bands are not transferable.
 }
 \examples{
 set.seed(1)

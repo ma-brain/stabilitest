@@ -13,6 +13,10 @@
 # All reuse a common case-deletion engine: jackknife, greedy worst-case
 # removal (AMIP-style), and case-resampling bootstrap operate on ROWS of the
 # analysis dataset, so covariate adjustment is preserved throughout.
+# Numeric scores and component metrics are always retained. Categorical labels
+# are suppressed until the exact method-specific calibration unit is validated;
+# the only active validated unit is the narrow significant `welch_unpaired`
+# configuration. `lm_ancova` is the next independent calibration target.
 # Companion to robustness_analysis.R (two-sample version); see
 # manuscript/methodological_review.md for the rationale behind the v2 metrics.
 # ==============================================================================
@@ -376,6 +380,9 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 #'   while retaining the engine's minimum analysis size; otherwise the function
 #'   raises an insufficient-sample error rather than returning an unevaluated
 #'   fragility score.
+#'   Numeric scores and component metrics remain available for every ANCOVA
+#'   result. The `lm_ancova` calibration unit is currently uncalibrated, so its
+#'   categorical label is suppressed (`NA`) even when the term is significant.
 #'
 #' @return An object of class `"robustness_model"` (a named list) with:
 #' \describe{
@@ -386,7 +393,8 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 #'     `robustness_metrics` (same tibble). Shared metric columns match
 #'     [robustness_analysis()] where meanings align.}
 #'   \item{interpretation_label}{A calibrated categorical label when a
-#'     method-specific calibration is applicable; otherwise `NA`. Alias:
+#'     method-specific calibration is applicable; otherwise `NA`. Scores and
+#'     component metrics are retained when the label is suppressed. Alias:
 #'     `robustness_interpretation`.}
 #'   \item{calibration}{Method-specific calibration metadata, including
 #'     applicability, status, cutoffs, version, and provenance.}
@@ -493,6 +501,9 @@ robustness_lm <- function(formula, data, term,
 #'   Robustness calculations use exactly the rows retained by the full fitted
 #'   model after its `na.action`. At least one further row must be removable
 #'   while retaining the engine's minimum analysis size.
+#'   Numeric scores and component metrics remain available for every Cox
+#'   result. The `cox_ph` calibration unit is currently uncalibrated, so its
+#'   categorical label is suppressed (`NA`) even when the term is significant.
 #'
 #' @return An object of class `"robustness_model"` (a named list). Same engine
 #'   fields as [robustness_lm()] (`original_p`, `metrics`,
@@ -612,8 +623,10 @@ robustness_surv <- function(formula, data, term,
 #'   Complete or quasi-complete separation is handled only via `converged`
 #'   and finite p-values: failed full-data fits error; failed subsets are
 #'   skipped. Firth / bias-reduced logistic regression is not supported.
-#'   Score bands are shared with the ANCOVA / Cox engines and are not
-#'   separately calibrated for GLM.
+#'   Numeric scores and component metrics remain available for every GLM
+#'   result, but the `glm_binomial` and `glm_poisson` units are currently
+#'   uncalibrated and their categorical labels are suppressed (`NA`). The
+#'   historical Task 15 broad-family score bands are not transferable.
 #'
 #' @return An object of class `"robustness_model"` (a named list). Same engine
 #'   fields as [robustness_lm()], plus `family` and `link` recording the GLM

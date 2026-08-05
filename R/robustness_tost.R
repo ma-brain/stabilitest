@@ -28,8 +28,12 @@
 # namely:
 #   * Equivalence: p_eff = max(p_lower, p_upper)
 #   * Non-inferiority: p_eff = the one-sided NI p-value
-# Score bands are shared with the ANCOVA/Cox engines and are not separately
-# calibrated for equivalence/NI (any endpoint).
+# Numeric scores and component metrics are retained for every TOST/NI endpoint,
+# but categorical labels are suppressed because `tost_mean`,
+# `tost_risk_difference`, and `tost_odds_ratio` are currently uncalibrated.
+# The historical Task 15 broad-family score bands are not transferable. Each
+# endpoint will be calibrated independently after the `lm_ancova` priority
+# project.
 # Rank-based TOST remains deferred.
 # ==============================================================================
 
@@ -562,8 +566,9 @@ tost_or_test <- function(group1, group2, type,
 #'   (`original_p` / effective p-value, `original_estimate` /
 #'   `original_mean_diff`, `original_significant`, `metrics` /
 #'   `robustness_metrics`, `interpretation_label` /
-#'   `robustness_interpretation` (always `NA` until a dedicated TOST
-#'   calibration is established), `calibration`, jackknife / worst-case /
+#'   `robustness_interpretation` (currently always `NA`; scores and component
+#'   metrics remain available until a dedicated TOST calibration is
+#'   established), `calibration`, jackknife / worst-case /
 #'   bootstrap tibbles,
 #'   `n`, `max_k`, `max_removal_pct`, `alpha`, `weights`) plus
 #'   TOST/NI metadata (`tost_type`, `endpoint`, `margin` / `delta_L` /
@@ -573,8 +578,9 @@ tost_or_test <- function(group1, group2, type,
 #' Binary methods use **Wald** normal approximations (RD or log OR), which can
 #' be anticonservative with sparse tables; Farrington–Manning score and exact
 #' unconditional procedures are not implemented. Rank-based TOST is still
-#' deferred. Composite score bands are **not** separately calibrated for
-#' equivalence/NI conclusions (any endpoint). The fragility component requires
+#' deferred. Composite score bands are **not** calibrated for equivalence/NI
+#' conclusions (any endpoint), and labels are suppressed while those units are
+#' uncalibrated. The fragility component requires
 #' at least one deletion that retains four pairs or eight unpaired observations;
 #' otherwise the analysis raises an insufficient-sample error.
 #'

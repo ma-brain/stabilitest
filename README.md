@@ -14,11 +14,24 @@ analyses into interpretable metrics:
 - **Bootstrap reproducibility probability** (Goodman 1992) — would a replicate
   sample likely reach the same conclusion?
 
-A data-dependent composite score from 0–100 summarises the components. Fixed
-interpretation bands were calibrated using Welch-test simulations; among
-statistically significant simulated results, null false positives averaged
-about 52, while large true effects averaged 71–77 (see the accompanying
-manuscript).
+A data-dependent composite score from 0–100 summarises the components. The
+numeric score and its component metrics are returned for every supported
+method. Categorical interpretation labels are deliberately conservative: the
+current release assigns **Robust**, **Moderately Robust**, or **Fragile** only
+to an applicable, statistically significant `welch_unpaired` result using the
+documented default score definition and weights. Labels are `NA` for
+uncalibrated methods or conclusions, while scores and components remain
+available for descriptive review. The 55/70 thresholds are retained only as
+the narrow Welch calibration; the broader Task 15 simulation is historical
+evidence, not a runtime calibration claim.
+
+Calibration is keyed by the resolved method (`welch_unpaired`, `paired_t`,
+`wilcoxon_rank_sum`, `wilcoxon_signed_rank`, `brunner_munzel`,
+`fisher_exact`, `chi_square_2x2`, `two_sample_prop`, `lm_ancova`,
+`glm_binomial`, `glm_poisson`, `cox_ph`, and the three TOST endpoints). The
+public `robustness_analysis()` dispatcher and its existing `test_type` values
+are unchanged. `lm_ancova` is the next independent calibration target; until
+that work is complete, model labels remain suppressed.
 
 ## Installation
 

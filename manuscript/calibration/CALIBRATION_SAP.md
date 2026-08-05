@@ -8,18 +8,28 @@ design layer, seed, and `n_boot = 1000`.  The estimand is the probability that
 the reported robustness score leads to the correct pre-specified conclusion for
 an independent held-out replicate from the same scenario family.
 
-## Frozen truth classes and score bands
+The runtime policy is deliberately narrower than this simulation plan: numeric
+scores and component metrics are retained for every method, while categorical
+labels are suppressed for uncalibrated methods and conclusions. The only
+active validated label mapping is significant `welch_unpaired` under its
+documented default conditions. The public `robustness_analysis()` dispatcher
+is unchanged. `lm_ancova` is the next independent calibration target.
+
+## Frozen truth classes and simulation score bands
 
 Truth classes are `null`, `borderline`, and `clear`.  A scenario's
 `target_conclusion` is frozen before simulation and is never changed in response
-to observed scores.  Shared score cutoffs are frozen at 55 and 70:
+to observed scores.  For simulation summaries, score cutoffs are frozen at 55
+and 70:
 
 - score ≤ 55: fragile;
 - 55 < score ≤ 70: moderate;
 - score > 70: robust.
 
 Scores are interpreted as evidence about the target conclusion, not as a
-replacement for the primary hypothesis test.
+replacement for the primary hypothesis test. These simulation cutoffs do not
+create runtime labels for any family other than the validated significant
+Welch row; uncalibrated results retain scores/components with labels suppressed.
 
 ## Training and held-out evaluation
 
@@ -166,7 +176,13 @@ declared.
 All changes to scenarios, adapters, package code, or random-number handling
 require a new calibration run and an updated audit manifest.
 
-## Task 15 execution record
+## Task 15 execution record (historical and inactive)
+
+Task 15 used a broad-family `two_sample` calibration identity. Its tables,
+manifests, and validation rows are retained as historical evidence under
+`published/`; they are not active runtime inputs and cannot justify labels for
+paired, rank, binary, model, Cox, or TOST methods. Any reanalysis is
+exploratory. The active registry is `inst/extdata/calibration-registry.csv`.
 
 The publication-grade command was exercised through the locked training →
 freeze → held-out flow using the deterministic reduced fixtures under

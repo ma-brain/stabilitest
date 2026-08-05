@@ -113,6 +113,17 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #' removal, and bootstrap operate on the same observation units as the
 #' continuous API. Barnard's exact test is not implemented in this version.
 #'
+#' Numeric scores and all component metrics are returned for every supported
+#' test. Categorical interpretation labels are assigned only when the resolved
+#' method is an applicable, significant `welch_unpaired` result under the
+#' documented default score definition and weights. Labels are suppressed for
+#' uncalibrated methods and conclusions; the public dispatcher and its existing
+#' `test_type` values are unchanged. Method-specific calibration is represented
+#' by exact units such as `paired_t`, `fisher_exact`, and `two_sample_prop`, not
+#' by a generic `two_sample` calibration identity. The archived Task 15
+#' broad-family simulation is historical evidence only. `lm_ancova` is the
+#' next independent calibration target.
+#'
 #' Rank-based options: `"wilcoxon"` (Mann–Whitney / Wilcoxon rank-sum) assumes
 #' exchangeable distributions under the null (equal shapes/variances for a pure
 #' location interpretation); `"brunner_munzel"` is the unpaired nonparametric
@@ -172,7 +183,8 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'     composite) and related diagnostics. Alias: `metrics` (same tibble).}
 #'   \item{robustness_interpretation}{A calibrated categorical label
 #'     (`"Robust"`, `"Moderately Robust"`, or `"Fragile"`) only for an
-#'     applicable significant Welch result; otherwise `NA`. Alias:
+#'     applicable significant Welch result; otherwise `NA`. Numeric scores and
+#'     component metrics remain available when the label is suppressed. Alias:
 #'     `interpretation_label`.}
 #'   \item{calibration}{Method-specific calibration metadata, including
 #'     applicability, status, cutoffs, version, and provenance.}
