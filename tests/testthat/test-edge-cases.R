@@ -229,6 +229,14 @@ test_that("brunner_munzel is unpaired only and rejects tiny samples", {
         bootstrap_p_sd = 0.01
       ),
       robustness_interpretation = label,
+      calibration = list(
+        calibration_unit = "welch_unpaired",
+        status = "validated_method_specific",
+        applicable = TRUE,
+        cutoff_fragile = 55,
+        cutoff_robust = 70,
+        version = "welch-2026-1"
+      ),
       weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
       sample_info = list(test_type = "t.test"),
       jackknife = list(n_influential = 0L),
@@ -265,6 +273,18 @@ test_that("score bands: exactly 55 is Fragile; exactly 70 is Moderately Robust",
   expect_match(rob$recommendation, "reported with confidence", ignore.case = TRUE)
 })
 
+test_that("legacy result narratives report unknown calibration status", {
+  legacy <- .make_mock_analysis(70)
+  legacy$calibration <- NULL
+  legacy$robustness_interpretation <- "Moderately Robust"
+  narrative <- stabilitest:::generate_interpretation(legacy)
+  expect_match(narrative$overall, "legacy result: calibration status unknown")
+  expect_match(narrative$recommendation, "calibration status is unknown",
+               ignore.case = TRUE)
+  expect_false(grepl("moderate robustness", narrative$recommendation,
+                     ignore.case = TRUE))
+})
+
 # --- print methods ------------------------------------------------------------
 
 test_that("print.robustness_analysis smoke test", {
@@ -292,6 +312,9 @@ test_that("print.robustness_model smoke tests for lm and surv", {
   expect_true(any(grepl("MODEL-BASED ROBUSTNESS ANALYSIS", out_lm)))
   expect_true(any(grepl("Linear model", out_lm)))
   expect_true(any(grepl("OVERALL ROBUSTNESS", out_lm)))
+  expect_true(any(grepl(
+    "categorical bands not calibrated for this method|no categorical band assigned",
+                        out_lm)))
 
   skip_if_not_installed("survival")
   set.seed(1)
@@ -306,6 +329,50 @@ test_that("print.robustness_model smoke tests for lm and surv", {
   out_s <- capture.output(print(rsurv))
   expect_true(any(grepl("Cox proportional hazards", out_s)))
   expect_true(any(grepl("HR =", out_s)))
+})
+
+test_that("model engines attach uncalibrated method-specific metadata", {
+  set.seed(2027)
+  n <- 30
+  dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    x = rnorm(n)
+  )
+  dat$y <- 4 * (dat$arm == "A") + 0.2 * dat$x + rnorm(n, sd = 0.25)
+  lm_result <- robustness_lm(y ~ arm + x, dat, term = "armA",
+                             n_boot = 5, seed = 1)
+
+  dat$binary <- c(rep(c(1, 0, 0), 5),
+                  c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0))
+  binomial_result <- robustness_glm(binary ~ arm + x, dat, term = "armA",
+                                    family = binomial(), n_boot = 5, seed = 2)
+
+  dat$count <- rpois(n, exp(1 + 1.5 * (dat$arm == "A") + 0.1 * dat$x))
+  poisson_result <- robustness_glm(count ~ arm + x, dat, term = "armA",
+                                   family = poisson(), n_boot = 5, seed = 3)
+
+  skip_if_not_installed("survival")
+  surv_dat <- data.frame(
+    arm = factor(rep(c("P", "A"), each = n / 2), levels = c("P", "A")),
+    time = c(rexp(n / 2, rate = 0.25), rexp(n / 2, rate = 0.03)),
+    event = 1L
+  )
+  cox_result <- robustness_surv(survival::Surv(time, event) ~ arm,
+                                surv_dat, term = "armA", n_boot = 5, seed = 4)
+
+  results <- list(lm_result, binomial_result, poisson_result, cox_result)
+  expected_units <- c("lm_ancova", "glm_binomial", "glm_poisson", "cox_ph")
+  expect_identical(
+    unname(vapply(results, function(x) x$calibration$calibration_unit,
+                  character(1))),
+    expected_units
+  )
+  for (result in results) {
+    expect_identical(result$calibration$status, "uncalibrated")
+    expect_false(result$calibration$applicable)
+    expect_true(is.na(result$interpretation_label))
+    expect_true(is.finite(result$metrics$overall_robustness))
+  }
 })
 
 # --- robustness_lm edges ------------------------------------------------------

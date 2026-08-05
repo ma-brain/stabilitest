@@ -61,14 +61,69 @@ validate_fragility_capacity <- function(max_k) {
   }
 }
 
-# Calibrated bands (simulation Section 3): > 70 Robust; (55, 70] Moderately
-# Robust; <= 55 Fragile. Shared by two-sample, model, and TOST paths.
+# Legacy score bands (simulation Section 3): > 70 Robust; (55, 70]
+# Moderately Robust; <= 55 Fragile.  This helper is retained for historical
+# callers only.  Current result wrappers use score_label_from_calibration()
+# after an exact registry/applicability check and never fall back to these
+# thresholds when a method is uncalibrated.
 robustness_band_label <- function(score) {
   dplyr::case_when(
     score > 70 ~ "Robust",
     score > 55 ~ "Moderately Robust",
     TRUE ~ "Fragile"
   )
+}
+
+# Render a composite score together with its calibration status.  Result
+# objects created before method-specific calibration was introduced do not
+# contain a `calibration` field; those objects are explicitly identified as
+# legacy rather than silently receiving the historical Welch cutoffs.
+format_score_interpretation <- function(score, calibration = NULL,
+                                        label = NULL) {
+  if (!is.numeric(score) || length(score) != 1L || !is.finite(score)) {
+    return("NA/100 (calibration status unknown)")
+  }
+
+  if (is.null(calibration) || !is.list(calibration)) {
+    return(sprintf(
+      "%.1f/100 (legacy result: calibration status unknown)", score
+    ))
+  }
+
+  if (identical(calibration$status, "bands_not_applicable")) {
+    return(sprintf(
+      "%.1f/100 (no categorical band assigned because observed conclusion is not eligible)",
+      score
+    ))
+  }
+
+  if (!isTRUE(calibration$applicable) ||
+      !identical(calibration$status, "validated_method_specific")) {
+    return(sprintf(
+      "%.1f/100 (categorical bands not calibrated for this method)", score
+    ))
+  }
+
+  # Applicability resolution guarantees valid cutoffs and labels, but keep
+  # this formatter defensive for hand-built/serialized result objects.
+  if (is.null(label) || length(label) != 1L || is.na(label) ||
+      !nzchar(as.character(label))) {
+    label <- "calibrated"
+  }
+  unit <- calibration$calibration_unit
+  calibration_name <- if (identical(unit, "welch_unpaired")) {
+    "Welch calibration"
+  } else if (is.character(unit) && length(unit) == 1L && !is.na(unit)) {
+    sprintf("%s calibration", unit)
+  } else {
+    "method-specific calibration"
+  }
+  version <- calibration$version
+  if (!is.character(version) || length(version) != 1L || is.na(version) ||
+      !nzchar(version)) {
+    version <- "version unknown"
+  }
+  sprintf("%.1f/100 (%s; %s %s)", score, label, calibration_name, version)
 }
 
 fragility_index_from_removal <- function(removal_tbl, max_k) {
@@ -211,7 +266,9 @@ jackknife_estimate_range <- function(estimate) {
 
 # Cross-class aliases: keep historical primary names and mirror the other
 # family so callers can use either metrics / robustness_metrics and
-# interpretation_label / robustness_interpretation.
+# interpretation_label / robustness_interpretation. Calibration metadata is
+# deliberately not inferred here: each analysis wrapper must attach the exact
+# method-specific resolution before aliases are synchronized.
 align_robustness_result_aliases <- function(out,
                                             style = c("analysis", "model")) {
   style <- match.arg(style)

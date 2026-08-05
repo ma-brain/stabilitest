@@ -13,6 +13,10 @@
 # All reuse a common case-deletion engine: jackknife, greedy worst-case
 # removal (AMIP-style), and case-resampling bootstrap operate on ROWS of the
 # analysis dataset, so covariate adjustment is preserved throughout.
+# Numeric scores and component metrics are always retained. Categorical labels
+# are suppressed until the exact method-specific calibration unit is validated;
+# the only active validated unit is the narrow significant `welch_unpaired`
+# configuration. `lm_ancova` is the next independent calibration target.
 # Companion to robustness_analysis.R (two-sample version); see
 # manuscript/methodological_review.md for the rationale behind the v2 metrics.
 # ==============================================================================
@@ -346,10 +350,9 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
     worstcase = worstcase,
     bootstrap = bootstrap,
     removed_rows = removed_rows,
-    metrics = metrics,
-    interpretation_label = robustness_band_label(metrics$overall_robustness)
+    metrics = metrics
   )
-  align_robustness_result_aliases(out, style = "model")
+  out
 }
 
 # ------------------------------------------------------------------------------
@@ -377,6 +380,9 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 #'   while retaining the engine's minimum analysis size; otherwise the function
 #'   raises an insufficient-sample error rather than returning an unevaluated
 #'   fragility score.
+#'   Numeric scores and component metrics remain available for every ANCOVA
+#'   result. The `lm_ancova` calibration unit is currently uncalibrated, so its
+#'   categorical label is suppressed (`NA`) even when the term is significant.
 #'
 #' @return An object of class `"robustness_model"` (a named list) with:
 #' \describe{
@@ -386,8 +392,12 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 #'     component scores and the overall composite. Alias:
 #'     `robustness_metrics` (same tibble). Shared metric columns match
 #'     [robustness_analysis()] where meanings align.}
-#'   \item{interpretation_label}{`"Robust"`, `"Moderately Robust"`, or
-#'     `"Fragile"`. Alias: `robustness_interpretation`.}
+#'   \item{interpretation_label}{A calibrated categorical label when a
+#'     method-specific calibration is applicable; otherwise `NA`. Scores and
+#'     component metrics are retained when the label is suppressed. Alias:
+#'     `robustness_interpretation`.}
+#'   \item{calibration}{Method-specific calibration metadata, including
+#'     applicability, status, cutoffs, version, and provenance.}
 #'   \item{original_estimate}{Term estimate (`NA` for multi-df joint tests).
 #'     Alias: `original_mean_diff`.}
 #'   \item{jackknife, worstcase, bootstrap, removed_rows}{Component analysis
@@ -455,6 +465,12 @@ robustness_lm <- function(formula, data, term,
   )
   out$model <- paste(deparse(formula), collapse = " ")
   out$type <- "Linear model (lm)"
+  out <- attach_result_calibration(
+    out,
+    calibration_unit = calibration_unit_for_model("lm"),
+    endpoint = "coefficient",
+    conclusion_type = superiority_conclusion_type(out$original_significant)
+  )
   class(out) <- c("robustness_model", "list")
   out
 }
@@ -485,6 +501,9 @@ robustness_lm <- function(formula, data, term,
 #'   Robustness calculations use exactly the rows retained by the full fitted
 #'   model after its `na.action`. At least one further row must be removable
 #'   while retaining the engine's minimum analysis size.
+#'   Numeric scores and component metrics remain available for every Cox
+#'   result. The `cox_ph` calibration unit is currently uncalibrated, so its
+#'   categorical label is suppressed (`NA`) even when the term is significant.
 #'
 #' @return An object of class `"robustness_model"` (a named list). Same engine
 #'   fields as [robustness_lm()] (`original_p`, `metrics`,
@@ -557,6 +576,12 @@ robustness_surv <- function(formula, data, term,
   )
   out$model <- paste(deparse(formula), collapse = " ")
   out$type <- "Cox proportional hazards"
+  out <- attach_result_calibration(
+    out,
+    calibration_unit = calibration_unit_for_model("cox"),
+    endpoint = "hazard_ratio",
+    conclusion_type = superiority_conclusion_type(out$original_significant)
+  )
   class(out) <- c("robustness_model", "list")
   out
 }
@@ -598,8 +623,10 @@ robustness_surv <- function(formula, data, term,
 #'   Complete or quasi-complete separation is handled only via `converged`
 #'   and finite p-values: failed full-data fits error; failed subsets are
 #'   skipped. Firth / bias-reduced logistic regression is not supported.
-#'   Score bands are shared with the ANCOVA / Cox engines and are not
-#'   separately calibrated for GLM.
+#'   Numeric scores and component metrics remain available for every GLM
+#'   result, but the `glm_binomial` and `glm_poisson` units are currently
+#'   uncalibrated and their categorical labels are suppressed (`NA`). The
+#'   historical Task 15 broad-family score bands are not transferable.
 #'
 #' @return An object of class `"robustness_model"` (a named list). Same engine
 #'   fields as [robustness_lm()], plus `family` and `link` recording the GLM
@@ -728,6 +755,12 @@ robustness_glm <- function(formula, data, term,
   out$family <- fam_name
   out$link <- link_name
   out$type <- sprintf("GLM (%s, %s)", fam_name, link_name)
+  out <- attach_result_calibration(
+    out,
+    calibration_unit = calibration_unit_for_model("glm", family = fam_name),
+    endpoint = "coefficient",
+    conclusion_type = superiority_conclusion_type(out$original_significant)
+  )
   class(out) <- c("robustness_model", "list")
   out
 }
@@ -788,8 +821,12 @@ print.robustness_model <- function(x, ...) {
       cat(sprintf("          IRR = %.3f\n", exp(x$original_estimate)))
     }
   }
-  cat(sprintf("\nOVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
-              m$overall_robustness, x$interpretation_label))
+  cat(sprintf("\nOVERALL ROBUSTNESS: %s\n\n",
+              format_score_interpretation(
+                m$overall_robustness,
+                x[["calibration"]],
+                x$interpretation_label
+              )))
   print_robustness_components(x, m, p_label = "p")
   cat("\n")
   if (length(x$removed_rows) > 0 && m$worstcase_fragility_k <= x$max_k) {

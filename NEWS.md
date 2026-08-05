@@ -1,5 +1,19 @@
 # stabilitest (development version)
 
+## Calibration policy
+
+* Added method-specific calibration metadata. Numeric scores and component
+  metrics are retained for every supported method, but categorical labels are
+  emitted only for an applicable significant `welch_unpaired` result under the
+  documented default score definition and weights. Labels are suppressed for
+  uncalibrated methods and conclusions; the public `robustness_analysis()`
+  dispatcher remains unchanged.
+* Removed the generic `two_sample` identity from the active calibration
+  registry. Exact units include `welch_unpaired`, `paired_t`, `fisher_exact`,
+  and `lm_ancova`; the latter is the next independent calibration target.
+  Task 15's broad-family tables and manifests remain archived as historical
+  evidence and are not used for runtime interpretation.
+
 ## Correctness
 
 * Fragility scoring now requires at least one feasible deletion and only reports

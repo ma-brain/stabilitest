@@ -1,0 +1,8 @@
+"analysis_family","conclusion_type","lower_cutoff","upper_cutoff","cutoff_fragile","cutoff_robust","status","applicable","reason"
+"binomial","non_significant",NA,NA,NA,NA,"bands_not_applicable",FALSE,"dedicated non-significant analysis is exploratory; categorical bands are not defined"
+"cox","non_significant",NA,NA,NA,NA,"bands_not_applicable",FALSE,"dedicated non-significant analysis is exploratory; categorical bands are not defined"
+"lm","non_significant",NA,NA,NA,NA,"bands_not_applicable",FALSE,"dedicated non-significant analysis is exploratory; categorical bands are not defined"
+"poisson","non_significant",NA,NA,NA,NA,"bands_not_applicable",FALSE,"dedicated non-significant analysis is exploratory; categorical bands are not defined"
+"proportion","non_significant",NA,NA,NA,NA,"bands_not_applicable",FALSE,"dedicated non-significant analysis is exploratory; categorical bands are not defined"
+"tost","non_significant",NA,NA,NA,NA,"bands_not_applicable",FALSE,"dedicated non-significant analysis is exploratory; categorical bands are not defined"
+"two_sample","non_significant",NA,NA,NA,NA,"bands_not_applicable",FALSE,"dedicated non-significant analysis is exploratory; categorical bands are not defined"

@@ -17,11 +17,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Marius Ally \email{marally@gmail.com}
+\strong{Maintainer}: Marius Ardelean \email{marally@gmail.com}
 
 Authors:
 \itemize{
-  \item Marius Ally \email{marally@gmail.com}
+  \item Marius Ardelean \email{marally@gmail.com}
 }
 
 }

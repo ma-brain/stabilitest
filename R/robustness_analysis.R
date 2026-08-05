@@ -113,6 +113,17 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #' removal, and bootstrap operate on the same observation units as the
 #' continuous API. Barnard's exact test is not implemented in this version.
 #'
+#' Numeric scores and all component metrics are returned for every supported
+#' test. Categorical interpretation labels are assigned only when the resolved
+#' method is an applicable, significant `welch_unpaired` result under the
+#' documented default score definition and weights. Labels are suppressed for
+#' uncalibrated methods and conclusions; the public dispatcher and its existing
+#' `test_type` values are unchanged. Method-specific calibration is represented
+#' by exact units such as `paired_t`, `fisher_exact`, and `two_sample_prop`, not
+#' by a generic `two_sample` calibration identity. The archived Task 15
+#' broad-family simulation is historical evidence only. `lm_ancova` is the
+#' next independent calibration target.
+#'
 #' Rank-based options: `"wilcoxon"` (Mann–Whitney / Wilcoxon rank-sum) assumes
 #' exchangeable distributions under the null (equal shapes/variances for a pure
 #' location interpretation); `"brunner_munzel"` is the unpaired nonparametric
@@ -170,8 +181,13 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'   \item{robustness_metrics}{Component scores (jackknife conclusion
 #'     stability, worst-case fragility, bootstrap reproducibility, overall
 #'     composite) and related diagnostics. Alias: `metrics` (same tibble).}
-#'   \item{robustness_interpretation}{Label: `"Robust"`,
-#'     `"Moderately Robust"`, or `"Fragile"`. Alias: `interpretation_label`.}
+#'   \item{robustness_interpretation}{A calibrated categorical label
+#'     (`"Robust"`, `"Moderately Robust"`, or `"Fragile"`) only for an
+#'     applicable significant Welch result; otherwise `NA`. Numeric scores and
+#'     component metrics remain available when the label is suppressed. Alias:
+#'     `interpretation_label`.}
+#'   \item{calibration}{Method-specific calibration metadata, including
+#'     applicability, status, cutoffs, version, and provenance.}
 #'   \item{original_mean_diff}{Effect summary (mean / HL / proportion
 #'     difference). Alias: `original_estimate`.}
 #'   \item{jackknife, worstcase, extreme, bootstrap}{Component analysis
@@ -486,10 +502,6 @@ robustness_analysis <- function(group1, group2,
     max_k = max_k,
     k_frag_extreme = k_frag_extreme
   )
-  robustness_interpretation <- robustness_band_label(
-    robustness_score$overall_robustness
-  )
-
   # --- sample info ------------------------------------------------------------
   effect_type <- if (is_prop) {
     "prop_diff"
@@ -523,6 +535,29 @@ robustness_analysis <- function(group1, group2,
     info
   }
 
+  # Categorical robustness bands are only calibrated for the documented
+  # default Welch configuration.  Every two-vector result still carries the
+  # numeric score and component metrics, but the label is suppressed whenever
+  # the exact method/conclusion/design has no validated registry entry.
+  calibration_unit <- calibration_unit_for_test(test_type)
+  calibration_endpoint <- switch(
+    effect_type,
+    mean_diff = "mean_difference",
+    hodges_lehmann = "location_shift",
+    prop_diff = "risk_difference",
+    NA_character_
+  )
+  calibration <- resolve_result_calibration(
+    calibration_unit = calibration_unit,
+    endpoint = calibration_endpoint,
+    conclusion_type = superiority_conclusion_type(original_significant),
+    weights = weights,
+    max_removal_pct = max_removal_pct
+  )
+  robustness_interpretation <- score_label_from_calibration(
+    robustness_score$overall_robustness, calibration
+  )
+
   out <- list(
     original_p           = original$p.value,
     original_significant = original_significant,
@@ -533,6 +568,7 @@ robustness_analysis <- function(group1, group2,
 
     robustness_metrics        = robustness_score,
     robustness_interpretation = robustness_interpretation,
+    calibration               = calibration,
     weights                   = weights,
     alpha                     = alpha,
     max_removal_pct           = max_removal_pct,
@@ -597,11 +633,16 @@ generate_interpretation <- function(x) {
     "chisq"           = "chi-square test of independence",
     "prop"            = "two-sample proportion test")
 
+  score_summary <- format_score_interpretation(
+    m$overall_robustness,
+    x[["calibration"]],
+    x$robustness_interpretation
+  )
   overall <- sprintf(
-    "The %s yielded a %s result (p = %.4f, alpha = %.2f). Overall robustness score: %.1f/100 ('%s'; weights %s).",
+    "The %s yielded a %s result (p = %.4f, alpha = %.2f). Overall robustness score: %s (weights %s).",
     test_name,
     ifelse(x$original_significant, "statistically significant", "non-significant"),
-    x$original_p, alpha, m$overall_robustness, x$robustness_interpretation,
+    x$original_p, alpha, score_summary,
     paste(sprintf("%s=%.2f", names(x$weights), x$weights), collapse = ", "))
 
   jack_level <- case_when(
@@ -635,12 +676,30 @@ generate_interpretation <- function(x) {
     m$bootstrap_p_mean, m$bootstrap_p_sd,
     x$bootstrap$p_percentile_interval[1], x$bootstrap$p_percentile_interval[2])
 
-  recommendation <- if (m$overall_robustness > 70) {
-    "The result is stable across all sensitivity analyses and can be reported with confidence."
-  } else if (m$overall_robustness > 55) {
-    "The result shows moderate robustness. Report the component metrics transparently, review flagged observations for data quality and clinical plausibility, and add a rank-based supplementary analysis. Interpret with appropriate caution."
+  calibration <- x[["calibration"]]
+  recommendation <- if (is.null(calibration) || !is.list(calibration)) {
+    "Calibration status is unknown for this legacy result. Review the numeric score and component metrics; no categorical robustness recommendation is assigned."
+  } else if (identical(calibration$status, "bands_not_applicable")) {
+    "No categorical band is assigned because the observed conclusion is not eligible. Review the numeric score and component metrics; no categorical robustness recommendation is assigned."
+  } else if (!isTRUE(calibration$applicable) ||
+             !identical(calibration$status, "validated_method_specific")) {
+    "Categorical bands are not calibrated for this method. Review the numeric score and component metrics; no categorical robustness recommendation is assigned."
   } else {
-    "The result is fragile. Treat it as exploratory: review influential observations, run non-parametric alternatives, investigate data quality, and seek confirmation in an independent, adequately powered study."
+    cutoff_fragile <- calibration$cutoff_fragile
+    cutoff_robust <- calibration$cutoff_robust
+    if (is.numeric(cutoff_fragile) && length(cutoff_fragile) == 1L &&
+        is.numeric(cutoff_robust) && length(cutoff_robust) == 1L &&
+        is.finite(cutoff_fragile) && is.finite(cutoff_robust)) {
+      if (m$overall_robustness > cutoff_robust) {
+        "The result is stable across all sensitivity analyses and can be reported with confidence."
+      } else if (m$overall_robustness > cutoff_fragile) {
+        "The result shows moderate robustness. Report the component metrics transparently, review flagged observations for data quality and clinical plausibility, and add a rank-based supplementary analysis. Interpret with appropriate caution."
+      } else {
+        "The result is fragile. Treat it as exploratory: review influential observations, run non-parametric alternatives, investigate data quality, and seek confirmation in an independent, adequately powered study."
+      }
+    } else {
+      "Calibration cutoffs are unavailable for this result. Review the numeric score and component metrics; no categorical robustness recommendation is assigned."
+    }
   }
 
   report <- paste(
@@ -723,8 +782,12 @@ print.robustness_analysis <- function(x, show_interpretation = TRUE, ...) {
                 ifelse(x$original_significant, "significant", "non-significant")))
   }
 
-  cat(sprintf("OVERALL ROBUSTNESS: %.1f/100 (%s)\n\n",
-              m$overall_robustness, x$robustness_interpretation))
+  cat(sprintf("OVERALL ROBUSTNESS: %s\n\n",
+              format_score_interpretation(
+                m$overall_robustness,
+                x[["calibration"]],
+                x$robustness_interpretation
+              )))
 
   cat("COMPONENTS:\n")
   cat(sprintf("  Jackknife stability:        %5.1f%%  (influential: %d)\n",

@@ -54,6 +54,9 @@ as a removal fragility index.
 Robustness calculations use exactly the rows retained by the full fitted
 model after its \code{na.action}. At least one further row must be removable
 while retaining the engine's minimum analysis size.
+Numeric scores and component metrics remain available for every Cox
+result. The \code{cox_ph} calibration unit is currently uncalibrated, so its
+categorical label is suppressed (\code{NA}) even when the term is significant.
 }
 \examples{
 if (requireNamespace("survival", quietly = TRUE)) {

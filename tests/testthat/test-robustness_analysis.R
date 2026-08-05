@@ -33,6 +33,137 @@ test_that("all continuous test types run", {
   }
 })
 
+test_that("significant default Welch has narrow calibrated metadata", {
+  set.seed(41)
+  result <- robustness_analysis(
+    rep(3, 12) + rnorm(12, 0, .1),
+    rep(0, 12) + rnorm(12, 0, .1),
+    test_type = "t.test", n_boot = 10, seed = 41
+  )
+
+  expect_identical(result$calibration$calibration_unit, "welch_unpaired")
+  expect_identical(result$calibration$endpoint, "mean_difference")
+  expect_true(result$calibration$applicable)
+  expect_identical(result$calibration$status, "validated_method_specific")
+  expect_match(result$robustness_interpretation,
+               "Robust|Moderately Robust|Fragile")
+})
+
+test_that("non-Welch two-vector methods keep scores but suppress labels", {
+  fx <- list(
+    g1 = c(rep(1, 12), rep(0, 3)),
+    g2 = c(rep(1, 3), rep(0, 12))
+  )
+  set.seed(42)
+  x <- rnorm(12, 3)
+  y <- rnorm(12)
+  bm_x <- c(1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 1, 1)
+  bm_y <- c(3, 3, 4, 3, 1, 2, 3, 1, 1, 5, 4)
+  methods <- list(
+    paired.t.test = list(g1 = x, g2 = y),
+    wilcoxon = list(g1 = x, g2 = y),
+    wilcoxon.paired = list(g1 = x, g2 = y),
+    brunner_munzel = list(g1 = bm_x, g2 = bm_y),
+    fisher = fx,
+    chisq = fx,
+    prop = fx
+  )
+
+  results <- lapply(names(methods), function(method) {
+    args <- c(
+      list(group1 = methods[[method]]$g1, group2 = methods[[method]]$g2),
+      list(test_type = method, n_boot = 10, seed = 42)
+    )
+    do.call(robustness_analysis, args)
+  })
+  expect_true(all(vapply(results, function(x) {
+    is.numeric(x$robustness_metrics$overall_robustness)
+  }, logical(1))))
+  expect_true(all(vapply(results, function(x) {
+    is.na(x$robustness_interpretation)
+  }, logical(1))))
+  expect_false(any(vapply(results, function(x) {
+    identical(x$calibration$calibration_unit, "two_sample")
+  }, logical(1))))
+})
+
+test_that("print and narrative output expose calibration status", {
+  x <- c(2, 2.1, 1.9, 2.2, 2.0, 2.1, 1.8, 2.2, 2.1, 1.9)
+  y <- c(0, 0.1, -0.1, 0.2, 0.0, 0.15, -0.2, 0.25, 0.1, -0.1)
+
+  calibrated <- robustness_analysis(x, y, test_type = "t.test",
+                                    n_boot = 10, seed = 42,
+                                    interpret = TRUE)
+  calibrated_text <- capture.output(print(calibrated))
+  expect_true(any(grepl("Welch calibration", calibrated_text)))
+  expect_true(any(grepl("Robust|Moderately Robust|Fragile",
+                         calibrated_text)))
+
+  uncalibrated <- robustness_analysis(x, y, test_type = "paired.t.test",
+                                      n_boot = 10, seed = 42,
+                                      interpret = TRUE)
+  uncalibrated_text <- capture.output(print(uncalibrated))
+  expect_true(any(grepl("OVERALL ROBUSTNESS: [0-9.]+/100",
+                        uncalibrated_text)))
+  expect_true(any(grepl("categorical bands not calibrated for this method",
+                        uncalibrated_text)))
+  expect_false(any(grepl("\\((Robust|Moderately Robust|Fragile)\\)",
+                         uncalibrated_text)))
+  expect_true(grepl("categorical bands not calibrated for this method",
+                    uncalibrated$interpretation$overall))
+  expect_true(grepl("component metrics",
+                    uncalibrated$interpretation$recommendation))
+})
+
+test_that("inapplicable conclusions have a distinct display status", {
+  result <- robustness_analysis(
+    seq(-1, 1, length.out = 12), seq(-1, 1, length.out = 12),
+    test_type = "t.test", n_boot = 10, seed = 41, interpret = TRUE
+  )
+  text <- capture.output(print(result))
+  expect_true(any(grepl(
+    "no categorical band assigned because observed conclusion is not eligible",
+    text
+  )))
+  expect_false(any(grepl(
+    "categorical bands not calibrated for this method", text
+  )))
+  expect_true(grepl(
+    "observed conclusion is not eligible",
+    result$interpretation$recommendation
+  ))
+})
+
+test_that("Welch labels are suppressed outside the validated design", {
+  set.seed(41)
+  x <- rep(3, 12) + rnorm(12, 0, .1)
+  y <- rep(0, 12) + rnorm(12, 0, .1)
+
+  non_significant <- robustness_analysis(
+    seq(-1, 1, length.out = 12), seq(-1, 1, length.out = 12),
+    test_type = "t.test", n_boot = 10, seed = 41
+  )
+  expect_false(non_significant$original_significant)
+  expect_identical(non_significant$calibration$status, "bands_not_applicable")
+  expect_true(is.na(non_significant$robustness_interpretation))
+
+  custom_weights <- robustness_analysis(
+    x, y, test_type = "t.test", n_boot = 10, seed = 41,
+    weights = c(jackknife = 0.3, fragility = 0.5, bootstrap = 0.2)
+  )
+  expect_true(custom_weights$original_significant)
+  expect_identical(custom_weights$calibration$status, "uncalibrated")
+  expect_true(is.na(custom_weights$robustness_interpretation))
+
+  custom_budget <- robustness_analysis(
+    x, y, test_type = "t.test", n_boot = 10, seed = 41,
+    max_removal_pct = 0.25
+  )
+  expect_true(custom_budget$original_significant)
+  expect_identical(custom_budget$calibration$status, "uncalibrated")
+  expect_true(is.na(custom_budget$robustness_interpretation))
+})
+
 test_that("wilcoxon and brunner_munzel report Hodges-Lehmann shift", {
   set.seed(42)
   x <- rnorm(20); y <- rnorm(20, 1)
@@ -474,8 +605,8 @@ test_that("non-significant two-sample results are handled", {
   expect_false(res$original_significant)
   expect_gte(res$robustness_metrics$overall_robustness, 0)
   expect_lte(res$robustness_metrics$overall_robustness, 100)
-  expect_match(res$robustness_interpretation,
-               "Robust|Moderately Robust|Fragile")
+  expect_true(is.na(res$robustness_interpretation))
+  expect_identical(res$calibration$status, "bands_not_applicable")
 })
 
 test_that("borderline significant results can be fragile", {

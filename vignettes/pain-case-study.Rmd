@@ -31,9 +31,9 @@ library(stabilitest)
 2. **Worst-case removal** — greedy adversarial deletion in the spirit of the maximum influence perturbation of Broderick, Giordano & Meager (2023). The resulting *removal fragility index* is the size of an identified subset whose removal flips the significance conclusion (an upper bound on the minimal such set).
 3. **Bootstrap reproducibility probability** (Goodman, 1992) — would a replicate sample drawn from the observed effect likely reach the same conclusion?
 
-A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Primary interpretation should stay with the component metrics; the composite is a communication heuristic calibrated by simulation (see the accompanying manuscript).
+A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. Categorical labels are suppressed for uncalibrated methods and conclusions; only an applicable significant `welch_unpaired` result receives the Robust / Moderately Robust / Fragile label. The public `robustness_analysis()` dispatcher is unchanged. `lm_ancova` is the next independent calibration target.
 
-> **Status.** Experimental (v0.5.0). API and band cut-offs may evolve. Bands below apply to *significant* primary results.
+> **Status.** Experimental (v0.5.0). API and calibration metadata may evolve. The current 55/70 bands apply only to the documented significant Welch configuration. The broader Task 15 simulation is historical evidence, not an active calibration for other methods.
 
 ## Pain trial case study
 
@@ -66,7 +66,7 @@ Key deterministic takeaways that match the manuscript case study:
 - Primary Welch test: mean difference (treatment − placebo) about −11.4, *p* ≈ 0.0018.
 - Jackknife conclusion stability 100% across all leave-one-out deletions (near-perfect LOO stability mostly reflects *n* ≈ 55, not invulnerability).
 - Worst-case fragility index **k = 6** (about 11% of the sample); *p* rises to ≈ 0.060 after the sixth greedy deletion.
-- Overall score lands in the **Robust** band when bootstrap reproducibility is high (manuscript: ~72.5/100 with `B = 2000`).
+- Overall score lands in the **Robust** band when bootstrap reproducibility is high (historical manuscript reference: ~72.5/100 with `B = 2000`; the label is applicable here because this is the documented Welch configuration).
 
 Optional diagnostic plots (removal *p*-value trajectories and the bootstrap *p* distribution):
 
@@ -74,7 +74,7 @@ Optional diagnostic plots (removal *p*-value trajectories and the bootstrap *p* 
 plot(res)
 ```
 
-Set `interpret = TRUE` to attach a narrative report (`res$interpretation$report`) that restates the components and a band-based recommendation.
+Set `interpret = TRUE` to attach a narrative report (`res$interpretation$report`) that restates the components and, when calibration is applicable, a band-based recommendation. For an uncalibrated result, the report retains numeric information but suppresses the categorical label.
 
 ## Choosing an analysis
 
@@ -183,22 +183,26 @@ fields: `metrics` / `robustness_metrics`, `interpretation_label` /
 Component objects remain class-specific, so inspect `str(result)` or the
 function's `Value` help section before writing downstream extraction code.
 
-## Interpretation bands
+## Interpretation policy
 
-With default weights, bands were calibrated by simulation *conditional on a significant result* (the setting in which the framework is usually consulted):
+The numeric score and all component metrics remain available regardless of the
+test family, endpoint, or conclusion. The active runtime registry has one
+validated row: significant `welch_unpaired` with the default score definition,
+weights, and documented independent-groups conditions. Only that row uses the
+55/70 labels:
 
 | Overall score | Label | Typical simulation profile |
 |---------------|-------|----------------------------|
-| > 70 | **Robust** | True large effects (mean score ~75) |
-| (55, 70] | **Moderately Robust** | True moderate effects; report components transparently |
-| ≤ 55 | **Fragile** | Chance-significant findings under H₀ (mean score ~52) |
+| > 70 | **Robust** | Narrow Welch calibration |
+| (55, 70] | **Moderately Robust** | Narrow Welch calibration |
+| ≤ 55 | **Fragile** | Narrow Welch calibration |
 
 Exact 70 is Moderately Robust; exact 55 is Fragile.
 
 In code:
 
 ```{r bands-logic, eval = FALSE}
-# As implemented in robustness_analysis():
+# As implemented for an applicable significant welch_unpaired result:
 #   > 70  -> "Robust"              # score > 70
 #   > 55  -> "Moderately Robust"   # (55, 70]
 #   else  -> "Fragile"             # score ≤ 55
@@ -211,14 +215,18 @@ Practical reading of the components alongside the label:
 - **Bootstrap reproducibility** reflects strength of evidence at the *observed* effect size, not robustness to contamination: a marginal *p*-value yields low reproducibility even in clean data. That is why its default weight is only 0.2.
 - **Extreme-value removal** can look much more reassuring than worst-case removal; the gap between the two indices is informative and should not be ignored.
 
-For **non-significant** primary results the composite bands are **not** calibrated the same way — adversarial removal can manufacture significance in almost any null sample. Prefer the component metrics directly.
+For every other method-specific unit (including paired t, rank tests, binary
+tests, model terms, Cox, and TOST) and for non-significant or otherwise
+inapplicable conclusions, `interpretation_label` is `NA`. Prefer the numeric
+score and component metrics directly. Task 15's broad-family 55/70 tables are
+archived under `manuscript/calibration/published/` as historical evidence only.
 
 ## Brief caveats
 
 - The greedy fragility index is an *upper bound* on the size of a minimal overturning subset; a smaller set may exist.
 - Binary significance framing inherits the usual knife-edge problem near α; always inspect the *p*-value trajectory, not only *k*_frag.
 - Adversarial removal asks “could the data support the opposite conclusion?” and should complement, not replace, assumption-based sensitivity analyses (missing data, model form).
-- Calibration was performed for the Welch test under normality with directional contamination; ANCOVA, GLM, Cox, and TOST/NI engines share the same scoring logic but are not yet separately calibrated.
+- Calibration is retained only for the narrowly documented Welch test under normality with directional contamination. ANCOVA, GLM, Cox, proportion, rank, and TOST/NI engines share the scoring logic but remain uncalibrated; `lm_ancova` is the next independent calibration project.
 - Pre-specify weights, `max_removal_pct`, and bands in the SAP when used in confirmatory work.
 
 Further methodological detail, simulation tables, and reporting templates are in the accompanying manuscript / methodological notes (development source tree and related project materials). For model-based terms see `robustness_lm()`, `robustness_glm()`, and `robustness_surv()`.

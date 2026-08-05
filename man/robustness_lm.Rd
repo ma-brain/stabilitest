@@ -41,8 +41,12 @@ term test (\code{estimate} is \code{NA} for multi-df joint tests).}
 component scores and the overall composite. Alias:
 \code{robustness_metrics} (same tibble). Shared metric columns match
 \code{\link[=robustness_analysis]{robustness_analysis()}} where meanings align.}
-\item{interpretation_label}{\code{"Robust"}, \code{"Moderately Robust"}, or
-\code{"Fragile"}. Alias: \code{robustness_interpretation}.}
+\item{interpretation_label}{A calibrated categorical label when a
+method-specific calibration is applicable; otherwise \code{NA}. Scores and
+component metrics are retained when the label is suppressed. Alias:
+\code{robustness_interpretation}.}
+\item{calibration}{Method-specific calibration metadata, including
+applicability, status, cutoffs, version, and provenance.}
 \item{original_estimate}{Term estimate (\code{NA} for multi-df joint tests).
 Alias: \code{original_mean_diff}.}
 \item{jackknife, worstcase, bootstrap, removed_rows}{Component analysis
@@ -67,6 +71,9 @@ model after its \code{na.action}. At least one further row must be removable
 while retaining the engine's minimum analysis size; otherwise the function
 raises an insufficient-sample error rather than returning an unevaluated
 fragility score.
+Numeric scores and component metrics remain available for every ANCOVA
+result. The \code{lm_ancova} calibration unit is currently uncalibrated, so its
+categorical label is suppressed (\code{NA}) even when the term is significant.
 }
 \examples{
 set.seed(1)
