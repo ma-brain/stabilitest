@@ -389,6 +389,16 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
       "uncalibrated", "Calibration registry could not be loaded"
     ))
   }
+  registry_error <- tryCatch({
+    validate_calibration_registry(registry)
+    NULL
+  }, error = function(e) e)
+  if (inherits(registry_error, "error")) {
+    return(.uncalibrated_result(
+      unit, endpoint_value, conclusion,
+      "uncalibrated", "Calibration registry failed validation"
+    ))
+  }
 
   # A non-significant superiority result, or an unsuccessful equivalence/NI
   # result, has no robustness band by definition.  It is not a missing row.
@@ -440,11 +450,19 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
 }
 
 score_label_from_calibration <- function(score, calibration) {
-  if (!isTRUE(calibration$applicable) ||
-      !is.numeric(score) || length(score) != 1L || is.na(score)) {
+  if (!is.list(calibration) || !isTRUE(calibration$applicable) ||
+      !is.numeric(score) || length(score) != 1L || !is.finite(score)) {
     return(NA_character_)
   }
-  if (score > calibration$cutoff_robust) return("Robust")
-  if (score > calibration$cutoff_fragile) return("Moderately Robust")
+  cutoff_fragile <- calibration$cutoff_fragile
+  cutoff_robust <- calibration$cutoff_robust
+  if (!is.numeric(cutoff_fragile) || length(cutoff_fragile) != 1L ||
+      !is.finite(cutoff_fragile) ||
+      !is.numeric(cutoff_robust) || length(cutoff_robust) != 1L ||
+      !is.finite(cutoff_robust) || cutoff_fragile >= cutoff_robust) {
+    return(NA_character_)
+  }
+  if (score > cutoff_robust) return("Robust")
+  if (score > cutoff_fragile) return("Moderately Robust")
   "Fragile"
 }

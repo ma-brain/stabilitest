@@ -360,3 +360,36 @@ test_that("score labels require applicable calibration", {
   )
   expect_true(is.na(score_label_from_calibration(80, uncalibrated)))
 })
+
+test_that("caller-supplied malformed registries fail closed", {
+  malformed <- .valid_calibration_registry()
+  malformed$cutoff_fragile <- NA_real_
+
+  result <- resolve_result_calibration(
+    "welch_unpaired", "mean_difference", "significant",
+    c(jackknife = .4, fragility = .4, bootstrap = .2), .30,
+    registry = malformed
+  )
+  expect_false(result$applicable)
+  expect_identical(result$status, "uncalibrated")
+  expect_true(all(is.na(c(result$cutoff_fragile, result$cutoff_robust))))
+
+  expect_false(resolve_result_calibration(
+    "welch_unpaired", "mean_difference", "significant",
+    c(jackknife = .4, fragility = .4, bootstrap = .2), .30,
+    registry = data.frame(not_a_registry = 1)
+  )$applicable)
+})
+
+test_that("malformed calibration metadata suppresses score labels", {
+  malformed <- list(
+    list(applicable = TRUE, cutoff_fragile = NA_real_, cutoff_robust = 70),
+    list(applicable = TRUE, cutoff_fragile = 55, cutoff_robust = Inf),
+    list(applicable = TRUE, cutoff_fragile = c(55, 56), cutoff_robust = 70),
+    list(applicable = TRUE, cutoff_fragile = 70, cutoff_robust = 55),
+    NULL
+  )
+  for (calibration in malformed) {
+    expect_true(is.na(score_label_from_calibration(80, calibration)))
+  }
+})
