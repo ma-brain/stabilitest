@@ -5,6 +5,25 @@
 **Status:** Gate A infrastructure frozen; active package registry remains
 `uncalibrated` until Gate B.
 
+## Gate A verification
+
+| Field | Value |
+| --- | --- |
+| Reviewed commit | `96141f2f3df6c45d3cc04f5c5c9696f56473a3bc` |
+| Date | 2026-08-06 |
+| `git diff --check` | PASS |
+| Documentation audit | PASS |
+| Package `devtools::test()` | PASS (663) |
+| Shared calibration tests | PASS |
+| Study-local tests | PASS |
+| ANCOVA vignette render | PASS |
+| `roxygen2::roxygenise()` drift | none |
+| `rcmdcheck --as-cran` | 0 errors, 0 warnings, accepted `New submission` NOTE only |
+
+No source changes were required by verification. Machine-readable stamp:
+`artifacts/summaries/GATE_A_REVIEW.json`. Fold the same hash into the pilot
+manifest when Task 14 creates the pilot run.
+
 ## Scope
 
 Bands apply only to eligible significant canonical 1-df ANCOVA treatment
