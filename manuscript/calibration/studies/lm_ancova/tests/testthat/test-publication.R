@@ -122,7 +122,8 @@ test_that("atomic publication writes compact outputs and a complete hash ledger"
     "completed_training.rds", "audit_training.rds", "occupancy.csv",
     "failures.csv", "power_verification.csv", "candidate.rds",
     "validation.rds", "registry.csv", "registry.rds",
-    "training_manifest.rds", "validation_manifest.rds", "hash_ledger.rds"
+    "training_manifest.rds", "validation_manifest.rds"
   ) %in% basename(names(ledger))))
   testthat::expect_true(file.exists(file.path(destination, "hash_ledger.rds")))
+  testthat::expect_false("hash_ledger.rds" %in% names(ledger))
 })

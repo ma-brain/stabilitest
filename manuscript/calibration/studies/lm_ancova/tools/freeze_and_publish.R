@@ -88,8 +88,6 @@ lm_ancova_publish_atomic <- function(artifacts, destination,
 
   ledger <- lm_ancova_hash_ledger(written)
   ledger_path <- .lm_ancova_write_artifact(ledger, file.path(staging, "hash_ledger.rds"))
-  written[["hash_ledger.rds"]] <- ledger_path
-  ledger <- lm_ancova_hash_ledger(written)
 
   # Replace destination contents atomically from the staging directory.
   if (dir.exists(destination)) {
@@ -103,5 +101,8 @@ lm_ancova_publish_atomic <- function(artifacts, destination,
     file.path(destination, names(written)),
     names(written)
   )
-  lm_ancova_hash_ledger(final_paths)
+  final_ledger <- lm_ancova_hash_ledger(final_paths)
+  # Persist the destination-resolved ledger without hashing itself.
+  saveRDS(final_ledger, file.path(destination, "hash_ledger.rds"), version = 2)
+  final_ledger
 }

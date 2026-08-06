@@ -32,12 +32,12 @@
 )
 
 .lm_ancova_study_root <- function(script_path = .lm_ancova_study_script_file) {
-  if (!is.null(script_path)) {
+  if (!is.null(script_path) && nzchar(script_path)) {
     return(dirname(dirname(normalizePath(script_path, mustWork = TRUE))))
   }
 
   # Fallback when sourced without ofile: walk from getwd() looking for the
-  # study markers.
+  # study markers, then try the conventional project-relative study path.
   candidate <- normalizePath(getwd(), mustWork = TRUE)
   repeat {
     markers <- file.path(
@@ -46,6 +46,13 @@
     )
     if (all(file.exists(markers))) {
       return(candidate)
+    }
+    nested <- file.path(
+      candidate, "manuscript", "calibration", "studies", "lm_ancova"
+    )
+    nested_markers <- file.path(nested, c("R/load_study.R", "config/scenarios.R"))
+    if (all(file.exists(nested_markers))) {
+      return(normalizePath(nested, mustWork = TRUE))
     }
     parent <- dirname(candidate)
     if (identical(parent, candidate)) {
