@@ -18,7 +18,8 @@ test_that("the active registry has no generic two_sample calibration key", {
 test_that("the calibration documentation audit passes", {
   root <- normalizePath(testthat::test_path("..", ".."))
   audit <- file.path(root, "tools", "check-calibration-documentation.R")
-  expect_true(file.exists(audit), info = "audit script is missing")
+  skip_if_not(file.exists(audit),
+              "audit script is not shipped in the package tarball")
   status <- system2(
     file.path(R.home("bin"), "Rscript"), audit,
     stdout = TRUE, stderr = TRUE
@@ -33,7 +34,8 @@ test_that("the proportions Phase 1 SAP freezes the key constants", {
   root <- normalizePath(testthat::test_path("..", ".."))
   sap <- file.path(root, "manuscript", "calibration", "studies",
                    "binary_proportion", "CALIBRATION_SAP.md")
-  expect_true(file.exists(sap), info = "proportions SAP is missing")
+  skip_if_not(file.exists(sap),
+              "proportions SAP is not shipped in the package tarball")
   text <- paste(readLines(sap, warn = FALSE), collapse = "\n")
   expect_true(grepl("fragility = 0.5.*bootstrap = 0.5.*jackknife = 0", text))
   expect_true(grepl("clear exact power 0.95", text))
