@@ -1,0 +1,10 @@
+{
+  "study": "lm_ancova_v3",
+  "phase": "phase1_track_e_production",
+  "workers_plan_frozen_max": 4,
+  "workers_authorized_sequence": [10, 6, 4, 2],
+  "workers_effective": 2,
+  "deviation": "Human authorized workers above frozen max 4 (10 then 6). WSL OOM persisted at 4 workers after raising WSL RAM to 48GB (~12GB RSS per forked R child). Production completed at workers=2. Assemble/publish from scenario checkpoints after aborting a hung gzip saveRDS of run-results.rds. No other frozen constants changed.",
+  "host": "Windows + WSL2 Ubuntu; native clone ~/stabilitest-lm-ancova-v3-prod",
+  "code_commit": "b3c9288337c143a7614e05057be1339fc95cb974"
+}
