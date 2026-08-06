@@ -35,6 +35,9 @@ src/*.dll
 /manuscript/calibration/artifacts/checkpoints/
 /manuscript/calibration/artifacts/raw/
 /manuscript/calibration/artifacts/pilot/
+/manuscript/calibration/studies/lm_ancova/artifacts/checkpoints/
+/manuscript/calibration/studies/lm_ancova/artifacts/raw/
+/manuscript/calibration/studies/lm_ancova/artifacts/pilot/
 
 # Dependencies / docs
 .Rlib/
