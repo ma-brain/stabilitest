@@ -129,6 +129,25 @@
 }
 
 .calibration_target_by_stratum <- function(scenario, plan) {
+  screening <- NULL
+  if (is.data.frame(scenario) && "parameters" %in% names(scenario) &&
+      nrow(scenario) >= 1L && is.list(scenario$parameters[[1L]])) {
+    screening <- scenario$parameters[[1L]]$screening
+  } else if (is.list(scenario) && is.list(scenario$parameters)) {
+    params <- scenario$parameters
+    if (length(params) == 1L && is.list(params[[1L]]) &&
+        !is.null(params[[1L]]$screening)) {
+      screening <- params[[1L]]$screening
+    } else {
+      screening <- params$screening
+    }
+  }
+  if (is.list(screening) && length(screening$conclusions)) {
+    target <- as.integer(screening$target_n)
+    keys <- paste(scenario$truth_class[[1L]], screening$conclusions, sep = "::")
+    return(stats::setNames(rep(target, length(keys)), keys))
+  }
+
   target <- if (is.null(plan$replicates_per_stratum)) {
     # The publication contract requires at least 500 completed core analyses;
     # use that frozen lower bound when no pilot quota is supplied.
