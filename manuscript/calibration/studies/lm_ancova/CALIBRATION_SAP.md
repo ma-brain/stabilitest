@@ -102,6 +102,26 @@ analyses, 0 analysis failures, 9 incomplete null screens under the pilot
 `max_screen_draws=250` cap, validation not accessed. Compact stamp:
 `artifacts/summaries/execution-freeze.json`.
 
+## Training outcome (Gate A production)
+
+| Field | Value |
+| --- | --- |
+| Workers | `4` (reduced from 10 after host OOM/Cursor crash) |
+| Core completed | `2700` (`100` per core scenario) |
+| Stress completed | `600` (diagnostic only; not used in fitting) |
+| Analysis failures | `0` |
+| Validation accessed | `FALSE` |
+| Candidate status | `uncalibrated` |
+| Reason | `no_feasible_thresholds` |
+| Candidate hash | `9ccfc2fca7c0a07c19a3a18838e9a3f2` |
+| Training artifact hash | `f552139cea8e573e45196607f71550d2` |
+| Assembled from | scenario `checkpoints/full` (parent died after writing monolithic `run-results.rds`) |
+
+No feasible `(L, U)` pair satisfied the frozen training constraints. Held-out
+validation is **not** opened. Compact stamps:
+`artifacts/summaries/candidate-diagnostics.json`,
+`artifacts/summaries/training-manifest.json`.
+
 ## Screening quotas and failures
 
 - Screen with the same coefficient test as `robustness_lm()`
