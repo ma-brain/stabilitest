@@ -46,9 +46,8 @@
   if (!is.null(violation_type) && nzchar(as.character(violation_type))) {
     vt <- as.character(violation_type)
     generator$stress <- vt
-    if (identical(vt, "allocation_2to1")) {
-      generator$allocation <- 2 / 3
-    }
+    # Nominal allocation stays 0.5 for all cells (identical clean-solved effect).
+    # The adapter applies 2:1 sampling for allocation_2to1 at generate time.
     if (identical(vt, "missing_baseline")) {
       generator$missing_rate <- 0.10
     }

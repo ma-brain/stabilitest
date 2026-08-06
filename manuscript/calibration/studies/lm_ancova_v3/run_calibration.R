@@ -67,13 +67,6 @@ prepare_lm_ancova_v3_runner <- function(project_root = NULL, study_root = NULL,
         call. = FALSE
       )
     }
-    # Adapter arrives in Task 5; until then surface a clear missing-hook error.
-    if (!exists("lm_ancova_v3_adapter", envir = envir, inherits = TRUE)) {
-      stop(
-        "lm_ancova_v3_adapter is not loaded yet (Task 5 tooling)",
-        call. = FALSE
-      )
-    }
     get("lm_ancova_v3_adapter", envir = envir, inherits = TRUE)()
   }
 
