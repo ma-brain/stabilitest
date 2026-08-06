@@ -79,11 +79,29 @@ analytic projection 0.54–0.58 → v1-preview 0.542 → v2-empirical 0.554, whi
 the frozen location metrics all said GO. Any future categorical attempt must
 use a feasibility-projection pilot metric rather than location GO/NO-GO.
 
-**What remains.** Track E (pre-registered violation-detection ΔAUC among
-significant results) will be appended to this section when published. The
-replication-probability curve target (Track D) is parked pending the
-binary-proportion study’s replication-curve outcome and is not executed in
-this Phase 1 plan. Categorical labels stay suppressed for all ANCOVA units.
+**Track E (violation detection) — not confirmed.** The pre-registered Phase 1
+study `lm_ancova_v3` tested whether, among significant clear ANCOVA rows, the
+jackknife-light score (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`)
+discriminates assumption-violated data from clean data better than the
+p-value. Quotas were met (2,100 completed, 0 failed; ≥100 significant per
+primary cell; ≤5% failures). The frozen gate required pooled
+ΔAUC = AUC_score − AUC_p ≥ 0.10 **and** scenario-cluster bootstrap 95% CI
+lower bound > 0 (seed `20260807`, B = 1000). Observed pooled values:
+AUC_score = 0.5569, AUC_p = 0.5516, **ΔAUC = 0.0053**, CI
+**[−0.1109, 0.1289]**. Verdict: **not confirmed**
+(`studies/lm_ancova_v3/published/TRACK_E_VERDICT.json`, md5
+`8fe6c66f28b5c788a637eff0cb8a3029`). Per-violation ΔAUC was descriptive only
+(largest +0.060 for 2:1 allocation; others near zero or slightly negative;
+`track-e-per-violation.csv`). This is an honest bound on the score’s added
+value beyond p under the frozen violation suite: the score does not clear the
+pre-registered discrimination gate. Compact publication artifacts and the
+hash ledger are under `studies/lm_ancova_v3/published/`. No package registry
+or runtime behavior change follows.
+
+**What remains.** The replication-probability curve target (Track D) stays
+parked pending the binary-proportion study’s replication-curve outcome and
+explicit human un-parking; seed ranges `51001+` / `52001+` / `53001+` remain
+reserved. Categorical labels stay suppressed for all ANCOVA units.
 
 ## Illustrative synthetic case study
 

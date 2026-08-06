@@ -44,6 +44,14 @@
   `jackknife = 0`; null+clear fitting; borderline diagnostic-only). Gate B
   integration of that SAP is the fail-closed uncalibrated decision above; v1
   provenance is unchanged.
+* Phase 1 Track E for `lm_ancova_v3` (pre-registered violation-detection
+  ΔAUC among significant clear ANCOVA rows) is published **not confirmed**:
+  pooled ΔAUC = 0.0053 with bootstrap 95% CI [−0.1109, 0.1289] against the
+  frozen gate (ΔAUC ≥ 0.10 and CI lower bound > 0). Quotas were met
+  (2,100 completed / 0 failed). Compact artifacts are under
+  `manuscript/calibration/studies/lm_ancova_v3/published/` (verdict hash
+  `8fe6c66f28b5c788a637eff0cb8a3029`). Track D remains parked. No package
+  registry or runtime behavior change.
 * The 0.5.1 production freeze found all seven calibration families
   `uncalibrated` / `no_feasible_thresholds`. Accordingly, categorical
   Fragile/Moderate/Robust labels are reserved for statistically significant

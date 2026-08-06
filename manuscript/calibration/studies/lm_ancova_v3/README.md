@@ -33,6 +33,8 @@ remain reserved.
 
 ## Status
 
-Phase 1 SAP frozen in `CALIBRATION_SAP.md` (Tracks F + E; Track D parked).
-Adapter / ΔAUC tooling, smoke/pilot/power, and production follow in later
-tasks. No package/registry/runtime behavior changes in this plan.
+Phase 1 complete for Tracks F + E. Track E is published **not confirmed**
+(pooled ΔAUC = 0.0053, bootstrap 95% CI [−0.1109, 0.1289]; quotas met;
+`published/TRACK_E_VERDICT.json`, md5 `8fe6c66f28b5c788a637eff0cb8a3029`).
+Track D remains parked (seeds `51001+` / `52001+` / `53001+` reserved). No
+package/registry/runtime behavior changes.

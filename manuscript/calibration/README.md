@@ -56,6 +56,22 @@ seeds/IDs are absent from v2 ledgers; v1 `lm_ancova` provenance stays the
 immutable uncalibrated historical record. Welch 55/70 is not an ANCOVA
 fallback.
 
+## ANCOVA v3 Phase 1 Track E (published not confirmed)
+
+`studies/lm_ancova_v3/` owns the pre-registered violation-detection study
+(Tracks F + E; Track D parked). Among significant clear rows, the
+jackknife-light score did **not** clear the frozen gate: pooled ΔAUC =
+0.0053, bootstrap 95% CI [−0.1109, 0.1289] (need ΔAUC ≥ 0.10 and CI lower
+bound > 0). Quotas were met (2,100 completed, 0 failed). Verdict artifact
+`TRACK_E_VERDICT.json` (md5 `8fe6c66f28b5c788a637eff0cb8a3029`) and compact
+occupancy / per-violation / hash-ledger files are under
+`studies/lm_ancova_v3/published/`. This is a publishable negative outcome and
+an honest bound on added value beyond p under the frozen violation suite. No
+package registry or runtime behavior change. Track D seed ranges `51001+` /
+`52001+` / `53001+` remain reserved pending explicit human un-parking after
+the binary-proportion replication-curve review. Welch 55/70 is not an ANCOVA
+fallback; v1/v2 publications stay immutable.
+
 The scenario table is deliberately independent of generated data.  Calibration
 runners must use the current checkout (via `R/load_calibration.R`), preserve the
 scenario seed, and write intermediate files below `artifacts/`.  Only the
