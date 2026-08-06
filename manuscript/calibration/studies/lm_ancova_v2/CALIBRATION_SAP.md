@@ -134,9 +134,14 @@ identification ≥ 0.70 gates, without searching \(L\) in the pilot.
 
 | Metric | Go | Marginal (may escalate clear power once) | Hard no-go |
 | --- | --- | --- | --- |
-| \(\Delta\) | ≥ 20 | \(15 \le \Delta < 20\) | \(\Delta < 15\) |
-| \(O\) | ≤ 0.10 | \(0.10 < O \le 0.20\) | \(O > 0.20\) |
-| AUC (if computed) | ≥ 0.75 | \(0.70 \le \mathrm{AUC} < 0.75\) | \(\mathrm{AUC} < 0.70\) |
+| Δ (location gap) | ≥ 20 | 15 ≤ Δ < 20 | Δ < 15 |
+| O (overlap) | ≤ 0.10 | 0.10 < O ≤ 0.20 | O > 0.20 |
+| AUC (if computed) | ≥ 0.75 | 0.70 ≤ AUC < 0.75 | AUC < 0.70 |
+
+Locked numeric freeze (audit tokens): Δ go ≥ 20, marginal 15 ≤ Δ < 20,
+hard no-go Δ < 15; O go ≤ 0.10, marginal 0.10 < O ≤ 0.20, hard no-go
+O > 0.20; AUC (if computed) go ≥ 0.75, marginal 0.70 ≤ AUC < 0.75,
+hard no-go AUC < 0.70.
 
 ### Decision rule
 
@@ -170,8 +175,8 @@ Training feasibility:
 Deterministic tie-breaks: highest clear identification, then greatest FR safety
 margin (distance of FR upper bound below 0.10), then smallest L.
 
-If no feasible L exists, publish `uncalibrated` / `no_feasible_threshold`
-(or equivalent), leave held-out closed, and fail closed.
+If no feasible L exists, publish `uncalibrated` / `no_feasible_thresholds`,
+leave held-out closed, and fail closed.
 
 ## Held-out acceptance
 

@@ -144,6 +144,18 @@ assert_ancova_v2("median\\(clear\\).{0,30}median\\(null\\)",
 assert_ancova_v2("P\\(null\\s*>\\s*median\\(clear\\)\\)",
                  "ANCOVA v2 docs omit pilot P(null > median(clear)) formula")
 assert_ancova_v2(
+  "[≥>=]\\s*20.{0,200}15\\s*[≤<=].{0,40}<\\s*20.{0,80}<\\s*15|[≥>=]\\s*20.{0,40}15\\s*[≤<=]\\s*Δ\\s*<\\s*20.{0,40}Δ\\s*<\\s*15",
+  "ANCOVA v2 docs omit locked Δ go ≥ 20 / marginal 15–20 / hard < 15"
+)
+assert_ancova_v2(
+  "[≤<=]\\s*0\\.10.{0,200}0\\.10\\s*<.{0,40}[≤<=]\\s*0\\.20.{0,80}>\\s*0\\.20",
+  "ANCOVA v2 docs omit locked O go ≤ 0.10 / marginal ≤ 0.20 / hard > 0.20"
+)
+assert_ancova_v2(
+  "[≥>=]\\s*0\\.75.{0,200}0\\.70\\s*[≤<=].{0,40}<\\s*0\\.75.{0,80}<\\s*0\\.70",
+  "ANCOVA v2 docs omit locked AUC go ≥ 0.75 / marginal 0.70–0.75 / hard < 0.70"
+)
+assert_ancova_v2(
   "0\\.90.{0,80}0\\.95|clear.{0,40}0\\.90.{0,40}0\\.95|escalate.{0,40}0\\.95",
   "ANCOVA v2 docs omit clear power 0.90 default / 0.95 escalation rule"
 )
@@ -160,9 +172,29 @@ assert_ancova_v2(
   "ANCOVA v2 docs omit FR ≤ 0.05 acceptance gate"
 )
 assert_ancova_v2(
+  "Wilson upper\\s*[≤<=]\\s*0\\.10|one-sided 95% Wilson upper\\s*[≤<=]\\s*0\\.10",
+  "ANCOVA v2 docs omit Wilson FR upper ≤ 0.10"
+)
+assert_ancova_v2(
   "Not.?fragile identification.{0,40}0\\.70|identification on clear.{0,40}0\\.70",
   "ANCOVA v2 docs omit Not-fragile identification ≥ 0.70 gate"
 )
+assert_ancova_v2(
+  "Wilson lower\\s*[≥>=]\\s*0\\.60|one-sided 95% Wilson lower\\s*[≥>=]\\s*0\\.60",
+  "ANCOVA v2 docs omit Wilson RI lower ≥ 0.60"
+)
+assert_ancova_v2("no_feasible_thresholds",
+                 "ANCOVA v2 docs omit no_feasible_thresholds fail-closed reason",
+                 ignore.case = FALSE)
+if (grepl("no_feasible_threshold(?!s)", ancova_v2_text, perl = TRUE)) {
+  violations <- c(violations,
+                  "ANCOVA v2 docs use singular no_feasible_threshold (must be plural)")
+}
+if (grepl("no_feasible_thresholds.{0,60}or equivalent|or equivalent.{0,60}no_feasible",
+          ancova_v2_text, ignore.case = TRUE, perl = TRUE)) {
+  violations <- c(violations,
+                  "ANCOVA v2 docs soften no_feasible_thresholds with 'or equivalent'")
+}
 assert_ancova_v2(
   "v1 validation.{0,100}(absent|not|never)|absent from v2|no v1 validation",
   "ANCOVA v2 docs omit assertion that v1 validation seeds/IDs are absent from v2"

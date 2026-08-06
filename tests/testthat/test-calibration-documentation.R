@@ -107,6 +107,18 @@ test_that("Gate A ANCOVA v2 Track A SAP freezes the two-band protocol", {
                perl = TRUE, ignore.case = TRUE)
   expect_match(text, "P\\(null\\s*>\\s*median\\(clear\\)\\)",
                perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "[≥>=]\\s*20", perl = TRUE)
+  expect_match(text, "15\\s*[≤<=]\\s*Δ\\s*<\\s*20|15\\s*[≤<=].{0,10}<\\s*20",
+               perl = TRUE)
+  expect_match(text, "Δ\\s*<\\s*15|<\\s*15", perl = TRUE)
+  expect_match(text, "[≤<=]\\s*0\\.10", perl = TRUE)
+  expect_match(text, "0\\.10\\s*<\\s*O\\s*[≤<=]\\s*0\\.20|0\\.10\\s*<.{0,10}[≤<=]\\s*0\\.20",
+               perl = TRUE)
+  expect_match(text, "O\\s*>\\s*0\\.20|>\\s*0\\.20", perl = TRUE)
+  expect_match(text, "[≥>=]\\s*0\\.75", perl = TRUE)
+  expect_match(text, "0\\.70\\s*[≤<=]\\s*AUC\\s*<\\s*0\\.75|0\\.70\\s*[≤<=].{0,10}<\\s*0\\.75",
+               perl = TRUE)
+  expect_match(text, "AUC\\s*<\\s*0\\.70|<\\s*0\\.70", perl = TRUE)
   expect_match(text, "0.90", fixed = TRUE)
   expect_match(text, "0.95", fixed = TRUE)
   expect_match(text, "workers.{0,20}4|Workers.+`4`",
@@ -118,12 +130,22 @@ test_that("Gate A ANCOVA v2 Track A SAP freezes the two-band protocol", {
                perl = TRUE, ignore.case = TRUE)
   expect_match(text, "false reassurance.{0,40}0\\.05|FR.{0,40}0\\.05",
                perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "Wilson upper\\s*[≤<=]\\s*0\\.10",
+               perl = TRUE, ignore.case = TRUE)
   expect_match(
     text,
     "Not.?fragile identification.{0,40}0\\.70|clear.{0,40}0\\.70",
     perl = TRUE,
     ignore.case = TRUE
   )
+  expect_match(text, "Wilson lower\\s*[≥>=]\\s*0\\.60",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "no_feasible_thresholds", fixed = TRUE)
+  expect_false(grepl("no_feasible_threshold(?!s)", text, perl = TRUE))
+  expect_false(grepl(
+    "no_feasible_thresholds.{0,60}or equivalent|or equivalent.{0,60}no_feasible",
+    text, perl = TRUE, ignore.case = TRUE
+  ))
   expect_match(
     text,
     "v1 validation.{0,80}(absent|not|never)|absent from v2|no v1 validation",
