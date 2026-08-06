@@ -170,7 +170,10 @@ validate_calibration_registry <- function(registry) {
   status = c("validated_method_specific", rep("uncalibrated", 17)),
   cutoff_fragile = c(55, rep(NA_real_, 17)),
   cutoff_robust = c(70, rep(NA_real_, 17)),
-  version = c("welch-2026-1", rep("taxonomy-2026-1", 17)),
+  version = c(
+    "welch-2026-1", rep("taxonomy-2026-1", 7), "lm-ancova-2026-1",
+    rep("taxonomy-2026-1", 9)
+  ),
   stringsAsFactors = FALSE
 )
 

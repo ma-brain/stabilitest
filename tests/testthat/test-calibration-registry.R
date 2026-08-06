@@ -113,12 +113,52 @@ test_that("the installed registry exactly matches the active taxonomy", {
     status = c("validated_method_specific", rep("uncalibrated", 17)),
     cutoff_fragile = c(55, rep(NA_real_, 17)),
     cutoff_robust = c(70, rep(NA_real_, 17)),
-    version = c("welch-2026-1", rep("taxonomy-2026-1", 17)),
+    version = c(
+      "welch-2026-1", rep("taxonomy-2026-1", 7), "lm-ancova-2026-1",
+      rep("taxonomy-2026-1", 9)
+    ),
     stringsAsFactors = FALSE
   )
   row.names(actual) <- NULL
 
   expect_identical(actual, expected)
+})
+
+test_that("active lm_ancova Gate B remains uncalibrated with auditable reason", {
+  registry <- load_calibration_registry()
+  ancova <- registry[registry$calibration_unit == "lm_ancova", , drop = FALSE]
+
+  expect_identical(nrow(ancova), 1L)
+  expect_identical(ancova$status, "uncalibrated")
+  expect_identical(ancova$version, "lm-ancova-2026-1")
+  expect_true(is.na(ancova$cutoff_fragile))
+  expect_true(is.na(ancova$cutoff_robust))
+  expect_match(ancova$source, "manuscript/calibration/studies/lm_ancova/published",
+               fixed = TRUE)
+  expect_match(ancova$supported_conditions, "no_feasible_thresholds", fixed = TRUE)
+  expect_match(ancova$supported_conditions, "held-out not opened|held.out not opened",
+               perl = TRUE)
+  expect_match(ancova$supported_conditions, "labels? suppressed|categorical bands suppressed",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(ancova$supported_conditions,
+               "Welch 55/70 is not an ANCOVA fallback|not an ANCOVA fallback",
+               perl = TRUE)
+  expect_match(ancova$supported_conditions,
+               "9ccfc2fca7c0a07c19a3a18838e9a3f2",
+               fixed = TRUE)
+
+  resolved <- resolve_result_calibration(
+    "lm_ancova", "coefficient", "significant",
+    c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2), 0.30,
+    analysis_profile = .canonical_profile_fixture()
+  )
+  expect_false(resolved$applicable)
+  expect_identical(resolved$status, "uncalibrated")
+  expect_true(all(is.na(c(resolved$cutoff_fragile, resolved$cutoff_robust))))
+  expect_match(resolved$supported_conditions, "no_feasible_thresholds", fixed = TRUE)
+  expect_true(is.na(score_label_from_calibration(80, resolved)))
+  expect_true(is.na(score_label_from_calibration(60, resolved)))
+  expect_true(is.na(score_label_from_calibration(40, resolved)))
 })
 
 test_that("the Welch row cites durable tracked provenance", {

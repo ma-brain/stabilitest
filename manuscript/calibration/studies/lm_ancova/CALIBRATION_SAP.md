@@ -2,9 +2,9 @@
 
 **Calibration unit:** `lm_ancova`  
 **Study path:** `manuscript/calibration/studies/lm_ancova/`  
-**Status:** Gate A infrastructure frozen; active package registry remains
-`uncalibrated` until Gate B.
-
+**Status:** Gate B closed fail-closed. Active package registry remains
+`uncalibrated` (`no_feasible_thresholds`; held-out not opened; version
+`lm-ancova-2026-1`).
 ## Gate A verification
 
 | Field | Value |
@@ -121,6 +121,26 @@ No feasible `(L, U)` pair satisfied the frozen training constraints. Held-out
 validation is **not** opened. Compact stamps:
 `artifacts/summaries/candidate-diagnostics.json`,
 `artifacts/summaries/training-manifest.json`.
+
+## Gate B package integration (uncalibrated)
+
+| Field | Value |
+| --- | --- |
+| Active registry status | `uncalibrated` |
+| Version | `lm-ancova-2026-1` |
+| Cutoffs | NA / NA (none invented) |
+| Reason | `no_feasible_thresholds` |
+| Candidate hash | `9ccfc2fca7c0a07c19a3a18838e9a3f2` |
+| Training artifact hash | `f552139cea8e573e45196607f71550d2` |
+| Held-out opened | `FALSE` |
+| Published path | `manuscript/calibration/studies/lm_ancova/published/` |
+| Labels | suppressed |
+| Welch 55/70 | Welch comparator only; **not** an ANCOVA fallback |
+
+Gate B is closed for the v1 uncalibrated path. Compact published artifacts
+include candidate/diagnostics, occupancy, failures, power verification,
+training manifest, method-specific registry, and hash ledger. Full replicate
+dumps are not republished here.
 
 ## Screening quotas and failures
 

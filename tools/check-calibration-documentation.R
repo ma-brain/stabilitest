@@ -82,8 +82,13 @@ assert_ancova("weights remain frozen|score weights remain frozen|frozen.*weights
               "ANCOVA docs omit frozen score weights")
 assert_ancova("Welch.{0,40}comparator|55/70.{0,40}comparator|comparator.{0,40}Welch|not an ANCOVA (default|fallback)",
               "ANCOVA docs omit that 55/70 is a Welch comparator, not an ANCOVA fallback")
-assert_ancova("uncalibrated until|remains uncalibrated|Gate B",
-              "ANCOVA docs omit that active lm_ancova stays uncalibrated until Gate B")
+assert_ancova("no_feasible_thresholds",
+              "ANCOVA docs omit no_feasible_thresholds fail-closed reason",
+              ignore.case = FALSE)
+assert_ancova("held-out not opened|held.out not opened|validation.{0,40}not (opened|accessed)",
+              "ANCOVA docs omit that held-out validation was not opened")
+assert_ancova("Gate B.{0,120}(fail-closed|uncalibrated)|(fail-closed|uncalibrated).{0,120}Gate B|Gate B closed",
+              "ANCOVA docs omit Gate B fail-closed uncalibrated closeout")
 assert_ancova("pain_ancova_trial",
               "ANCOVA docs omit pain_ancova_trial")
 assert_ancova("prospectively frozen|never enters training|excluded from.*calibration",

@@ -32,6 +32,7 @@ manuscript case study follows, rather than precedes, calibration results.
 
 ## Status
 
-Gate A infrastructure only. The active package registry row for `lm_ancova`
-remains `uncalibrated` until Gate B. An unsuccessful calibration remains a
-valid, publishable uncalibrated result.
+Gate B closed fail-closed: the active package registry row for `lm_ancova`
+remains `uncalibrated` with reason `no_feasible_thresholds`. Held-out
+validation was not opened. Categorical labels stay suppressed; Welch 55/70 is
+not an ANCOVA fallback. Compact decision artifacts are under `published/`.

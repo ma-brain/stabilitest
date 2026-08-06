@@ -67,10 +67,9 @@ print(case_result)
 - A categorical Fragile / Moderately Robust / Robust label appears only when
   the active `lm_ancova` registry row is validated **and** the analysis profile
   matches the supported canonical conditions.
-- At Gate A the active registry remains uncalibrated, so this vignette should
-  render an explicit numeric-only result. After Gate B it will report either a
-  validated label or continue to suppress the label if calibration failed
-  closed.
+- Gate B closed fail-closed (`uncalibrated` / `no_feasible_thresholds`; held-out
+  not opened), so this vignette renders an explicit numeric-only result with
+  the categorical label suppressed. Welch 55/70 is not an ANCOVA fallback.
 
 ```{r profile-and-label}
 case_result$analysis_profile

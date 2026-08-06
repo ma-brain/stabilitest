@@ -1,0 +1,2 @@
+"family","calibration_unit","endpoint","conclusion_type","status","cutoff_fragile","cutoff_robust","version","source","supported_conditions"
+"linear_model","lm_ancova","coefficient","significant","uncalibrated",,,"lm-ancova-2026-1","manuscript/calibration/studies/lm_ancova/published","no_feasible_thresholds; candidate_hash:9ccfc2fca7c0a07c19a3a18838e9a3f2; held-out not opened; categorical labels suppressed; Welch 55/70 is not an ANCOVA fallback; numeric scores and component metrics only"

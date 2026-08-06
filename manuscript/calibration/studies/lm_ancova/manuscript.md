@@ -13,10 +13,13 @@ held-out evaluation follow the irreversible study flow in
 
 ## Calibration results
 
-Calibration results will be populated after the held-out gate is opened once
-and reviewed. Until Gate B, the active package registry row for `lm_ancova`
-remains `uncalibrated`. Welch 55/70 cutoffs are reported only as a comparator
-and are never used as an ANCOVA fallback.
+Gate B closed **fail-closed**. Training found no feasible `(L, U)` pair
+(`no_feasible_thresholds`; candidate hash
+`9ccfc2fca7c0a07c19a3a18838e9a3f2`). Held-out validation was **not** opened.
+The active package registry row for `lm_ancova` remains `uncalibrated`
+(version `lm-ancova-2026-1`); categorical labels are suppressed. Welch 55/70
+cutoffs are reported only as a comparator and are never used as an ANCOVA
+fallback. Compact decision artifacts live under `published/`.
 
 ## Illustrative synthetic case study
 
@@ -45,10 +48,10 @@ case_result <- robustness_lm(
 At Gate A this section documents the intended outputs only: adjusted treatment
 estimate and p-value, calibration-profile eligibility, jackknife stability,
 worst-case removal fragility, bootstrap reproducibility, composite score,
-applicable label (if any), and deletion/influence plots. Final numeric claims
-and the categorical label status are deferred until after the calibration
-decision is published. The vignette must render honestly for either outcome: a
-validated label or an uncalibrated numeric-only result.
+applicable label (if any), and deletion/influence plots. Because Gate B closed
+fail-closed (`uncalibrated` / `no_feasible_thresholds`; held-out not opened),
+the published case-study outcome is numeric scores and component metrics with
+the categorical label suppressed.
 
 ## Discussion
 
