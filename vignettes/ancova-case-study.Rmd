@@ -1,0 +1,84 @@
+---
+title: "ANCOVA Case Study: Canonical Treatment Adjustment"
+author: "Marius Ally"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ANCOVA Case Study: Canonical Treatment Adjustment}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 96
+)
+```
+
+```{r setup}
+library(stabilitest)
+```
+
+## Purpose
+
+This vignette reproduces the illustrative synthetic ANCOVA case study that
+accompanies the independent `lm_ancova` calibration study. The dataset
+`pain_ancova_trial` was prospectively frozen before production calibration and
+does **not** enter training, candidate selection, or held-out validation.
+
+## Frozen synthetic trial
+
+`pain_ancova_trial` is an 80-row balanced two-arm trial with a continuous
+baseline covariate and Week 12 pain outcome. See `?pain_ancova_trial` and
+`data-raw/pain_ancova_trial.R` (seed `20260806`).
+
+```{r data-glimpse}
+str(pain_ancova_trial)
+table(pain_ancova_trial$arm)
+```
+
+## Worked robustness analysis
+
+The call below uses the exact configuration required for runtime applicability
+(`n_boot = 1000`, default weights, 30% removal budget). Do not shorten the
+bootstrap count merely for vignette speed.
+
+```{r case-analysis}
+case_result <- robustness_lm(
+  week12_pain ~ arm + baseline_pain,
+  pain_ancova_trial,
+  term = "armActive",
+  alpha = 0.05,
+  n_boot = 1000,
+  max_removal_pct = 0.30,
+  weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+  seed = 1408
+)
+print(case_result)
+```
+
+## How to read the output
+
+- Numeric component metrics and the composite score are always retained.
+- A categorical Fragile / Moderately Robust / Robust label appears only when
+  the active `lm_ancova` registry row is validated **and** the analysis profile
+  matches the supported canonical conditions.
+- At Gate A the active registry remains uncalibrated, so this vignette should
+  render an explicit numeric-only result. After Gate B it will report either a
+  validated label or continue to suppress the label if calibration failed
+  closed.
+
+```{r profile-and-label}
+case_result$analysis_profile
+case_result$calibration
+case_result$interpretation_label
+```
+
+## Non-calibrating status
+
+This example is illustrative only. It must never be described as
+threshold-fitting or validation evidence for the ANCOVA categorical bands.
