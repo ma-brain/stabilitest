@@ -43,5 +43,6 @@
     "clear_target_power": 0.9,
     "note": "Workers capped at 4; do not open validation; do not fit L in Task 7"
   },
-  "code_commit": "ebc97ea441df3fb1e81b21f09a72e55dfee7c9c2"
+  "code_commit": "0cedfaaca515bc92b89fd6e74ce44329aca9cb60",
+  "execution_freeze_commit": "0cedfaaca515bc92b89fd6e74ce44329aca9cb60"
 }
