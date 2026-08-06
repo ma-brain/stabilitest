@@ -77,7 +77,7 @@ root.
 | Power check | clean cells only: primary-test-only Monte Carlo, draws 10000, master 20260807, tolerance 0.02 (violated cells are exempt — deviation from nominal power is the phenomenon under study, not an error) |
 | Track E primary metric | pooled ΔAUC = AUC_score − AUC_p for discriminating violated vs clean among significant clear rows. Score orientation PRE-SPECIFIED: clean > violated. p orientation (−log₁₀ p) chosen empirically, whichever favors p (conservative for the claim). Scenario-cluster bootstrap CI: seed 20260807, B = 1000, resample whole scenario cells |
 | Track E gate (frozen) | confirmed if pooled ΔAUC ≥ 0.10 AND bootstrap 95% CI lower bound > 0; per-violation ΔAUC reported descriptively either way |
-| Estimated Phase 1 compute | ~1,800 primary + ~300 diagnostic scored replicates (≈ v2-training scale; roughly a day at 4 workers) |
+| Estimated Phase 1 compute | ~1,800 primary + ~300 diagnostic scored replicates. Measured basis: v2 scored 3,300 replicates in ~80 min wall on this host (freeze 12:59 → occupancy 14:19, 2026-08-06); v1 ledger mean runtime 0.87/1.86/1.78 s at n = 40/80/160 → ≈ 55 core-min pure scoring. Expected wall time ≈ 1–2 h at 4 workers (≤ 3 h if violated cells depress significance rates) |
 
 ---
 
