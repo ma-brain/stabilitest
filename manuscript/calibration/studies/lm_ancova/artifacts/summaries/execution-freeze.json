@@ -1,0 +1,47 @@
+{
+  "gate_a_reviewed_commit": "96141f2f3df6c45d3cc04f5c5c9696f56473a3bc",
+  "pilot": {
+    "exit": 0,
+    "git_commit": "0c2449d99e9c85be8cbb4b157dee9406eeb94f97",
+    "scenario_manifest_hash": "40d480b7c211ce1b7baa92d6c580162d",
+    "n_scenarios": 27,
+    "n_boot": 50,
+    "max_screen_draws": 250,
+    "analyse_completed": 1922,
+    "analyse_noncompleted": 0,
+    "screen_complete": 18,
+    "screen_incomplete": 9,
+    "validation_accessed": false,
+    "wall_minutes": 9.7391
+  },
+  "power": {
+    "draws": 10000,
+    "master_seed": 20260806,
+    "tol_power": 0.02,
+    "tol_null": 0.02,
+    "n_scenarios": 45,
+    "n_fail": 0,
+    "any_robustness_score": false,
+    "output": "/Users/Marius/Github/stabilitest/.worktrees/lm-ancova-calibration/manuscript/calibration/studies/lm_ancova/artifacts/summaries/power-verification.csv",
+    "sha256": "c47409b1698f6ad2180776599d28145d4416cd807f5dde4c82df8197372a9e90"
+  },
+  "hashes": {
+    "all_scenarios": "5b97d1cdee060ac2c29f6f6256f75912",
+    "core_only": "61af0d58e582e1e6a935d921db43f216",
+    "training_core_plus_stress": "784f035d4965f2f3a626af4f0a2ce2a3"
+  },
+  "production_plan": {
+    "n_boot": 1000,
+    "max_screen_draws": 10000,
+    "screening_target_n": 100,
+    "workers": 10,
+    "training_scenarios": 33,
+    "core_scenarios": 27,
+    "stress_scenarios": 6,
+    "validation_scenarios": 18,
+    "projected_seconds_per_replicate_nboot1000": 5.9468,
+    "projected_core_hours_workers_1": 4.4601,
+    "projected_core_hours_workers_10": 0.446
+  },
+  "code_commit": "7052e23873ee65b13d66fbef52e10a8184d4715f"
+}

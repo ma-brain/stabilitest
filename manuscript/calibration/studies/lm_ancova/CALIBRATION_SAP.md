@@ -73,9 +73,34 @@ remain frozen for the Gate A protocol.
 
 - Primary-test-only Monte Carlo before robustness scoring
 - Independent seeds; no inspection of score distributions
-- Production gate: tolerance `0.02` of targets `0.60` / `0.90`; null type-I
-  near `0.05`
+- Production gate: `draws = 10000`, master seed `20260806`, tolerance
+  `0.02` of targets `0.60` / `0.90`; null type-I within `0.02` of `0.05`
 - Unit tests may use 2,000 draws and tolerance `0.04`
+- Frozen artifact: `artifacts/summaries/power-verification.csv`
+  (sha256 `c47409b1698f6ad2180776599d28145d4416cd807f5dde4c82df8197372a9e90`;
+  45/45 canonical core+validation scenarios PASS; no robustness scores)
+
+## Production execution freeze
+
+| Field | Value |
+| --- | --- |
+| Code commit | `7052e23873ee65b13d66fbef52e10a8184d4715f` |
+| Gate A reviewed commit | `96141f2f3df6c45d3cc04f5c5c9696f56473a3bc` |
+| All-scenario hash | `5b97d1cdee060ac2c29f6f6256f75912` |
+| Training (core+stress) hash | `784f035d4965f2f3a626af4f0a2ce2a3` |
+| Core-only hash | `61af0d58e582e1e6a935d921db43f216` |
+| Pilot scenario hash | `40d480b7c211ce1b7baa92d6c580162d` |
+| Pilot commit | `0c2449d99e9c85be8cbb4b157dee9406eeb94f97` |
+| `n_boot` | `1000` |
+| Max screen draws | `10000` |
+| Screening target | `100` significant per required scenario |
+| Workers | `10` |
+| Runtime projection | ~5.95s/replicate at `n_boot=1000`; ~4.5h core @1 worker / ~0.45h @10 |
+
+Pilot (wiring only; scores not inspected): 27 core scenarios, 1922 completed
+analyses, 0 analysis failures, 9 incomplete null screens under the pilot
+`max_screen_draws=250` cap, validation not accessed. Compact stamp:
+`artifacts/summaries/execution-freeze.json`.
 
 ## Screening quotas and failures
 
