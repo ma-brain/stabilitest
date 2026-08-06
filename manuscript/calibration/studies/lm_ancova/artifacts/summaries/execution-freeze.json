@@ -34,14 +34,16 @@
     "n_boot": 1000,
     "max_screen_draws": 10000,
     "screening_target_n": 100,
-    "workers": 10,
+    "workers": 4,
     "training_scenarios": 33,
     "core_scenarios": 27,
     "stress_scenarios": 6,
     "validation_scenarios": 18,
     "projected_seconds_per_replicate_nboot1000": 5.9468,
     "projected_core_hours_workers_1": 4.4601,
-    "projected_core_hours_workers_10": 0.446
+    "projected_core_hours_workers_10": 1.115025,
+    "projected_core_hours_workers_4": 1.115025,
+    "note": "Reduced to 4 workers after 10-worker run crashed Cursor on M4 Pro 48GB"
   },
   "code_commit": "433c9671a15882d80652b435305563aa0274b801",
   "execution_freeze_commit": "433c9671a15882d80652b435305563aa0274b801"

@@ -94,8 +94,8 @@ remain frozen for the Gate A protocol.
 | `n_boot` | `1000` |
 | Max screen draws | `10000` |
 | Screening target | `100` significant per required scenario |
-| Workers | `10` |
-| Runtime projection | ~5.95s/replicate at `n_boot=1000`; ~4.5h core @1 worker / ~0.45h @10 |
+| Workers | `4` |
+| Runtime projection | ~5.95s/replicate at `n_boot=1000`; ~4.5h core @1 worker / ~1.1h @4 |
 
 Pilot (wiring only; scores not inspected): 27 core scenarios, 1922 completed
 analyses, 0 analysis failures, 9 incomplete null screens under the pilot
