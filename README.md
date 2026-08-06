@@ -31,7 +31,13 @@ Calibration is keyed by the resolved method (`welch_unpaired`, `paired_t`,
 `glm_binomial`, `glm_poisson`, `cox_ph`, and the three TOST endpoints). The
 public `robustness_analysis()` dispatcher and its existing `test_type` values
 are unchanged. `lm_ancova` is the next independent calibration target; until
-that work is complete, model labels remain suppressed.
+that work completes Gate B, the active registry remains uncalibrated and model
+labels remain suppressed. Gate A adds an isolated ANCOVA study for eligible
+significant canonical 1-df treatment effects with 60%/90% power-defined truth
+strata. Multi-df labels remain suppressed, score weights remain frozen, and
+Welch 55/70 is a Welch comparator, not an ANCOVA fallback. The prospectively
+frozen `pain_ancova_trial` dataset is an illustration only and never enters
+training or held-out evidence.
 
 ## Installation
 

@@ -22,6 +22,17 @@ preserved for provenance, not runtime lookup.  The inspected Task 15
 validation rows cannot be reused as fresh held-out confirmation; any reanalysis
 of them is exploratory.
 
+## Independent ANCOVA study (Gate A)
+
+`studies/lm_ancova/` owns a separate method-specific calibration for eligible
+significant canonical 1-df ANCOVA treatment effects. Its scenario contract,
+SAP, runner, and publication tools are isolated from the historical
+mixed-family experiment. At Gate A this is planned/implemented infrastructure
+only: the active `lm_ancova` registry row remains `uncalibrated`, multi-df
+labels remain suppressed, score weights remain frozen, and Welch 55/70 is a
+Welch comparator rather than an ANCOVA fallback. The prospectively frozen
+`pain_ancova_trial` illustration never enters training or held-out evidence.
+
 The scenario table is deliberately independent of generated data.  Calibration
 runners must use the current checkout (via `R/load_calibration.R`), preserve the
 scenario seed, and write intermediate files below `artifacts/`.  Only the

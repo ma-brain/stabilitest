@@ -46,6 +46,51 @@ assert_match("public `?robustness_analysis[(][)]`? dispatcher",
 assert_match("lm_ancova", "active policy does not name lm_ancova",
              ignore.case = FALSE)
 
+# Gate A ANCOVA study policy (independent method-specific calibration).
+ancova_policy_files <- file.path(root, c(
+  "README.md", "NEWS.md",
+  "manuscript/calibration/README.md",
+  "manuscript/calibration/studies/lm_ancova/README.md",
+  "manuscript/calibration/studies/lm_ancova/CALIBRATION_SAP.md",
+  "manuscript/calibration/studies/lm_ancova/manuscript.md",
+  "vignettes/ancova-case-study.Rmd"
+))
+ancova_required <- file.path(
+  root, "manuscript/calibration/studies/lm_ancova/CALIBRATION_SAP.md"
+)
+if (!file.exists(ancova_required)) {
+  violations <- c(violations, "missing ANCOVA CALIBRATION_SAP.md")
+}
+ancova_existing <- ancova_policy_files[file.exists(ancova_policy_files)]
+ancova_text <- if (length(ancova_existing)) {
+  paste(unlist(lapply(ancova_existing, readLines, warn = FALSE)), collapse = "\n")
+} else {
+  ""
+}
+assert_ancova <- function(pattern, description, ignore.case = TRUE) {
+  if (!grepl(pattern, ancova_text, ignore.case = ignore.case, perl = TRUE)) {
+    violations <<- c(violations, description)
+  }
+}
+assert_ancova("canonical significant 1-df treatment|canonical 1-df ANCOVA treatment",
+              "ANCOVA docs omit canonical significant 1-df treatment scope")
+assert_ancova("60%.{0,20}90%|0\\.60.{0,20}0\\.90|power-defined",
+              "ANCOVA docs omit 60%/90% power-defined truth strata")
+assert_ancova("multi-df",
+              "ANCOVA docs omit multi-df label suppression")
+assert_ancova("weights remain frozen|score weights remain frozen|frozen.*weights",
+              "ANCOVA docs omit frozen score weights")
+assert_ancova("Welch.{0,40}comparator|55/70.{0,40}comparator|comparator.{0,40}Welch|not an ANCOVA (default|fallback)",
+              "ANCOVA docs omit that 55/70 is a Welch comparator, not an ANCOVA fallback")
+assert_ancova("uncalibrated until|remains uncalibrated|Gate B",
+              "ANCOVA docs omit that active lm_ancova stays uncalibrated until Gate B")
+assert_ancova("pain_ancova_trial",
+              "ANCOVA docs omit pain_ancova_trial")
+assert_ancova("prospectively frozen|never enters training|excluded from.*calibration",
+              "ANCOVA docs omit that pain_ancova_trial is a non-calibrating frozen illustration")
+assert_ancova("Illustrative synthetic case study|case study follows|after the calibration results",
+              "ANCOVA docs omit that the manuscript case study follows calibration results")
+
 scan_files <- file.path(root, c(
   "README.md", "NEWS.md", "R", "man", "vignettes",
   "manuscript/robustness_analysis_manuscript.md",

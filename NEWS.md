@@ -13,6 +13,13 @@
   and `lm_ancova`; the latter is the next independent calibration target.
   Task 15's broad-family tables and manifests remain archived as historical
   evidence and are not used for runtime interpretation.
+* Gate A freezes an isolated ANCOVA calibration study for eligible significant
+  canonical 1-df treatment effects with 60%/90% power-defined truth strata.
+  Multi-df labels remain suppressed, score weights remain frozen, and Welch
+  55/70 remains a Welch comparator rather than an ANCOVA fallback. The active
+  `lm_ancova` registry row stays uncalibrated until Gate B. The prospectively
+  frozen `pain_ancova_trial` illustration never enters training or held-out
+  evidence; the manuscript case study follows calibration results.
 * The 0.5.1 production freeze found all seven calibration families
   `uncalibrated` / `no_feasible_thresholds`. Accordingly, categorical
   Fragile/Moderate/Robust labels are reserved for statistically significant
