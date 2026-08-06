@@ -6,8 +6,9 @@
 **Status:** Gate A protocol frozen. Score-only pilot **passed** (go at clear
 power `0.90`; stamp `artifacts/summaries/SCORE_PILOT_GATE.json`). Production
 power gate **passed** (45/45); execution freeze recorded in
-`artifacts/summaries/execution-freeze.json`. Production training may proceed
-under the freeze; cutoff search and held-out acceptance are not yet executed.
+`artifacts/summaries/execution-freeze.json`. Production training occupancy assembled from checkpoints
+(33/33 complete; validation not opened; cutoff search not run). Cutoff search
+and held-out acceptance are not yet executed.
 Package labels remain suppressed until a later Gate B integration of a
 validated (or fail-closed uncalibrated) v2 decision. The v1 unit `lm_ancova`
 stays the immutable uncalibrated historical record (`no_feasible_thresholds`;

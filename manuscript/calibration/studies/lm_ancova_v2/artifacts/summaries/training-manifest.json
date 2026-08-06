@@ -1,0 +1,17 @@
+{
+  "phase": "training",
+  "calibration_unit": "lm_ancova_v2",
+  "workers": 4,
+  "code_commit": "0dc7066f63140aff57551b4761d1f0d8731cd2e4",
+  "scenario_manifest_hash": "f69bb4388a70765d1008d0fdc1748b80",
+  "n_core_completed": 2700,
+  "n_audit": 3300,
+  "n_scenarios": 33,
+  "n_complete_scenarios": 33,
+  "validation_accessed": false,
+  "assembled_from": "checkpoints/full",
+  "cutoff_fit": false,
+  "note": "Occupancy assembled from per-scenario checkpoints; cutoff search (Task 8) not run.",
+  "wall_minutes_to_last_checkpoint": 43.84,
+  "parent_outcome": "killed_after_checkpoints_while_serializing_run_results"
+}
