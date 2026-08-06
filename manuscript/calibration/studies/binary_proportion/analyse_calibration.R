@@ -9,10 +9,22 @@ analyse_binary_proportion_calibration <- function(training, validation = NULL,
                                                     scenario_manifest_hash,
                                                     training_manifest_hash,
                                                     validation_manifest_hash = NULL,
+                                                    replication_data = NULL,
                                                     cluster_B = 1000L,
                                                     cluster_seed = 20260808L) {
   track_a <- fit_fisher_exact_cutoffs(training)
-  track_d <- fit_fisher_exact_replication_curve(training)
+  # The Track D' replication curve is fit from the dedicated replication draws
+  # (one primary-test-only replicate per completed significant row).  When no
+  # replication data is supplied, it is fit from training if it carries a
+  # replication_significant column, otherwise archived as unavailable.
+  track_d <- if (!is.null(replication_data)) {
+    fit_fisher_exact_replication_curve(replication_data)
+  } else if (!is.null(training) && is.data.frame(training) &&
+             "replication_significant" %in% names(training)) {
+    fit_fisher_exact_replication_curve(training)
+  } else {
+    list(status = "unavailable", reason = "no_replication_data")
+  }
   frozen <- freeze_binary_proportion_candidate(
     track_a,
     track_d = track_d,
