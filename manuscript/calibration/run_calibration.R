@@ -317,8 +317,28 @@ run_calibration <- function(args = commandArgs(trailingOnly = TRUE), project_roo
 `%||%` <- function(left, right) if (is.null(left)) right else left
 
 .calibration_is_direct <- function() {
+  # Match only the shared manuscript/calibration entry point. Study runners
+  # such as studies/lm_ancova/run_calibration.R also end in run_calibration.R
+  # and must not trigger this auto-run when they sys.source this file.
   args <- commandArgs(trailingOnly = FALSE)
-  any(grepl("run_calibration[.]R$", args))
+  file_arg <- sub("^--file=", "", grep("^--file=", args, value = TRUE))
+  if (!length(file_arg)) {
+    return(FALSE)
+  }
+  normalized <- tryCatch(
+    normalizePath(file_arg[[1L]], mustWork = FALSE),
+    error = function(e) file_arg[[1L]]
+  )
+  grepl(
+    paste0(
+      "manuscript", .Platform$file.sep, "calibration", .Platform$file.sep,
+      "run_calibration[.]R$"
+    ),
+    normalized
+  ) && !grepl(
+    paste0(.Platform$file.sep, "studies", .Platform$file.sep),
+    normalized
+  )
 }
 
-if (.calibration_is_direct()) run_calibration()
+if (identical(sys.nframe(), 0L) && .calibration_is_direct()) run_calibration()

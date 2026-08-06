@@ -83,3 +83,28 @@ test_that("isolated runner hashes study scenarios and records study command", {
                                   unlist(manifest$command), fixed = TRUE)))
   testthat::expect_identical(manifest$scenario_manifest_hash, study_smoke_hash)
 })
+
+test_that("shared runner direct-invoke excludes nested study entry points", {
+  shared <- new.env(parent = globalenv())
+  sys.source(
+    file.path(.project_root(), "manuscript", "calibration", "run_calibration.R"),
+    envir = shared
+  )
+  testthat::expect_true(is.function(shared$.calibration_is_direct))
+  # When this file is sourced (not the process entry point), auto-run must be off.
+  # The helper itself only authenticates the shared --file= path.
+  study_file <- normalizePath(
+    file.path(.study_root(), "run_calibration.R"),
+    mustWork = TRUE
+  )
+  shared_file <- normalizePath(
+    file.path(.project_root(), "manuscript", "calibration", "run_calibration.R"),
+    mustWork = TRUE
+  )
+  testthat::expect_true(grepl("studies/.*/run_calibration[.]R$", study_file))
+  testthat::expect_true(grepl("manuscript/calibration/run_calibration[.]R$", shared_file))
+  testthat::expect_false(grepl(
+    paste0(.Platform$file.sep, "studies", .Platform$file.sep),
+    shared_file
+  ))
+})
