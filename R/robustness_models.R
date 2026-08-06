@@ -16,7 +16,10 @@
 # Numeric scores and component metrics are always retained. Categorical labels
 # are suppressed until the exact method-specific calibration unit is validated;
 # the only active validated unit is the narrow significant `welch_unpaired`
-# configuration. `lm_ancova` is the next independent calibration target.
+# configuration. `lm_ancova` (v1) and `lm_ancova_v2` (Track A jackknife-light)
+# both closed Gate B fail-closed as uncalibrated / no_feasible_thresholds;
+# interactive `robustness_lm()` defaults still resolve to `lm_ancova` and keep
+# labels suppressed. Welch 55/70 is not an ANCOVA fallback.
 # Companion to robustness_analysis.R (two-sample version); see
 # manuscript/methodological_review.md for the rationale behind the v2 metrics.
 # ==============================================================================

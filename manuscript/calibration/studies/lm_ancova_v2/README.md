@@ -39,5 +39,7 @@ Gate A SAP frozen (Track A). Score-only pilot **passed** (clear power frozen at
 `0.90`). Production power gate **passed** (45/45); execution freeze recorded.
 Production training cutoff search closed **fail-closed** as `uncalibrated` /
 `no_feasible_thresholds` (candidate hash
-`3dc2a1f840b3eb725bea629dc130f070`; held-out not opened). Package labels stay
-suppressed until Gate B integration of the uncalibrated v2 decision.
+`3dc2a1f840b3eb725bea629dc130f070`; held-out not opened). Gate B published the
+uncalibrated decision under `published/` (version `lm-ancova-v2-2026-1`);
+package labels stay suppressed. The v1 `lm_ancova` provenance row remains the
+immutable historical uncalibrated record.

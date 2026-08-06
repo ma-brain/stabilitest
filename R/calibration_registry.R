@@ -144,15 +144,15 @@ validate_calibration_registry <- function(registry) {
 .active_calibration_registry_contract <- data.frame(
   family = c(
     rep("continuous_parametric", 2), rep("rank_nonparametric", 3),
-    rep("binary_proportion", 3), "linear_model",
+    rep("binary_proportion", 3), rep("linear_model", 2),
     rep("generalized_linear_model", 2), "survival",
     rep("equivalence_noninferiority", 6)
   ),
   calibration_unit = c(
     "welch_unpaired", "paired_t", "wilcoxon_rank_sum",
     "wilcoxon_signed_rank", "brunner_munzel", "fisher_exact",
-    "chi_square_2x2", "two_sample_prop", "lm_ancova", "glm_binomial",
-    "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
+    "chi_square_2x2", "two_sample_prop", "lm_ancova", "lm_ancova_v2",
+    "glm_binomial", "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
     "tost_risk_difference", "tost_risk_difference", "tost_odds_ratio",
     "tost_odds_ratio"
   ),
@@ -160,19 +160,20 @@ validate_calibration_registry <- function(registry) {
     "mean_difference", "mean_difference", "location_shift",
     "location_shift", "location_shift", "risk_difference",
     "risk_difference", "risk_difference", "coefficient", "coefficient",
-    "coefficient", "hazard_ratio", "mean_difference", "mean_difference",
-    "risk_difference", "risk_difference", "odds_ratio", "odds_ratio"
+    "coefficient", "coefficient", "hazard_ratio", "mean_difference",
+    "mean_difference", "risk_difference", "risk_difference", "odds_ratio",
+    "odds_ratio"
   ),
   conclusion_type = c(
-    rep("significant", 12), "equivalence", "noninferiority",
+    rep("significant", 13), "equivalence", "noninferiority",
     "equivalence", "noninferiority", "equivalence", "noninferiority"
   ),
-  status = c("validated_method_specific", rep("uncalibrated", 17)),
-  cutoff_fragile = c(55, rep(NA_real_, 17)),
-  cutoff_robust = c(70, rep(NA_real_, 17)),
+  status = c("validated_method_specific", rep("uncalibrated", 18)),
+  cutoff_fragile = c(55, rep(NA_real_, 18)),
+  cutoff_robust = c(70, rep(NA_real_, 18)),
   version = c(
     "welch-2026-1", rep("taxonomy-2026-1", 7), "lm-ancova-2026-1",
-    rep("taxonomy-2026-1", 9)
+    "lm-ancova-v2-2026-1", rep("taxonomy-2026-1", 9)
   ),
   stringsAsFactors = FALSE
 )
@@ -352,23 +353,39 @@ conclusion_type_for_tost <- tost_conclusion_type
   jackknife = 0.4, fragility = 0.4, bootstrap = 0.2
 )
 
-.is_default_calibration_design <- function(weights, max_removal_pct) {
-  weights_ok <- is.numeric(weights) && length(weights) == 3L &&
+# Track A jackknife-light weights for lm_ancova_v2 (not package defaults).
+.lm_ancova_v2_calibration_weights <- c(
+  jackknife = 0, fragility = 0.5, bootstrap = 0.5
+)
+
+.is_named_weight_design <- function(weights, expected) {
+  is.numeric(weights) && length(weights) == 3L &&
     !is.null(names(weights)) && !anyNA(names(weights)) &&
     !anyDuplicated(names(weights)) &&
-    setequal(names(weights), names(.default_calibration_weights)) &&
+    setequal(names(weights), names(expected)) &&
     all(is.finite(weights)) &&
     isTRUE(all.equal(
-      unname(weights[names(.default_calibration_weights)]),
-      unname(.default_calibration_weights), tolerance = 1e-8
+      unname(weights[names(expected)]),
+      unname(expected), tolerance = 1e-8
     ))
+}
+
+.is_default_calibration_design <- function(weights, max_removal_pct) {
   removal_ok <- is.numeric(max_removal_pct) &&
     length(max_removal_pct) == 1L && is.finite(max_removal_pct) &&
     isTRUE(all.equal(as.numeric(max_removal_pct), 0.30, tolerance = 1e-8))
-  weights_ok && removal_ok
+  .is_named_weight_design(weights, .default_calibration_weights) && removal_ok
 }
 
-.is_supported_lm_ancova_profile <- function(profile) {
+.is_lm_ancova_v2_calibration_design <- function(weights, max_removal_pct) {
+  removal_ok <- is.numeric(max_removal_pct) &&
+    length(max_removal_pct) == 1L && is.finite(max_removal_pct) &&
+    isTRUE(all.equal(as.numeric(max_removal_pct), 0.30, tolerance = 1e-8))
+  .is_named_weight_design(weights, .lm_ancova_v2_calibration_weights) &&
+    removal_ok
+}
+
+.is_canonical_lm_ancova_profile_shape <- function(profile) {
   is.list(profile) && identical(profile$version, "lm-profile-1") &&
     isTRUE(profile$canonical_ancova) &&
     identical(profile$term_type, "single") && identical(profile$term_df, 1L) &&
@@ -379,8 +396,17 @@ conclusion_type_for_tost <- tost_conclusion_type
     is.numeric(profile$n) && length(profile$n) == 1L &&
     !is.na(profile$n) && profile$n >= 40L && profile$n <= 240L &&
     isTRUE(all.equal(profile$alpha, 0.05)) &&
-    identical(as.integer(profile$n_boot), 1000L) &&
+    identical(as.integer(profile$n_boot), 1000L)
+}
+
+.is_supported_lm_ancova_profile <- function(profile) {
+  .is_canonical_lm_ancova_profile_shape(profile) &&
     .is_default_calibration_design(profile$weights, profile$max_removal_pct)
+}
+
+.is_supported_lm_ancova_v2_profile <- function(profile) {
+  .is_canonical_lm_ancova_profile_shape(profile) &&
+    .is_lm_ancova_v2_calibration_design(profile$weights, profile$max_removal_pct)
 }
 
 # Resolve a result to exactly one registry row.  Resolution is deliberately
@@ -455,7 +481,12 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
     return(.registry_result(row, status = as.character(row$status),
                             applicable = FALSE))
   }
-  if (!.is_default_calibration_design(weights, max_removal_pct)) {
+  design_ok <- if (identical(unit, "lm_ancova_v2")) {
+    .is_lm_ancova_v2_calibration_design(weights, max_removal_pct)
+  } else {
+    .is_default_calibration_design(weights, max_removal_pct)
+  }
+  if (!design_ok) {
     result <- .registry_result(
       row, status = "uncalibrated", applicable = FALSE,
       reason = "Observed score configuration is outside the validated design"
@@ -470,6 +501,13 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
     return(.registry_result(
       row, status = "uncalibrated", applicable = FALSE,
       reason = "Observed analysis profile is outside the validated lm_ancova design"
+    ))
+  }
+  if (identical(unit, "lm_ancova_v2") &&
+      !.is_supported_lm_ancova_v2_profile(analysis_profile)) {
+    return(.registry_result(
+      row, status = "uncalibrated", applicable = FALSE,
+      reason = "Observed analysis profile is outside the validated lm_ancova_v2 design"
     ))
   }
 

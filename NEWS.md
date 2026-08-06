@@ -10,9 +10,10 @@
   dispatcher remains unchanged.
 * Removed the generic `two_sample` identity from the active calibration
   registry. Exact units include `welch_unpaired`, `paired_t`, `fisher_exact`,
-  and `lm_ancova`; the latter is the next independent calibration target.
-  Task 15's broad-family tables and manifests remain archived as historical
-  evidence and are not used for runtime interpretation.
+  `lm_ancova`, and `lm_ancova_v2`; both ANCOVA units remain uncalibrated after
+  fail-closed Gate B decisions. Task 15's broad-family tables and manifests
+  remain archived as historical evidence and are not used for runtime
+  interpretation.
 * Gate A freezes an isolated ANCOVA calibration study for eligible significant
   canonical 1-df treatment effects with 60%/90% power-defined truth strata.
   Multi-df labels remain suppressed, score weights remain frozen, and Welch
@@ -24,11 +25,20 @@
   Categorical labels stay suppressed; compact decision artifacts are under
   `manuscript/calibration/studies/lm_ancova/published/`. Welch 55/70 is not an
   ANCOVA fallback.
+* Gate B for Track A unit `lm_ancova_v2` closed fail-closed: status
+  `uncalibrated`, reason `no_feasible_thresholds` (candidate hash
+  `3dc2a1f840b3eb725bea629dc130f070`), held-out not opened, version
+  `lm-ancova-v2-2026-1`. The jackknife-light two-band attempt
+  (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`) found no feasible L;
+  categorical labels stay suppressed. Compact decision artifacts are under
+  `manuscript/calibration/studies/lm_ancova_v2/published/`. The v1 `lm_ancova`
+  provenance row remains the immutable historical uncalibrated record; Welch
+  55/70 is not an ANCOVA fallback.
 * Gate A for Track A unit `lm_ancova_v2` freezes a two-band (Fragile / Not
   fragile) jackknife-light SAP (`fragility = 0.5`, `bootstrap = 0.5`,
-  `jackknife = 0`; null+clear fitting; borderline diagnostic-only). Labels
-  remain suppressed until a later v2 Gate B decision; v1 provenance is
-  unchanged.
+  `jackknife = 0`; null+clear fitting; borderline diagnostic-only). Gate B
+  integration of that SAP is the fail-closed uncalibrated decision above; v1
+  provenance is unchanged.
 * The 0.5.1 production freeze found all seven calibration families
   `uncalibrated` / `no_feasible_thresholds`. Accordingly, categorical
   Fragile/Moderate/Robust labels are reserved for statistically significant

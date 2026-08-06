@@ -28,18 +28,21 @@ evidence, not a runtime calibration claim.
 Calibration is keyed by the resolved method (`welch_unpaired`, `paired_t`,
 `wilcoxon_rank_sum`, `wilcoxon_signed_rank`, `brunner_munzel`,
 `fisher_exact`, `chi_square_2x2`, `two_sample_prop`, `lm_ancova`,
-`glm_binomial`, `glm_poisson`, `cox_ph`, and the three TOST endpoints). The
-public `robustness_analysis()` dispatcher and its existing `test_type` values
-are unchanged. Gate B for the isolated `lm_ancova` v1 study closed fail-closed:
-the active registry remains `uncalibrated` (`no_feasible_thresholds`; held-out
-not opened; version `lm-ancova-2026-1`), so model labels remain suppressed.
-Welch 55/70 is a Welch comparator, not an ANCOVA fallback. Gate A froze the
-isolated ANCOVA study for eligible significant canonical 1-df treatment effects
-with 60%/90% power-defined truth strata. Multi-df labels remain suppressed and
-score weights remain frozen. A separate Gate A SAP for Track A unit
-`lm_ancova_v2` freezes a two-band (Fragile / Not fragile) jackknife-light
-protocol (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`); labels stay
-suppressed until a later v2 Gate B decision. The prospectively frozen
+`lm_ancova_v2`, `glm_binomial`, `glm_poisson`, `cox_ph`, and the three TOST
+endpoints). The public `robustness_analysis()` dispatcher and its existing
+`test_type` values are unchanged. Gate B for the isolated `lm_ancova` v1 study
+closed fail-closed: the registry row remains `uncalibrated`
+(`no_feasible_thresholds`; held-out not opened; version `lm-ancova-2026-1`).
+Gate B for Track A `lm_ancova_v2` likewise closed fail-closed
+(`no_feasible_thresholds`; candidate hash `3dc2a1f840b3eb725bea629dc130f070`;
+held-out not opened; version `lm-ancova-v2-2026-1`), so model labels remain
+suppressed for both ANCOVA units. Welch 55/70 is a Welch comparator, not an
+ANCOVA fallback. Gate A froze the isolated ANCOVA study for eligible significant
+canonical 1-df treatment effects with 60%/90% power-defined truth strata.
+Multi-df labels remain suppressed and score weights remain frozen. The Track A
+`lm_ancova_v2` SAP froze a two-band (Fragile / Not fragile) jackknife-light
+protocol (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`); training found
+no feasible L, so labels stay suppressed. The prospectively frozen
 `pain_ancova_trial` dataset is an illustration only and never enters training
 or held-out evidence.
 

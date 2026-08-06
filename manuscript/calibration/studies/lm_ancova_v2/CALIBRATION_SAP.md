@@ -8,10 +8,11 @@ power `0.90`; stamp `artifacts/summaries/SCORE_PILOT_GATE.json`). Production
 power gate **passed** (45/45); execution freeze recorded in
 `artifacts/summaries/execution-freeze.json`. Production training cutoff search
 closed **fail-closed** as `uncalibrated` / `no_feasible_thresholds` (candidate
-hash `3dc2a1f840b3eb725bea629dc130f070`; held-out **not** opened). Package
-labels remain suppressed until Gate B integration of this uncalibrated v2
-decision. The v1 unit `lm_ancova` stays the immutable uncalibrated historical
-record (`no_feasible_thresholds`; held-out not opened).
+hash `3dc2a1f840b3eb725bea629dc130f070`; held-out **not** opened). Gate B
+published the uncalibrated decision under `published/` (version
+`lm-ancova-v2-2026-1`); package labels remain suppressed. The v1 unit
+`lm_ancova` stays the immutable uncalibrated historical record
+(`no_feasible_thresholds`; held-out not opened).
 
 ## Scope
 
@@ -283,9 +284,11 @@ Rscript manuscript/calibration/studies/lm_ancova_v2/run_calibration.R \
 
 ## Publication policy
 
-Compact published outputs (when executed) must include completed replicate
-summaries, occupancy and failure tables, power verification, candidate and
-validation diagnostics, method-specific registry CSV/RDS for `lm_ancova_v2`,
-training/validation manifests, and the hash ledger. An unsuccessful calibration
+Compact published outputs under `published/` record the Gate B fail-closed
+decision: occupancy and failure tables, power verification, candidate
+diagnostics (no feasible L), method-specific registry CSV/RDS for
+`lm_ancova_v2` (version `lm-ancova-v2-2026-1`), training manifests, and the
+hash ledger. Held-out validation was not opened. An unsuccessful calibration
 remains a valid, publishable uncalibrated result. User-facing docs must state
-that any ANCOVA bands are two-class and method-specific, not Welch 55/70.
+that any ANCOVA bands would be two-class and method-specific, not Welch 55/70,
+and that labels remain suppressed for this unit.

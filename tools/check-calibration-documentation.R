@@ -207,6 +207,27 @@ assert_ancova_v2(
   "Track A|two-band|Fragile / Not fragile|Fragile vs Not fragile",
   "ANCOVA v2 docs omit Track A two-band claim"
 )
+assert_ancova_v2(
+  "Gate B.{0,120}(fail-closed|uncalibrated)|(fail-closed|uncalibrated).{0,120}Gate B|Gate B closed",
+  "ANCOVA v2 docs omit Gate B fail-closed uncalibrated closeout"
+)
+assert_ancova_v2(
+  "held-out not opened|held.out not opened|validation.{0,40}not (opened|accessed)",
+  "ANCOVA v2 docs omit that held-out validation was not opened"
+)
+assert_ancova_v2(
+  "3dc2a1f840b3eb725bea629dc130f070",
+  "ANCOVA v2 docs omit published candidate hash",
+  ignore.case = FALSE
+)
+assert_ancova_v2(
+  "lm-ancova-v2-2026-1|published/",
+  "ANCOVA v2 docs omit published version or published/ path"
+)
+assert_ancova_v2(
+  "labels?.{0,40}suppressed|categorical labels stay suppressed|labels remain suppressed",
+  "ANCOVA v2 docs omit that labels remain suppressed"
+)
 
 scan_files <- file.path(root, c(
   "README.md", "NEWS.md", "R", "man", "vignettes",

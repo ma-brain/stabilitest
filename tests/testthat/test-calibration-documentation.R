@@ -80,6 +80,70 @@ test_that("Gate B uncalibrated ANCOVA decision is published and documented", {
                perl = TRUE, ignore.case = TRUE)
 })
 
+test_that("Gate B uncalibrated ANCOVA v2 decision is published and documented", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  published <- file.path(
+    root, "manuscript", "calibration", "studies", "lm_ancova_v2", "published"
+  )
+  skip_if_not(dir.exists(published), "ANCOVA v2 published/ directory missing")
+
+  required <- c(
+    "candidate.rds",
+    "candidate-diagnostics.json",
+    "training-occupancy.csv",
+    "training-failures.csv",
+    "power-verification.csv",
+    "training-manifest.rds",
+    "registry.csv",
+    "registry.rds",
+    "hash_ledger.rds"
+  )
+  for (name in required) {
+    expect_true(file.exists(file.path(published, name)), info = name)
+  }
+
+  candidate <- readRDS(file.path(published, "candidate.rds"))
+  expect_identical(candidate$status, "uncalibrated")
+  expect_identical(candidate$reason, "no_feasible_thresholds")
+  expect_true(is.na(candidate$cutoff) ||
+                (is.numeric(candidate$cutoff) && !is.finite(candidate$cutoff)))
+  expect_false(isTRUE(candidate$held_out_opened))
+  expect_identical(candidate$candidate_hash, "3dc2a1f840b3eb725bea629dc130f070")
+
+  registry <- utils::read.csv(file.path(published, "registry.csv"),
+                              stringsAsFactors = FALSE, na.strings = c("", "NA"))
+  expect_true(any(registry$calibration_unit == "lm_ancova_v2"))
+  ancova_v2 <- registry[registry$calibration_unit == "lm_ancova_v2", , drop = FALSE]
+  expect_identical(ancova_v2$status, "uncalibrated")
+  expect_identical(ancova_v2$version, "lm-ancova-v2-2026-1")
+  expect_true(all(is.na(ancova_v2$cutoff_fragile)))
+  expect_true(all(is.na(ancova_v2$cutoff_robust)))
+  expect_match(paste(ancova_v2$supported_conditions, collapse = " "),
+               "no_feasible_thresholds", fixed = TRUE)
+  expect_match(paste(ancova_v2$supported_conditions, collapse = " "),
+               "jackknife-light|fragility=0.5", perl = TRUE)
+
+  policy_files <- file.path(root, c(
+    "README.md", "NEWS.md",
+    "manuscript/calibration/README.md",
+    "manuscript/calibration/studies/lm_ancova_v2/CALIBRATION_SAP.md",
+    "manuscript/calibration/studies/lm_ancova_v2/README.md"
+  ))
+  text <- paste(unlist(lapply(policy_files, readLines, warn = FALSE)),
+                collapse = "\n")
+  expect_match(text, "lm_ancova_v2", fixed = TRUE)
+  expect_match(text, "no_feasible_thresholds", fixed = TRUE)
+  expect_match(text, "held-out not opened|held.out not opened|validation.*not opened",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(
+    text,
+    "Gate B.{0,120}(fail-closed|uncalibrated)|(fail-closed|uncalibrated).{0,120}Gate B",
+    perl = TRUE,
+    ignore.case = TRUE
+  )
+  expect_match(text, "3dc2a1f840b3eb725bea629dc130f070", fixed = TRUE)
+})
+
 test_that("Gate A ANCOVA v2 Track A SAP freezes the two-band protocol", {
   root <- normalizePath(testthat::test_path("..", ".."))
   sap <- file.path(

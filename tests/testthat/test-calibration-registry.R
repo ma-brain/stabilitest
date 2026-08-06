@@ -87,15 +87,15 @@ test_that("the installed registry exactly matches the active taxonomy", {
   expected <- data.frame(
     family = c(
       rep("continuous_parametric", 2), rep("rank_nonparametric", 3),
-      rep("binary_proportion", 3), "linear_model",
+      rep("binary_proportion", 3), rep("linear_model", 2),
       rep("generalized_linear_model", 2), "survival",
       rep("equivalence_noninferiority", 6)
     ),
     calibration_unit = c(
       "welch_unpaired", "paired_t", "wilcoxon_rank_sum",
       "wilcoxon_signed_rank", "brunner_munzel", "fisher_exact",
-      "chi_square_2x2", "two_sample_prop", "lm_ancova", "glm_binomial",
-      "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
+      "chi_square_2x2", "two_sample_prop", "lm_ancova", "lm_ancova_v2",
+      "glm_binomial", "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
       "tost_risk_difference", "tost_risk_difference", "tost_odds_ratio",
       "tost_odds_ratio"
     ),
@@ -103,19 +103,20 @@ test_that("the installed registry exactly matches the active taxonomy", {
       "mean_difference", "mean_difference", "location_shift",
       "location_shift", "location_shift", "risk_difference",
       "risk_difference", "risk_difference", "coefficient", "coefficient",
-      "coefficient", "hazard_ratio", "mean_difference", "mean_difference",
-      "risk_difference", "risk_difference", "odds_ratio", "odds_ratio"
+      "coefficient", "coefficient", "hazard_ratio", "mean_difference",
+      "mean_difference", "risk_difference", "risk_difference", "odds_ratio",
+      "odds_ratio"
     ),
     conclusion_type = c(
-      rep("significant", 12), "equivalence", "noninferiority",
+      rep("significant", 13), "equivalence", "noninferiority",
       "equivalence", "noninferiority", "equivalence", "noninferiority"
     ),
-    status = c("validated_method_specific", rep("uncalibrated", 17)),
-    cutoff_fragile = c(55, rep(NA_real_, 17)),
-    cutoff_robust = c(70, rep(NA_real_, 17)),
+    status = c("validated_method_specific", rep("uncalibrated", 18)),
+    cutoff_fragile = c(55, rep(NA_real_, 18)),
+    cutoff_robust = c(70, rep(NA_real_, 18)),
     version = c(
       "welch-2026-1", rep("taxonomy-2026-1", 7), "lm-ancova-2026-1",
-      rep("taxonomy-2026-1", 9)
+      "lm-ancova-v2-2026-1", rep("taxonomy-2026-1", 9)
     ),
     stringsAsFactors = FALSE
   )
@@ -159,6 +160,64 @@ test_that("active lm_ancova Gate B remains uncalibrated with auditable reason", 
   expect_true(is.na(score_label_from_calibration(80, resolved)))
   expect_true(is.na(score_label_from_calibration(60, resolved)))
   expect_true(is.na(score_label_from_calibration(40, resolved)))
+})
+
+test_that("active lm_ancova_v2 Gate B remains uncalibrated with auditable reason", {
+  registry <- load_calibration_registry()
+  ancova_v2 <- registry[registry$calibration_unit == "lm_ancova_v2", , drop = FALSE]
+
+  expect_identical(nrow(ancova_v2), 1L)
+  expect_identical(ancova_v2$status, "uncalibrated")
+  expect_identical(ancova_v2$version, "lm-ancova-v2-2026-1")
+  expect_true(is.na(ancova_v2$cutoff_fragile))
+  expect_true(is.na(ancova_v2$cutoff_robust))
+  expect_match(
+    ancova_v2$source,
+    "manuscript/calibration/studies/lm_ancova_v2/published",
+    fixed = TRUE
+  )
+  expect_match(ancova_v2$supported_conditions, "no_feasible_thresholds",
+               fixed = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "jackknife-light|fragility=0\\.5|jackknife = 0",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "two-band|Fragile/Not fragile|Fragile / Not fragile",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "held-out not opened|held.out not opened",
+               perl = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "labels? suppressed|categorical bands suppressed",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "Welch 55/70 is not an ANCOVA fallback|not an ANCOVA fallback",
+               perl = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "3dc2a1f840b3eb725bea629dc130f070",
+               fixed = TRUE)
+
+  # v1 historical row must remain intact beside v2.
+  ancova_v1 <- registry[registry$calibration_unit == "lm_ancova", , drop = FALSE]
+  expect_identical(nrow(ancova_v1), 1L)
+  expect_identical(ancova_v1$version, "lm-ancova-2026-1")
+
+  resolved <- resolve_result_calibration(
+    "lm_ancova_v2", "coefficient", "significant",
+    c(jackknife = 0, fragility = 0.5, bootstrap = 0.5), 0.30,
+    analysis_profile = .canonical_profile_fixture()
+  )
+  expect_false(resolved$applicable)
+  expect_identical(resolved$status, "uncalibrated")
+  expect_true(all(is.na(c(resolved$cutoff_fragile, resolved$cutoff_robust))))
+  expect_match(resolved$supported_conditions, "no_feasible_thresholds",
+               fixed = TRUE)
+  expect_true(is.na(score_label_from_calibration(80, resolved)))
+  expect_true(is.na(score_label_from_calibration(50, resolved)))
+  expect_true(is.na(score_label_from_calibration(20, resolved)))
+
+  # Default interactive lm resolution stays on historical v1 unit.
+  expect_identical(calibration_unit_for_model("lm"), "lm_ancova")
 })
 
 test_that("the Welch row cites durable tracked provenance", {
