@@ -267,6 +267,133 @@ assert_ancova_v2_outcome(
   "ANCOVA calibration docs omit false-GO / pilot location-metric narrative"
 )
 
+# Phase 1 v3-lite Track E SAP (violation detection; Track D parked).
+ancova_v3_policy_files <- file.path(root, c(
+  "manuscript/calibration/studies/lm_ancova_v3/README.md",
+  "manuscript/calibration/studies/lm_ancova_v3/CALIBRATION_SAP.md"
+))
+ancova_v3_required <- file.path(
+  root, "manuscript/calibration/studies/lm_ancova_v3/CALIBRATION_SAP.md"
+)
+if (!file.exists(ancova_v3_required)) {
+  violations <- c(violations, "missing ANCOVA v3 CALIBRATION_SAP.md")
+}
+ancova_v3_existing <- ancova_v3_policy_files[file.exists(ancova_v3_policy_files)]
+ancova_v3_text <- if (length(ancova_v3_existing)) {
+  paste(unlist(lapply(ancova_v3_existing, readLines, warn = FALSE)), collapse = "\n")
+} else {
+  ""
+}
+assert_ancova_v3 <- function(pattern, description, ignore.case = TRUE) {
+  if (!grepl(pattern, ancova_v3_text, ignore.case = ignore.case, perl = TRUE)) {
+    violations <<- c(violations, description)
+  }
+}
+assert_ancova_v3("lm_ancova_v3", "ANCOVA v3 docs omit lm_ancova_v3", ignore.case = FALSE)
+assert_ancova_v3("Track E|violation.?detection",
+                 "ANCOVA v3 docs omit Track E / violation-detection scope")
+assert_ancova_v3("fragility\\s*=\\s*0\\.5",
+                 "ANCOVA v3 docs omit fragility = 0.5")
+assert_ancova_v3("bootstrap\\s*=\\s*0\\.5",
+                 "ANCOVA v3 docs omit bootstrap = 0.5")
+assert_ancova_v3("jackknife\\s*=\\s*0(?!\\.\\d)",
+                 "ANCOVA v3 docs omit jackknife = 0")
+assert_ancova_v3(
+  "0\\.4.{0,20}0\\.4.{0,20}0\\.2|jackknife\\s*=\\s*0\\.4",
+  "ANCOVA v3 docs omit v1 composite archived as comparator"
+)
+assert_ancova_v3(
+  "n\\s*∈\\s*\\{40,\\s*80,\\s*160\\}|n ∈ \\{40, 80, 160\\}",
+  "ANCOVA v3 docs omit clean-cell n ∈ {40, 80, 160}"
+)
+assert_ancova_v3("0\\.40|R²\\s*=\\s*0\\.40|R\\^?2\\s*=\\s*0\\.40",
+                 "ANCOVA v3 docs omit baseline R² = 0.40")
+assert_ancova_v3("0\\.90", "ANCOVA v3 docs omit clear power 0.90")
+assert_ancova_v3(
+  "allocation|2:1|heteroscedastic|heavy tails|missing baseline|interaction",
+  "ANCOVA v3 docs omit the five frozen violation types"
+)
+assert_ancova_v3(
+  "diagnostic.{0,40}null|null.{0,40}diagnostic|n\\s*=\\s*80",
+  "ANCOVA v3 docs omit diagnostic null pairs at n = 80"
+)
+assert_ancova_v3(
+  "no gate|not gated|secondary.{0,20}no gate",
+  "ANCOVA v3 docs omit that null pairs carry no gate"
+)
+assert_ancova_v3("54001", "ANCOVA v3 docs omit Track E seed range 54001+")
+assert_ancova_v3("20260807", "ANCOVA v3 docs omit master seed 20260807")
+assert_ancova_v3(
+  "51001|52001|53001",
+  "ANCOVA v3 docs omit reserved Track D seed ranges"
+)
+assert_ancova_v3(
+  "Track D.{0,80}parked|parked.{0,80}Track D",
+  "ANCOVA v3 docs omit that Track D is parked"
+)
+assert_ancova_v3(
+  "binary.?proportion|explicit human",
+  "ANCOVA v3 docs omit Track D un-parking condition"
+)
+assert_ancova_v3(
+  "ΔAUC|delta.?AUC|AUC_score\\s*[−-]\\s*AUC_p",
+  "ANCOVA v3 docs omit ΔAUC = AUC_score − AUC_p"
+)
+assert_ancova_v3(
+  "clean\\s*>\\s*violated|score orientation.{0,40}clean",
+  "ANCOVA v3 docs omit pre-specified score orientation clean > violated"
+)
+assert_ancova_v3(
+  "favors p|p-favoring|whichever favors p|conservative for the claim",
+  "ANCOVA v3 docs omit empirical p-favoring orientation rule"
+)
+assert_ancova_v3(
+  "cluster.?bootstrap|scenario.?cluster",
+  "ANCOVA v3 docs omit scenario-cluster bootstrap"
+)
+assert_ancova_v3(
+  "B\\s*=\\s*1000|B = 1000",
+  "ANCOVA v3 docs omit bootstrap B = 1000"
+)
+assert_ancova_v3(
+  "0\\.10|≥\\s*0\\.10",
+  "ANCOVA v3 docs omit pooled ΔAUC ≥ 0.10 gate"
+)
+assert_ancova_v3(
+  "lower bound\\s*>\\s*0|CI lower.{0,20}>\\s*0",
+  "ANCOVA v3 docs omit CI lower bound > 0 gate"
+)
+assert_ancova_v3(
+  "workers.{0,30}`?4`?|Workers.+`4`|maximum.{0,20}4",
+  "ANCOVA v3 docs omit workers maximum 4"
+)
+assert_ancova_v3("n_boot.{0,30}`?1000`?|`1000`",
+                 "ANCOVA v3 docs omit n_boot = 1000")
+assert_ancova_v3(
+  "100.{0,40}significant|significant.{0,40}100",
+  "ANCOVA v3 docs omit ≥100 significant primary quota"
+)
+assert_ancova_v3(
+  "5%|≤\\s*0\\.05|failures.{0,20}5",
+  "ANCOVA v3 docs omit ≤5% failure limit"
+)
+assert_ancova_v3(
+  "10000|draws.{0,20}10000",
+  "ANCOVA v3 docs omit power-check draws 10000"
+)
+assert_ancova_v3(
+  "0\\.02|tolerance.{0,20}0\\.02",
+  "ANCOVA v3 docs omit power-check tolerance 0.02"
+)
+assert_ancova_v3(
+  "v1.{0,40}validation|validation.{0,40}(seeds|IDs).{0,40}(absent|no v3)",
+  "ANCOVA v3 docs omit that v1/v2 validation seeds/IDs are absent from v3"
+)
+assert_ancova_v3(
+  "Welch 55/70.{0,40}not.{0,40}ANCOVA|not an ANCOVA fallback",
+  "ANCOVA v3 docs omit that Welch 55/70 is not an ANCOVA fallback"
+)
+
 scan_files <- file.path(root, c(
   "README.md", "NEWS.md", "R", "man", "vignettes",
   "manuscript/robustness_analysis_manuscript.md",

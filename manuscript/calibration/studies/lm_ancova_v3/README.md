@@ -33,5 +33,6 @@ remain reserved.
 
 ## Status
 
-Scaffolded for Phase 1 Track E. SAP freeze, adapter, and production run follow
-in later tasks. No package/registry/runtime behavior changes in this plan.
+Phase 1 SAP frozen in `CALIBRATION_SAP.md` (Tracks F + E; Track D parked).
+Adapter / ΔAUC tooling, smoke/pilot/power, and production follow in later
+tasks. No package/registry/runtime behavior changes in this plan.

@@ -248,3 +248,47 @@ test_that("Gate A ANCOVA v2 Track A SAP freezes the two-band protocol", {
   expect_identical(attr(status, "status"), NULL)
   expect_true(any(grepl("audit passed", status, ignore.case = TRUE)))
 })
+
+test_that("Phase 1 ANCOVA v3 Track E SAP freezes the violation-detection protocol", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  sap <- file.path(
+    root, "manuscript", "calibration", "studies", "lm_ancova_v3",
+    "CALIBRATION_SAP.md"
+  )
+  expect_true(file.exists(sap), info = "missing lm_ancova_v3 CALIBRATION_SAP.md")
+  if (!file.exists(sap)) {
+    return(invisible())
+  }
+
+  text <- paste(readLines(sap, warn = FALSE), collapse = "\n")
+  expect_match(text, "lm_ancova_v3", fixed = TRUE)
+  expect_match(text, "Track E|violation", perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "fragility\\s*=\\s*0\\.5", perl = TRUE)
+  expect_match(text, "bootstrap\\s*=\\s*0\\.5", perl = TRUE)
+  expect_match(text, "jackknife\\s*=\\s*0", perl = TRUE)
+  expect_match(text, "54001", fixed = TRUE)
+  expect_match(text, "20260807", fixed = TRUE)
+  expect_match(text, "Track D.{0,80}parked|parked.{0,80}Track D",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "51001|52001|53001", perl = TRUE)
+  expect_match(text, "ΔAUC|AUC_score", perl = TRUE)
+  expect_match(text, "clean\\s*>\\s*violated", perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "0\\.10", perl = TRUE)
+  expect_match(text, "lower bound\\s*>\\s*0|CI lower.{0,20}>\\s*0",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "cluster.?bootstrap|scenario.?cluster",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "no gate|not gated", perl = TRUE, ignore.case = TRUE)
+  expect_match(
+    text,
+    "v1.{0,40}validation|validation.{0,40}(seeds|IDs).{0,40}(absent|no v3)",
+    perl = TRUE,
+    ignore.case = TRUE
+  )
+
+  audit <- file.path(root, "tools", "check-calibration-documentation.R")
+  skip_if_not(file.exists(audit), "documentation audit tool is not shipped")
+  status <- system2("Rscript", audit, stdout = TRUE, stderr = TRUE)
+  expect_identical(attr(status, "status"), NULL)
+  expect_true(any(grepl("audit passed", status, ignore.case = TRUE)))
+})
