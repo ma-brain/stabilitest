@@ -365,13 +365,29 @@ conclusion_type_for_tost <- tost_conclusion_type
   weights_ok && removal_ok
 }
 
+.is_supported_lm_ancova_profile <- function(profile) {
+  is.list(profile) && identical(profile$version, "lm-profile-1") &&
+    isTRUE(profile$canonical_ancova) &&
+    identical(profile$term_type, "single") && identical(profile$term_df, 1L) &&
+    identical(profile$treatment_levels, 2L) &&
+    identical(profile$baseline_count, 1L) &&
+    isTRUE(profile$response_numeric) && isTRUE(profile$baseline_numeric) &&
+    isTRUE(profile$additive_direct_terms) && !isTRUE(profile$omitted_rows) &&
+    is.numeric(profile$n) && length(profile$n) == 1L &&
+    !is.na(profile$n) && profile$n >= 40L && profile$n <= 240L &&
+    isTRUE(all.equal(profile$alpha, 0.05)) &&
+    identical(as.integer(profile$n_boot), 1000L) &&
+    .is_default_calibration_design(profile$weights, profile$max_removal_pct)
+}
+
 # Resolve a result to exactly one registry row.  Resolution is deliberately
 # fail-closed: only the narrow validated Welch configuration receives cutoffs;
 # every other method/configuration retains scores but has no categorical bands.
 resolve_result_calibration <- function(calibration_unit, endpoint,
                                        conclusion_type, weights,
                                        max_removal_pct,
-                                       registry = NULL) {
+                                       registry = NULL,
+                                       analysis_profile = NULL) {
   unit <- if (.is_scalar_character(calibration_unit)) {
     calibration_unit
   } else {
@@ -446,6 +462,14 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
     return(result)
   }
 
+  if (identical(unit, "lm_ancova") &&
+      !.is_supported_lm_ancova_profile(analysis_profile)) {
+    return(.registry_result(
+      row, status = "uncalibrated", applicable = FALSE,
+      reason = "Observed analysis profile is outside the validated lm_ancova design"
+    ))
+  }
+
   .registry_result(row, status = "validated_method_specific", applicable = TRUE)
 }
 
@@ -474,16 +498,21 @@ score_label_from_calibration <- function(score, calibration) {
 # engine deliberately does not infer categorical bands: model and TOST methods
 # are currently uncalibrated, while unsuccessful conclusions are inapplicable.
 attach_result_calibration <- function(out, calibration_unit, endpoint,
-                                      conclusion_type) {
+                                      conclusion_type,
+                                      analysis_profile = NULL) {
   if (!is.list(out)) {
     stop("result must be a list", call. = FALSE)
+  }
+  if (is.null(analysis_profile) && !is.null(out$analysis_profile)) {
+    analysis_profile <- out$analysis_profile
   }
   calibration <- resolve_result_calibration(
     calibration_unit = calibration_unit,
     endpoint = endpoint,
     conclusion_type = conclusion_type,
     weights = out$weights,
-    max_removal_pct = out$max_removal_pct
+    max_removal_pct = out$max_removal_pct,
+    analysis_profile = analysis_profile
   )
   out$calibration <- calibration
   out$interpretation_label <- score_label_from_calibration(

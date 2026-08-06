@@ -387,6 +387,24 @@ test_that("noncanonical LM profiles are marked ineligible", {
   expect_false(omitted$canonical_ancova)
 })
 
+test_that("active lm_ancova remains uncalibrated despite canonical profiles", {
+  set.seed(103)
+  dat <- data.frame(
+    outcome = rnorm(80, mean = rep(c(0, 1), each = 40)),
+    treatment = factor(rep(c("A", "B"), each = 40)),
+    baseline = rnorm(80)
+  )
+  res <- robustness_lm(
+    outcome ~ treatment + baseline, dat, term = "treatmentB",
+    n_boot = 1000, seed = 103
+  )
+  expect_true(res$analysis_profile$canonical_ancova)
+  expect_identical(res$calibration$calibration_unit, "lm_ancova")
+  expect_identical(res$calibration$status, "uncalibrated")
+  expect_false(res$calibration$applicable)
+  expect_true(is.na(res$interpretation_label))
+})
+
 test_that("robustness_surv works on a Cox term", {
   skip_if_not_installed("survival")
   set.seed(1)

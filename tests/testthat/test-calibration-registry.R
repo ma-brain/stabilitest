@@ -405,3 +405,82 @@ test_that("malformed calibration metadata suppresses score labels", {
     expect_true(is.na(score_label_from_calibration(80, calibration)))
   }
 })
+
+.canonical_profile_fixture <- function(...) {
+  utils::modifyList(list(
+    version = "lm-profile-1", canonical_ancova = TRUE,
+    term_type = "single", term_df = 1L, treatment_levels = 2L,
+    baseline_count = 1L, response_numeric = TRUE, baseline_numeric = TRUE,
+    additive_direct_terms = TRUE, omitted_rows = FALSE, n = 80L,
+    alpha = 0.05, n_boot = 1000L,
+    weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+    max_removal_pct = 0.30
+  ), list(...))
+}
+
+.validated_lm_ancova_registry <- function() {
+  registry <- load_calibration_registry()
+  idx <- registry$calibration_unit == "lm_ancova"
+  registry$status[idx] <- "validated_method_specific"
+  registry$cutoff_fragile[idx] <- 50
+  registry$cutoff_robust[idx] <- 65
+  registry$version[idx] <- "lm-ancova-fixture-1"
+  registry$source[idx] <- "fixture:validated-lm-ancova"
+  registry$supported_conditions[idx] <- "canonical significant 1-df ANCOVA fixture"
+  registry
+}
+
+test_that("validated lm_ancova applies only to a complete canonical profile", {
+  registry <- .validated_lm_ancova_registry()
+  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+
+  eligible <- resolve_result_calibration(
+    "lm_ancova", "coefficient", "significant",
+    weights, 0.30,
+    registry = registry,
+    analysis_profile = .canonical_profile_fixture()
+  )
+  expect_true(eligible$applicable)
+  expect_identical(eligible$status, "validated_method_specific")
+  expect_equal(c(eligible$cutoff_fragile, eligible$cutoff_robust), c(50, 65))
+
+  inapplicable <- list(
+    missing_profile = NULL,
+    joint_term = .canonical_profile_fixture(term_type = "joint", term_df = 2L,
+                                            canonical_ancova = FALSE),
+    noncanonical = .canonical_profile_fixture(canonical_ancova = FALSE),
+    small_n = .canonical_profile_fixture(n = 39L),
+    large_n = .canonical_profile_fixture(n = 241L),
+    alpha = .canonical_profile_fixture(alpha = 0.01),
+    n_boot = .canonical_profile_fixture(n_boot = 500L),
+    weights = .canonical_profile_fixture(
+      weights = c(jackknife = 0.5, fragility = 0.3, bootstrap = 0.2)
+    ),
+    removal = .canonical_profile_fixture(max_removal_pct = 0.20)
+  )
+
+  for (name in names(inapplicable)) {
+    result <- resolve_result_calibration(
+      "lm_ancova", "coefficient", "significant",
+      weights, 0.30,
+      registry = registry,
+      analysis_profile = inapplicable[[name]]
+    )
+    expect_false(result$applicable, info = name)
+    expect_true(is.na(result$cutoff_fragile), info = name)
+    expect_true(is.na(result$cutoff_robust), info = name)
+  }
+})
+
+test_that("Welch resolution ignores analysis_profile", {
+  supported <- resolve_result_calibration(
+    calibration_unit = "welch_unpaired",
+    endpoint = "mean_difference",
+    conclusion_type = "significant",
+    weights = c(jackknife = .4, fragility = .4, bootstrap = .2),
+    max_removal_pct = .30,
+    analysis_profile = .canonical_profile_fixture()
+  )
+  expect_true(supported$applicable)
+  expect_identical(supported$status, "validated_method_specific")
+})
