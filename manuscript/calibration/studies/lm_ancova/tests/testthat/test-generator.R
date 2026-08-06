@@ -67,3 +67,24 @@ test_that("verify_ancova_power uses only the primary ANCOVA test", {
   testthat::expect_lt(abs(verification$achieved_power - 0.60), 0.04)
   testthat::expect_false(isTRUE(verification$used_robustness_score))
 })
+
+test_that("dataframe scenario rows keep power-targeted effects after as.list()", {
+  env <- .load_lm_ancova_study_env()
+  scenarios <- env$lm_ancova_scenarios()
+  row <- scenarios[
+    scenarios$scenario_id == "lm_ancova_core_n80_r2_40_borderline",
+    ,
+    drop = FALSE
+  ]
+  testthat::expect_identical(nrow(row), 1L)
+
+  from_df <- env$generate_lm_ancova(row, seed = 4403L)
+  from_list <- env$generate_lm_ancova(as.list(row[1L, , drop = FALSE]), seed = 4403L)
+  testthat::expect_equal(from_df$truth$beta, from_list$truth$beta, tolerance = 1e-12)
+  testthat::expect_gt(abs(from_df$truth$beta), 0)
+  testthat::expect_equal(from_df$data, from_list$data)
+
+  verification <- env$verify_ancova_power(row, draws = 2000L, seed = 5502L)
+  testthat::expect_equal(verification$target_power, 0.60, tolerance = 1e-12)
+  testthat::expect_lt(abs(verification$achieved_power - 0.60), 0.04)
+})

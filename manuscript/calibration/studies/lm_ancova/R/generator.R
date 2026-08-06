@@ -4,6 +4,14 @@
   if (is.data.frame(scenario)) {
     if (nrow(scenario) != 1L) stop("ANCOVA scenario must contain one row", call. = FALSE)
     scenario <- as.list(scenario[1L, , drop = FALSE])
+  }
+  # Tibble list-columns become list(list(generator=...)) under as.list().
+  # Unwrap once so both dataframe rows and as.list(row) paths resolve the
+  # same generator payload.
+  if (is.list(scenario$parameters) &&
+      length(scenario$parameters) == 1L &&
+      is.list(scenario$parameters[[1L]]) &&
+      !is.null(scenario$parameters[[1L]]$generator)) {
     scenario$parameters <- scenario$parameters[[1L]]
   }
   params <- scenario
