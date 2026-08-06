@@ -1,0 +1,50 @@
+[1/45] lm_ancova_v2_core_n160_r2_10_borderline achieved=0.5984 target=0.60 PASS
+[2/45] lm_ancova_v2_core_n160_r2_10_clear achieved=0.8996 target=0.90 PASS
+[3/45] lm_ancova_v2_core_n160_r2_10_null achieved=0.0483 target=0.05 PASS
+[4/45] lm_ancova_v2_core_n160_r2_40_borderline achieved=0.5999 target=0.60 PASS
+[5/45] lm_ancova_v2_core_n160_r2_40_clear achieved=0.8982 target=0.90 PASS
+[6/45] lm_ancova_v2_core_n160_r2_40_null achieved=0.0490 target=0.05 PASS
+[7/45] lm_ancova_v2_core_n160_r2_70_borderline achieved=0.6001 target=0.60 PASS
+[8/45] lm_ancova_v2_core_n160_r2_70_clear achieved=0.9026 target=0.90 PASS
+[9/45] lm_ancova_v2_core_n160_r2_70_null achieved=0.0518 target=0.05 PASS
+[10/45] lm_ancova_v2_core_n40_r2_10_borderline achieved=0.5920 target=0.60 PASS
+[11/45] lm_ancova_v2_core_n40_r2_10_clear achieved=0.8925 target=0.90 PASS
+[12/45] lm_ancova_v2_core_n40_r2_10_null achieved=0.0511 target=0.05 PASS
+[13/45] lm_ancova_v2_core_n40_r2_40_borderline achieved=0.5904 target=0.60 PASS
+[14/45] lm_ancova_v2_core_n40_r2_40_clear achieved=0.8940 target=0.90 PASS
+[15/45] lm_ancova_v2_core_n40_r2_40_null achieved=0.0484 target=0.05 PASS
+[16/45] lm_ancova_v2_core_n40_r2_70_borderline achieved=0.5850 target=0.60 PASS
+[17/45] lm_ancova_v2_core_n40_r2_70_clear achieved=0.8922 target=0.90 PASS
+[18/45] lm_ancova_v2_core_n40_r2_70_null achieved=0.0471 target=0.05 PASS
+[19/45] lm_ancova_v2_core_n80_r2_10_borderline achieved=0.5968 target=0.60 PASS
+[20/45] lm_ancova_v2_core_n80_r2_10_clear achieved=0.8957 target=0.90 PASS
+[21/45] lm_ancova_v2_core_n80_r2_10_null achieved=0.0523 target=0.05 PASS
+[22/45] lm_ancova_v2_core_n80_r2_40_borderline achieved=0.5888 target=0.60 PASS
+[23/45] lm_ancova_v2_core_n80_r2_40_clear achieved=0.9017 target=0.90 PASS
+[24/45] lm_ancova_v2_core_n80_r2_40_null achieved=0.0535 target=0.05 PASS
+[25/45] lm_ancova_v2_core_n80_r2_70_borderline achieved=0.5863 target=0.60 PASS
+[26/45] lm_ancova_v2_core_n80_r2_70_clear achieved=0.8930 target=0.90 PASS
+[27/45] lm_ancova_v2_core_n80_r2_70_null achieved=0.0499 target=0.05 PASS
+[28/45] lm_ancova_v2_validation_n120_r2_25_borderline achieved=0.6004 target=0.60 PASS
+[29/45] lm_ancova_v2_validation_n120_r2_25_clear achieved=0.9031 target=0.90 PASS
+[30/45] lm_ancova_v2_validation_n120_r2_25_null achieved=0.0501 target=0.05 PASS
+[31/45] lm_ancova_v2_validation_n120_r2_55_borderline achieved=0.6020 target=0.60 PASS
+[32/45] lm_ancova_v2_validation_n120_r2_55_clear achieved=0.8920 target=0.90 PASS
+[33/45] lm_ancova_v2_validation_n120_r2_55_null achieved=0.0467 target=0.05 PASS
+[34/45] lm_ancova_v2_validation_n240_r2_25_borderline achieved=0.5934 target=0.60 PASS
+[35/45] lm_ancova_v2_validation_n240_r2_25_clear achieved=0.8957 target=0.90 PASS
+[36/45] lm_ancova_v2_validation_n240_r2_25_null achieved=0.0490 target=0.05 PASS
+[37/45] lm_ancova_v2_validation_n240_r2_55_borderline achieved=0.5910 target=0.60 PASS
+[38/45] lm_ancova_v2_validation_n240_r2_55_clear achieved=0.8988 target=0.90 PASS
+[39/45] lm_ancova_v2_validation_n240_r2_55_null achieved=0.0493 target=0.05 PASS
+[40/45] lm_ancova_v2_validation_n60_r2_25_borderline achieved=0.5931 target=0.60 PASS
+[41/45] lm_ancova_v2_validation_n60_r2_25_clear achieved=0.8890 target=0.90 PASS
+[42/45] lm_ancova_v2_validation_n60_r2_25_null achieved=0.0504 target=0.05 PASS
+[43/45] lm_ancova_v2_validation_n60_r2_55_borderline achieved=0.5976 target=0.60 PASS
+[44/45] lm_ancova_v2_validation_n60_r2_55_clear achieved=0.8980 target=0.90 PASS
+[45/45] lm_ancova_v2_validation_n60_r2_55_null achieved=0.0511 target=0.05 PASS
+Wrote manuscript/calibration/studies/lm_ancova_v2/artifacts/summaries/power-verification.csv (45 scenarios, 0 failures, clear_power=0.90, sha256=eda951887de7c888d2a67216282aacc539d2ecf81b2e2fd359e76c24137dcaea)
+real 228.81
+user 225.30
+sys 2.24
+EXIT:0

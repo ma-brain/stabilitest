@@ -5,7 +5,9 @@
 **Design:** `docs/plans/2026-08-06-lm-ancova-v2-design.md` (Track A locked)  
 **Status:** Gate A protocol frozen. Score-only pilot **passed** (go at clear
 power `0.90`; stamp `artifacts/summaries/SCORE_PILOT_GATE.json`). Production
-training, cutoff search, and held-out acceptance are not yet executed.
+power gate **passed** (45/45); execution freeze recorded in
+`artifacts/summaries/execution-freeze.json`. Production training may proceed
+under the freeze; cutoff search and held-out acceptance are not yet executed.
 Package labels remain suppressed until a later Gate B integration of a
 validated (or fail-closed uncalibrated) v2 decision. The v1 unit `lm_ancova`
 stays the immutable uncalibrated historical record (`no_feasible_thresholds`;
@@ -95,7 +97,7 @@ reassurance is defined on significant nulls).
 `artifacts/summaries/SCORE_PILOT_GATE.json`). Production training and cutoff
 search must use this frozen value.
 
-## Production execution freeze (defaults)
+## Production execution freeze
 
 | Field | Value |
 | --- | --- |
@@ -105,6 +107,13 @@ search must use this frozen value.
 | Screening quota | ≥ `100` significant completed results per required scenario |
 | Failure limit | analysis failures ≤ 5% in any required scenario |
 | `max_removal_pct` | `0.30` |
+| Clear target power | `0.90` (score-pilot freeze) |
+| All-scenario hash | `f69bb4388a70765d1008d0fdc1748b80` |
+| Training (core+stress) hash | `865117678951797d2090259e8d046d32` |
+| Core-only hash | `4485162d1af3ce3a424662472f7a6779` |
+| Validation hash | `a6181acd67201d01a8626f3733c4b583` |
+| Power verification | `artifacts/summaries/power-verification.csv` (sha256 `eda951887de7c888d2a67216282aacc539d2ecf81b2e2fd359e76c24137dcaea`; 45/45 PASS) |
+| Compact stamp | `artifacts/summaries/execution-freeze.json` |
 
 Required scenarios for quotas and acceptance are core/validation null and
 clear rows (borderline and stress excluded). Block publication if any required
@@ -221,6 +230,10 @@ never accept.
 - Unit tests may use 2,000 draws and tolerance `0.04`
 - Borderline power checks may be retained as diagnostics even though borderline
   is excluded from cutoff fitting
+- Frozen artifact: `artifacts/summaries/power-verification.csv`
+  (sha256 `eda951887de7c888d2a67216282aacc539d2ecf81b2e2fd359e76c24137dcaea`;
+  45/45 canonical core+validation scenarios PASS at clear power `0.90`;
+  no robustness scores)
 
 ## Canonical commands
 
