@@ -43,6 +43,10 @@ src/*.dll
 /manuscript/calibration/studies/lm_ancova_v2/artifacts/raw/
 /manuscript/calibration/studies/lm_ancova_v2/artifacts/pilot/
 /manuscript/calibration/studies/lm_ancova_v2/outputs/
+/manuscript/calibration/studies/lm_ancova_v3/artifacts/checkpoints/
+/manuscript/calibration/studies/lm_ancova_v3/artifacts/raw/
+/manuscript/calibration/studies/lm_ancova_v3/artifacts/pilot/
+/manuscript/calibration/studies/lm_ancova_v3/outputs/
 
 # Dependencies / docs
 .Rlib/
