@@ -25,13 +25,18 @@
   Categorical labels stay suppressed; compact decision artifacts are under
   `manuscript/calibration/studies/lm_ancova/published/`. Welch 55/70 is not an
   ANCOVA fallback.
-* Gate B for Track A unit `lm_ancova_v2` closed fail-closed: status
-  `uncalibrated`, reason `no_feasible_thresholds` (candidate hash
+* Gate B for Track A unit `lm_ancova_v2` was executed fail-closed after a
+  sealed pilot GO (Δ = 24.4, overlap = 0.034, AUC = 0.892) whose location
+  metrics were a false-GO relative to training: status `uncalibrated`, reason
+  `no_feasible_thresholds` (candidate hash
   `3dc2a1f840b3eb725bea629dc130f070`), held-out not opened, version
   `lm-ancova-v2-2026-1`. The jackknife-light two-band attempt
   (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`) found no feasible L;
-  categorical labels stay suppressed. Compact decision artifacts are under
-  `manuscript/calibration/studies/lm_ancova_v2/published/`. The v1 `lm_ancova`
+  best RI at the FR-safe L was 0.554 vs gate 0.70. Categorical labels stay
+  suppressed. Compact decision artifacts are under
+  `manuscript/calibration/studies/lm_ancova_v2/published/`. This empirical
+  outcome confirms Finding 4 in
+  `docs/plans/2026-08-06-lm-ancova-v3-design.md`. The v1 `lm_ancova`
   provenance row remains the immutable historical uncalibrated record; Welch
   55/70 is not an ANCOVA fallback.
 * Gate A for Track A unit `lm_ancova_v2` freezes a two-band (Fragile / Not

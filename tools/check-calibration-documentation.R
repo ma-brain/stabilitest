@@ -229,6 +229,44 @@ assert_ancova_v2(
   "ANCOVA v2 docs omit that labels remain suppressed"
 )
 
+# Phase 1 v3-lite: empirical fail-closed narrative (NEWS + calibration README).
+# Do not require edits under studies/lm_ancova_v2/ (immutable publication).
+ancova_v2_outcome_files <- file.path(root, c(
+  "NEWS.md",
+  "manuscript/calibration/README.md"
+))
+ancova_v2_outcome_existing <- ancova_v2_outcome_files[file.exists(ancova_v2_outcome_files)]
+ancova_v2_outcome_text <- if (length(ancova_v2_outcome_existing)) {
+  paste(unlist(lapply(ancova_v2_outcome_existing, readLines, warn = FALSE)),
+        collapse = "\n")
+} else {
+  ""
+}
+assert_ancova_v2_outcome <- function(pattern, description, ignore.case = TRUE) {
+  if (!grepl(pattern, ancova_v2_outcome_text, ignore.case = ignore.case, perl = TRUE)) {
+    violations <<- c(violations, description)
+  }
+}
+assert_ancova_v2_outcome(
+  "executed fail-closed|fail-closed after.{0,80}(pilot|training)",
+  "ANCOVA calibration docs omit that v2 was executed fail-closed"
+)
+assert_ancova_v2_outcome("24\\.4", "ANCOVA calibration docs omit v2 pilot Δ = 24.4")
+assert_ancova_v2_outcome("0\\.034", "ANCOVA calibration docs omit v2 pilot overlap = 0.034")
+assert_ancova_v2_outcome("0\\.892", "ANCOVA calibration docs omit v2 pilot AUC = 0.892")
+assert_ancova_v2_outcome(
+  "0\\.554",
+  "ANCOVA calibration docs omit best RI at FR-safe L = 0.554"
+)
+assert_ancova_v2_outcome(
+  "Finding 4|2026-08-06-lm-ancova-v3-design",
+  "ANCOVA calibration docs omit cross-reference to v3 design Finding 4"
+)
+assert_ancova_v2_outcome(
+  "false.?GO|pilot GO|location",
+  "ANCOVA calibration docs omit false-GO / pilot location-metric narrative"
+)
+
 scan_files <- file.path(root, c(
   "README.md", "NEWS.md", "R", "man", "vignettes",
   "manuscript/robustness_analysis_manuscript.md",

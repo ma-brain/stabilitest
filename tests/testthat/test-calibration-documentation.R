@@ -144,6 +144,31 @@ test_that("Gate B uncalibrated ANCOVA v2 decision is published and documented", 
   expect_match(text, "3dc2a1f840b3eb725bea629dc130f070", fixed = TRUE)
 })
 
+test_that("docs describe v2 as executed fail-closed with empirical pilot metrics", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  policy_files <- file.path(root, c(
+    "NEWS.md",
+    "manuscript/calibration/README.md"
+  ))
+  text <- paste(unlist(lapply(policy_files, readLines, warn = FALSE)),
+                collapse = "\n")
+  expect_match(text, "executed fail-closed|fail-closed after.{0,40}pilot",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "24\\.4", perl = TRUE)
+  expect_match(text, "0\\.034", perl = TRUE)
+  expect_match(text, "0\\.892", perl = TRUE)
+  expect_match(text, "0\\.554", perl = TRUE)
+  expect_match(text, "0\\.70", perl = TRUE)
+  expect_match(
+    text,
+    "Finding 4|2026-08-06-lm-ancova-v3-design",
+    perl = TRUE,
+    ignore.case = TRUE
+  )
+  expect_match(text, "false.?GO|pilot GO|location metrics",
+               perl = TRUE, ignore.case = TRUE)
+})
+
 test_that("Gate A ANCOVA v2 Track A SAP freezes the two-band protocol", {
   root <- normalizePath(testthat::test_path("..", ".."))
   sap <- file.path(

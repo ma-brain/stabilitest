@@ -35,7 +35,7 @@ Welch comparator rather than an ANCOVA fallback. Compact published decision
 artifacts are under `studies/lm_ancova/published/`. The prospectively frozen
 `pain_ancova_trial` illustration never enters training or held-out evidence.
 
-## ANCOVA v2 Track A study (Gate B fail-closed)
+## ANCOVA v2 Track A study (executed fail-closed)
 
 `studies/lm_ancova_v2/` is a separate calibration unit for a weaker two-band
 claim (Fragile / Not fragile) on a jackknife-light score
@@ -43,14 +43,18 @@ claim (Fragile / Not fragile) on a jackknife-light score
 null+clear fitting strata, borderline as diagnostic-only, sealed pilot
 go/no-go formulas, clear-power `0.90` default with recorded `0.95` escalation
 only, workers `4` / `n_boot = 1000` / quotas ≥100 significant, and FR/RI
-acceptance gates. Gate B closed fail-closed: the active `lm_ancova_v2`
-registry row is `uncalibrated` with reason `no_feasible_thresholds` (candidate
-hash `3dc2a1f840b3eb725bea629dc130f070`; version `lm-ancova-v2-2026-1`);
-held-out validation was not opened; categorical labels stay suppressed.
-Compact published decision artifacts are under `studies/lm_ancova_v2/published/`.
-v1 validation seeds/IDs are absent from v2 ledgers; v1 `lm_ancova` provenance
-stays the immutable uncalibrated historical record. Welch 55/70 is not an
-ANCOVA fallback.
+acceptance gates. Gate B was executed fail-closed after a sealed pilot GO
+(Δ = 24.4, overlap = 0.034, AUC = 0.892) whose location metrics were a
+false-GO relative to training: the active `lm_ancova_v2` registry row is
+`uncalibrated` with reason `no_feasible_thresholds` (candidate hash
+`3dc2a1f840b3eb725bea629dc130f070`; version `lm-ancova-v2-2026-1`); held-out
+validation was not opened; best RI at the FR-safe L was 0.554 vs gate 0.70;
+categorical labels stay suppressed. Compact published decision artifacts are
+under `studies/lm_ancova_v2/published/`. This empirical outcome confirms
+Finding 4 in `docs/plans/2026-08-06-lm-ancova-v3-design.md`. v1 validation
+seeds/IDs are absent from v2 ledgers; v1 `lm_ancova` provenance stays the
+immutable uncalibrated historical record. Welch 55/70 is not an ANCOVA
+fallback.
 
 The scenario table is deliberately independent of generated data.  Calibration
 runners must use the current checkout (via `R/load_calibration.R`), preserve the
