@@ -235,6 +235,38 @@ testthat::test_that("resume never returns a checkpoint for a different replicate
   testthat::expect_identical(resumed$replicate_id, 5:8)
 })
 
+testthat::test_that("resume fails closed on checkpoint manifest hash mismatch", {
+  env <- new.env(parent = globalenv())
+  for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
+    sys.source(file.path("..", "..", "R", file), envir = env)
+  }
+  scenario <- list(scenario_id = "hash-aware", analysis_engine = "two_sample",
+                   calibration_family = "test", calibration_unit = "fake_method", endpoint = "mean",
+                   design_layer = "core", truth_class = "null", target_conclusion = "non_significant",
+                   sample_size = 3L, n_boot = 2L, max_removal_pct = .3)
+  adapter <- list(
+    generate = function(scenario, seed) list(data = data.frame(x = 1:3)),
+    primary_decision = function(...) list(conclusion = "non_significant"),
+    run_robustness = function(data, ...) list(status = "completed", original_p = .5, effective_p = .5,
+      metrics = list(jackknife_conclusion_stability = 100, worstcase_fragility_component = 100,
+                     worstcase_fragility_k = 3L, worstcase_fragility_pct = 100,
+                     bootstrap_reproducibility = 100, overall_robustness = 100),
+      interpretation_label = "Robust", n = 3L)
+  )
+  root <- tempfile("hash-aware-"); dir.create(root)
+  env$run_full_scenario(
+    scenario, adapter, replicate_ids = 1L, checkpoint_root = root,
+    manifest_hash = "prop-manifest-v1"
+  )
+  testthat::expect_error(
+    env$run_full_scenario(
+      scenario, adapter, replicate_ids = 1L, checkpoint_root = root,
+      resume = TRUE, manifest_hash = "prop-manifest-mutated"
+    ),
+    "checkpoint manifest hash mismatch"
+  )
+})
+
 testthat::test_that("executor reads nested analysis metrics from wrapped adapters", {
   env <- new.env(parent = globalenv())
   for (file in c("schema.R", "seeds.R", "checkpoints.R", "executor.R")) {
