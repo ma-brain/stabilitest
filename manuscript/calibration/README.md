@@ -35,6 +35,19 @@ Welch comparator rather than an ANCOVA fallback. Compact published decision
 artifacts are under `studies/lm_ancova/published/`. The prospectively frozen
 `pain_ancova_trial` illustration never enters training or held-out evidence.
 
+## ANCOVA v2 Track A study (Gate A SAP frozen)
+
+`studies/lm_ancova_v2/` is a new calibration unit for a weaker two-band claim
+(Fragile / Not fragile) on a jackknife-light score
+(`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`). The Gate A SAP freezes
+null+clear fitting strata, borderline as diagnostic-only, sealed pilot
+go/no-go formulas, clear-power `0.90` default with recorded `0.95` escalation
+only, workers `4` / `n_boot = 1000` / quotas ≥100 significant, and FR/RI
+acceptance gates. v1 validation seeds/IDs are absent from v2 ledgers; v1
+`lm_ancova` provenance stays the immutable uncalibrated record. Package labels
+remain suppressed until a later Gate B integration of a validated or
+fail-closed v2 decision. Welch 55/70 is not an ANCOVA fallback.
+
 The scenario table is deliberately independent of generated data.  Calibration
 runners must use the current checkout (via `R/load_calibration.R`), preserve the
 scenario seed, and write intermediate files below `artifacts/`.  Only the

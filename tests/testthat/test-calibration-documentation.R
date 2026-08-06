@@ -79,3 +79,61 @@ test_that("Gate B uncalibrated ANCOVA decision is published and documented", {
   expect_match(text, "Gate B.{0,80}(fail-closed|uncalibrated)|fail-closed.{0,80}Gate B",
                perl = TRUE, ignore.case = TRUE)
 })
+
+test_that("Gate A ANCOVA v2 Track A SAP freezes the two-band protocol", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  sap <- file.path(
+    root, "manuscript", "calibration", "studies", "lm_ancova_v2",
+    "CALIBRATION_SAP.md"
+  )
+  expect_true(file.exists(sap), info = "missing lm_ancova_v2 CALIBRATION_SAP.md")
+  if (!file.exists(sap)) {
+    return(invisible())
+  }
+
+  text <- paste(readLines(sap, warn = FALSE), collapse = "\n")
+  expect_match(text, "lm_ancova_v2", fixed = TRUE)
+  expect_match(text, "fragility\\s*=\\s*0\\.5", perl = TRUE)
+  expect_match(text, "bootstrap\\s*=\\s*0\\.5", perl = TRUE)
+  expect_match(text, "jackknife\\s*=\\s*0", perl = TRUE)
+  expect_match(text, "Fragile if score\\s*[≤<=]\\s*L|score\\s*[≤<=]\\s*L.{0,40}Fragile",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "Not fragile", ignore.case = TRUE)
+  expect_match(text, "null.{0,40}clear|fitting strata.{0,40}null",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "borderline.{0,40}diagnostic|diagnostic.?only",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "median\\(clear\\).{0,20}median\\(null\\)",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "P\\(null\\s*>\\s*median\\(clear\\)\\)",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "0.90", fixed = TRUE)
+  expect_match(text, "0.95", fixed = TRUE)
+  expect_match(text, "workers.{0,20}4|Workers.+`4`",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "n_boot.{0,20}1000|`1000`", perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "max_screen_draws.{0,20}10000|`10000`",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "100.{0,40}significant|significant.{0,40}100",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(text, "false reassurance.{0,40}0\\.05|FR.{0,40}0\\.05",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(
+    text,
+    "Not.?fragile identification.{0,40}0\\.70|clear.{0,40}0\\.70",
+    perl = TRUE,
+    ignore.case = TRUE
+  )
+  expect_match(
+    text,
+    "v1 validation.{0,80}(absent|not|never)|absent from v2|no v1 validation",
+    perl = TRUE,
+    ignore.case = TRUE
+  )
+
+  audit <- file.path(root, "tools", "check-calibration-documentation.R")
+  skip_if_not(file.exists(audit), "documentation audit tool is not shipped")
+  status <- system2("Rscript", audit, stdout = TRUE, stderr = TRUE)
+  expect_identical(attr(status, "status"), NULL)
+  expect_true(any(grepl("audit passed", status, ignore.case = TRUE)))
+})

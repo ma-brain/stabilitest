@@ -96,6 +96,86 @@ assert_ancova("prospectively frozen|never enters training|excluded from.*calibra
 assert_ancova("Illustrative synthetic case study|case study follows|after the calibration results",
               "ANCOVA docs omit that the manuscript case study follows calibration results")
 
+# Gate A ANCOVA v2 Track A SAP (two-band jackknife-light protocol).
+ancova_v2_policy_files <- file.path(root, c(
+  "README.md", "NEWS.md",
+  "manuscript/calibration/README.md",
+  "manuscript/calibration/studies/lm_ancova_v2/README.md",
+  "manuscript/calibration/studies/lm_ancova_v2/CALIBRATION_SAP.md"
+))
+ancova_v2_required <- file.path(
+  root, "manuscript/calibration/studies/lm_ancova_v2/CALIBRATION_SAP.md"
+)
+if (!file.exists(ancova_v2_required)) {
+  violations <- c(violations, "missing ANCOVA v2 CALIBRATION_SAP.md")
+}
+ancova_v2_existing <- ancova_v2_policy_files[file.exists(ancova_v2_policy_files)]
+ancova_v2_text <- if (length(ancova_v2_existing)) {
+  paste(unlist(lapply(ancova_v2_existing, readLines, warn = FALSE)), collapse = "\n")
+} else {
+  ""
+}
+assert_ancova_v2 <- function(pattern, description, ignore.case = TRUE) {
+  if (!grepl(pattern, ancova_v2_text, ignore.case = ignore.case, perl = TRUE)) {
+    violations <<- c(violations, description)
+  }
+}
+assert_ancova_v2("lm_ancova_v2",
+                 "ANCOVA v2 docs omit lm_ancova_v2",
+                 ignore.case = FALSE)
+assert_ancova_v2("fragility\\s*=\\s*0\\.5",
+                 "ANCOVA v2 docs omit fragility = 0.5")
+assert_ancova_v2("bootstrap\\s*=\\s*0\\.5",
+                 "ANCOVA v2 docs omit bootstrap = 0.5")
+assert_ancova_v2("jackknife\\s*=\\s*0(?!\\.\\d)",
+                 "ANCOVA v2 docs omit jackknife = 0")
+assert_ancova_v2(
+  "Fragile if score\\s*[≤<=]\\s*L|score\\s*[≤<=]\\s*L.{0,60}Fragile",
+  "ANCOVA v2 docs omit Fragile if score ≤ L band rule"
+)
+assert_ancova_v2("Not fragile",
+                 "ANCOVA v2 docs omit Not fragile band")
+assert_ancova_v2("null.{0,40}clear only|fitting strata.{0,40}null.{0,20}clear",
+                 "ANCOVA v2 docs omit null + clear fitting strata")
+assert_ancova_v2("borderline.{0,40}diagnostic|diagnostic.?only",
+                 "ANCOVA v2 docs omit borderline diagnostic-only policy")
+assert_ancova_v2("median\\(clear\\).{0,30}median\\(null\\)",
+                 "ANCOVA v2 docs omit pilot median(clear) − median(null) formula")
+assert_ancova_v2("P\\(null\\s*>\\s*median\\(clear\\)\\)",
+                 "ANCOVA v2 docs omit pilot P(null > median(clear)) formula")
+assert_ancova_v2(
+  "0\\.90.{0,80}0\\.95|clear.{0,40}0\\.90.{0,40}0\\.95|escalate.{0,40}0\\.95",
+  "ANCOVA v2 docs omit clear power 0.90 default / 0.95 escalation rule"
+)
+assert_ancova_v2("workers.{0,30}`?4`?|Workers.+`4`",
+                 "ANCOVA v2 docs omit workers default 4")
+assert_ancova_v2("n_boot.{0,30}`?1000`?|`1000`",
+                 "ANCOVA v2 docs omit n_boot = 1000")
+assert_ancova_v2("max_screen_draws.{0,30}`?10000`?|`10000`",
+                 "ANCOVA v2 docs omit max_screen_draws = 10000")
+assert_ancova_v2("100.{0,40}significant|significant.{0,40}100",
+                 "ANCOVA v2 docs omit ≥100 significant quota")
+assert_ancova_v2(
+  "false reassurance.{0,40}0\\.05|FR.{0,40}0\\.05",
+  "ANCOVA v2 docs omit FR ≤ 0.05 acceptance gate"
+)
+assert_ancova_v2(
+  "Not.?fragile identification.{0,40}0\\.70|identification on clear.{0,40}0\\.70",
+  "ANCOVA v2 docs omit Not-fragile identification ≥ 0.70 gate"
+)
+assert_ancova_v2(
+  "v1 validation.{0,100}(absent|not|never)|absent from v2|no v1 validation",
+  "ANCOVA v2 docs omit assertion that v1 validation seeds/IDs are absent from v2"
+)
+assert_ancova_v2(
+  "Welch.{0,40}comparator|55/70.{0,40}comparator|not an ANCOVA (default|fallback)",
+  "ANCOVA v2 docs omit that Welch 55/70 is not an ANCOVA fallback"
+)
+assert_ancova_v2(
+  "Track A|two-band|Fragile / Not fragile|Fragile vs Not fragile",
+  "ANCOVA v2 docs omit Track A two-band claim"
+)
+
 scan_files <- file.path(root, c(
   "README.md", "NEWS.md", "R", "man", "vignettes",
   "manuscript/robustness_analysis_manuscript.md",

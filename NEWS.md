@@ -24,6 +24,11 @@
   Categorical labels stay suppressed; compact decision artifacts are under
   `manuscript/calibration/studies/lm_ancova/published/`. Welch 55/70 is not an
   ANCOVA fallback.
+* Gate A for Track A unit `lm_ancova_v2` freezes a two-band (Fragile / Not
+  fragile) jackknife-light SAP (`fragility = 0.5`, `bootstrap = 0.5`,
+  `jackknife = 0`; null+clear fitting; borderline diagnostic-only). Labels
+  remain suppressed until a later v2 Gate B decision; v1 provenance is
+  unchanged.
 * The 0.5.1 production freeze found all seven calibration families
   `uncalibrated` / `no_feasible_thresholds`. Accordingly, categorical
   Fragile/Moderate/Robust labels are reserved for statistically significant

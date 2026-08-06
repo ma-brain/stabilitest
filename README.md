@@ -36,8 +36,12 @@ not opened; version `lm-ancova-2026-1`), so model labels remain suppressed.
 Welch 55/70 is a Welch comparator, not an ANCOVA fallback. Gate A froze the
 isolated ANCOVA study for eligible significant canonical 1-df treatment effects
 with 60%/90% power-defined truth strata. Multi-df labels remain suppressed and
-score weights remain frozen. The prospectively frozen `pain_ancova_trial`
-dataset is an illustration only and never enters training or held-out evidence.
+score weights remain frozen. A separate Gate A SAP for Track A unit
+`lm_ancova_v2` freezes a two-band (Fragile / Not fragile) jackknife-light
+protocol (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`); labels stay
+suppressed until a later v2 Gate B decision. The prospectively frozen
+`pain_ancova_trial` dataset is an illustration only and never enters training
+or held-out evidence.
 
 ## Installation
 
