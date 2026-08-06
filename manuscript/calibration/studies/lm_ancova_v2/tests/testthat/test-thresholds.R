@@ -16,7 +16,8 @@
 
 .ancova_v2_score_rows <- function(scenario_id, truth_class, scores,
                                   diagnostic_only = FALSE,
-                                  status = "completed") {
+                                  status = "completed",
+                                  design_layer = "core") {
   data.frame(
     scenario_id = scenario_id,
     truth_class = truth_class,
@@ -24,6 +25,7 @@
     overall_score = as.numeric(scores),
     diagnostic_only = isTRUE(diagnostic_only),
     status = status,
+    design_layer = as.character(design_layer),
     stringsAsFactors = FALSE
   )
 }
@@ -136,7 +138,14 @@ test_that("fit_lm_ancova_v2_cutoffs ignores borderline and diagnostic_only rows"
   bord_unflagged <- .ancova_v2_score_rows(
     "bord_unflagged", "borderline", rep(99, 40), diagnostic_only = FALSE
   )
-  fit <- env$fit_lm_ancova_v2_cutoffs(rbind(base, poison, bord_unflagged))
+  # Stress-layer clears without diagnostic_only must still be excluded.
+  stress_clear <- .ancova_v2_score_rows(
+    "stress_layer_clear", "clear", rep(10, 40),
+    diagnostic_only = FALSE, design_layer = "stress"
+  )
+  fit <- env$fit_lm_ancova_v2_cutoffs(
+    rbind(base, poison, bord_unflagged, stress_clear)
+  )
   testthat::expect_identical(fit$status, "candidate")
   testthat::expect_identical(fit$cutoff, 50L)
   testthat::expect_identical(fit$metrics$n, 80L)
@@ -145,7 +154,7 @@ test_that("fit_lm_ancova_v2_cutoffs ignores borderline and diagnostic_only rows"
 test_that("fit_lm_ancova_v2_cutoffs tie-breaks by RI then FR margin then smallest L", {
   env <- .load_lm_ancova_v2_study_env()
 
-  # Highest not-fragile identification wins when FR margins are equal.
+  # Among equal max-RI cutoffs with equal FR margins, prefer smallest L.
   # Nulls peak at 40 ⇒ FR fails for L < 40. Clears keep RI=1 through L=44.
   null_ri <- c(rep(20, 30), rep(40, 10))
   clear_ri <- c(rep(50, 28), rep(45, 12))
@@ -158,7 +167,7 @@ test_that("fit_lm_ancova_v2_cutoffs tie-breaks by RI then FR margin then smalles
   testthat::expect_equal(fit_ri$metrics$not_fragile_identification, 1)
 
   # With equal RI, prefer greater FR safety margin (lower FR upper bound).
-  # L=50 has FR=2/40; L=60 has FR=0 and the same RI=1 → pick 60.
+  # Only FR=0 is Wilson-feasible at n=40; smallest such L is 60.
   null_fr <- c(rep(20, 38), 60, 60)
   clear_fr <- rep(80, 40)
   data_fr <- rbind(
@@ -177,4 +186,37 @@ test_that("fit_lm_ancova_v2_cutoffs tie-breaks by RI then FR margin then smalles
   )
   fit_small <- env$fit_lm_ancova_v2_cutoffs(data_small)
   testthat::expect_identical(fit_small$cutoff, 48L)
+})
+
+test_that("fit_lm_ancova_v2_cutoffs prefers higher RI over safer FR margin", {
+  env <- .load_lm_ancova_v2_study_env()
+  # n=80 so a non-zero FR can still clear the Wilson upper gate.
+  # L=40: RI=1.0, FR=3/80 (worse FR margin).
+  # L=70: RI=0.70, FR=0 (safer FR margin).
+  # RI-primary order must pick 40; FR-margin-primary would pick 70.
+  null_scores <- c(rep(10, 67), rep(40, 10), rep(70, 3))
+  clear_scores <- c(rep(80, 56), rep(45, 24))
+  data <- rbind(
+    .ancova_v2_score_rows("null_w", "null", null_scores),
+    .ancova_v2_score_rows("clear_w", "clear", clear_scores)
+  )
+  fit <- env$fit_lm_ancova_v2_cutoffs(data)
+  testthat::expect_identical(fit$cutoff, 40L)
+  testthat::expect_equal(fit$metrics$not_fragile_identification, 1)
+
+  feasible <- fit$grid[isTRUE(fit$grid$feasible) | fit$grid$feasible %in% TRUE,
+                       , drop = FALSE]
+  fr_primary <- feasible[
+    order(-feasible$fr_safety_margin, feasible$cutoff),
+    , drop = FALSE
+  ]
+  testthat::expect_identical(as.integer(fr_primary$cutoff[[1L]]), 70L)
+  testthat::expect_gt(
+    fit$metrics$not_fragile_identification,
+    fr_primary$not_fragile_identification[[1L]]
+  )
+  testthat::expect_lt(
+    fit$grid$fr_safety_margin[fit$grid$cutoff == 40L],
+    fit$grid$fr_safety_margin[fit$grid$cutoff == 70L]
+  )
 })

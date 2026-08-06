@@ -22,6 +22,12 @@
     diag <- data$diagnostic_only
     data <- data[is.na(diag) | !as.logical(diag), , drop = FALSE]
   }
+  if ("design_layer" %in% names(data)) {
+    data <- data[
+      is.na(data$design_layer) | as.character(data$design_layer) != "stress",
+      , drop = FALSE
+    ]
+  }
   truth <- as.character(data$truth_class)
   data <- data[truth %in% c("null", "clear"), , drop = FALSE]
   if (!nrow(data)) {
