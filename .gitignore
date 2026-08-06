@@ -35,6 +35,10 @@ src/*.dll
 /manuscript/calibration/artifacts/checkpoints/
 /manuscript/calibration/artifacts/raw/
 /manuscript/calibration/artifacts/pilot/
+/manuscript/calibration/studies/binary_proportion/artifacts/checkpoints/
+/manuscript/calibration/studies/binary_proportion/artifacts/raw/
+/manuscript/calibration/studies/binary_proportion/artifacts/pilot/
+/manuscript/calibration/studies/binary_proportion/outputs/
 
 # Dependencies / docs
 .Rlib/
