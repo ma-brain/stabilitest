@@ -6,13 +6,12 @@
 **Status:** Gate A protocol frozen. Score-only pilot **passed** (go at clear
 power `0.90`; stamp `artifacts/summaries/SCORE_PILOT_GATE.json`). Production
 power gate **passed** (45/45); execution freeze recorded in
-`artifacts/summaries/execution-freeze.json`. Production training occupancy assembled from checkpoints
-(33/33 complete; validation not opened; cutoff search not run). Cutoff search
-and held-out acceptance are not yet executed.
-Package labels remain suppressed until a later Gate B integration of a
-validated (or fail-closed uncalibrated) v2 decision. The v1 unit `lm_ancova`
-stays the immutable uncalibrated historical record (`no_feasible_thresholds`;
-held-out not opened).
+`artifacts/summaries/execution-freeze.json`. Production training cutoff search
+closed **fail-closed** as `uncalibrated` / `no_feasible_thresholds` (candidate
+hash `3dc2a1f840b3eb725bea629dc130f070`; held-out **not** opened). Package
+labels remain suppressed until Gate B integration of this uncalibrated v2
+decision. The v1 unit `lm_ancova` stays the immutable uncalibrated historical
+record (`no_feasible_thresholds`; held-out not opened).
 
 ## Scope
 
@@ -120,6 +119,31 @@ Required scenarios for quotas and acceptance are core/validation null and
 clear rows (borderline and stress excluded). Block publication if any required
 scenario misses quota or exceeds the failure limit. Full screening budget and
 resume require matching scenario/code/option hashes.
+
+## Training outcome (Gate A production)
+
+| Field | Value |
+| --- | --- |
+| Workers | `4` |
+| Core null+clear completed (fit strata) | `1800` (`100` per scenario; 9 null + 9 clear) |
+| Core borderline completed | `900` (diagnostic only; excluded from fit) |
+| Stress completed | `600` (diagnostic only; excluded from fit) |
+| Analysis failures | `0` |
+| Validation accessed | `FALSE` |
+| Candidate status | `uncalibrated` |
+| Reason | `no_feasible_thresholds` |
+| Cutoff L | `NA` |
+| Candidate hash | `3dc2a1f840b3eb725bea629dc130f070` |
+| Training artifact hash (fit strata) | `e432ac874eb894518bbc826fc972f0a6` |
+| Scenario manifest hash | `f69bb4388a70765d1008d0fdc1748b80` |
+| Assembled from | scenario `checkpoints/full` |
+
+No integer L in {0, ..., 100} satisfied the frozen FR/RI training constraints
+on significant core null+clear rows. Best FR-safe L (`FR ≤ 0.05` and Wilson
+upper ≤ 0.10) reached clear Not-fragile identification ≈ 0.55 (below the 0.70
+point / 0.60 Wilson-lower gates). Held-out validation is **not** opened.
+Compact stamps: `artifacts/summaries/candidate-diagnostics.json`,
+`artifacts/summaries/training-manifest.json`.
 
 ## Score-only pilot go/no-go (sealed)
 

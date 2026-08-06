@@ -37,6 +37,7 @@ for eligible significant canonical 1-df ANCOVA on a jackknife-light score
 
 Gate A SAP frozen (Track A). Score-only pilot **passed** (clear power frozen at
 `0.90`). Production power gate **passed** (45/45); execution freeze recorded.
-Production training occupancy assembled (33/33 checkpoints; validation
-closed). Cutoff search and held-out acceptance remain subsequent plan tasks. Package labels stay suppressed until a
-later Gate B integration.
+Production training cutoff search closed **fail-closed** as `uncalibrated` /
+`no_feasible_thresholds` (candidate hash
+`3dc2a1f840b3eb725bea629dc130f070`; held-out not opened). Package labels stay
+suppressed until Gate B integration of the uncalibrated v2 decision.

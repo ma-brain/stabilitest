@@ -1,0 +1,30 @@
+{
+  "status": "uncalibrated",
+  "frozen_status": "uncalibrated",
+  "cutoff": "NA",
+  "candidate_hash": "3dc2a1f840b3eb725bea629dc130f070",
+  "scenario_manifest_hash": "f69bb4388a70765d1008d0fdc1748b80",
+  "training_manifest_hash": "e432ac874eb894518bbc826fc972f0a6",
+  "n_training": 1800,
+  "n_audit": 3300,
+  "reason": "no_feasible_thresholds",
+  "workers": 4,
+  "validation_accessed": false,
+  "code_commit": "e7e9cf4991944bfda13f12df168539a06ba6932a",
+  "fit": {
+    "status": "uncalibrated",
+    "reason": "no_feasible_thresholds",
+    "cutoff": "NA",
+    "metrics": null
+  },
+  "frozen": {
+    "status": "uncalibrated",
+    "reason": "no_feasible_thresholds",
+    "cutoff": "NA",
+    "scenario_manifest_hash": "f69bb4388a70765d1008d0fdc1748b80",
+    "training_manifest_hash": "e432ac874eb894518bbc826fc972f0a6",
+    "held_out_opened": false,
+    "validation_refit": false,
+    "candidate_hash": "3dc2a1f840b3eb725bea629dc130f070"
+  }
+}
