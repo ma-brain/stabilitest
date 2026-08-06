@@ -353,6 +353,11 @@ ancova_v2_write_score_pilot_gate <- function(data, output,
       return(obj$payload$replicates)
     }
     if (is.list(obj) && is.data.frame(obj$replicates)) return(obj$replicates)
+    # Shared runner artifact: list(screen=..., analyse=list(<replicate tibbles>))
+    if (is.list(obj) && is.list(obj$analyse)) {
+      parts <- Filter(function(x) is.data.frame(x) && nrow(x) > 0L, obj$analyse)
+      if (length(parts)) return(do.call(rbind, parts))
+    }
     .ancova_v2_score_pilot_abort("RDS input did not contain a replicate data frame")
   }
   if (identical(ext, "csv")) {

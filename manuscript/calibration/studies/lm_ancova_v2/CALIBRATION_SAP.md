@@ -3,12 +3,13 @@
 **Calibration unit:** `lm_ancova_v2`  
 **Study path:** `manuscript/calibration/studies/lm_ancova_v2/`  
 **Design:** `docs/plans/2026-08-06-lm-ancova-v2-design.md` (Track A locked)  
-**Status:** Gate A protocol frozen. Score-only pilot, production training,
-cutoff search, and held-out acceptance are not yet executed. Package labels
-remain suppressed until a later Gate B integration of a validated (or
-fail-closed uncalibrated) v2 decision. The v1 unit `lm_ancova` stays the
-immutable uncalibrated historical record (`no_feasible_thresholds`; held-out
-not opened).
+**Status:** Gate A protocol frozen. Score-only pilot **passed** (go at clear
+power `0.90`; stamp `artifacts/summaries/SCORE_PILOT_GATE.json`). Production
+training, cutoff search, and held-out acceptance are not yet executed.
+Package labels remain suppressed until a later Gate B integration of a
+validated (or fail-closed uncalibrated) v2 decision. The v1 unit `lm_ancova`
+stays the immutable uncalibrated historical record (`no_feasible_thresholds`;
+held-out not opened).
 
 ## Scope
 
@@ -89,6 +90,11 @@ reassurance is defined on significant nulls).
 4. The frozen clear-power value is written into the pilot gate stamp before
    any production cutoff search.
 
+**Frozen decision (score pilot):** clear target power = `0.90`
+(`decision = go`, `escalate = false`; see
+`artifacts/summaries/SCORE_PILOT_GATE.json`). Production training and cutoff
+search must use this frozen value.
+
 ## Production execution freeze (defaults)
 
 | Field | Value |
@@ -154,7 +160,9 @@ hard no-go AUC < 0.70.
 - **No-go** if any Hard no-go fires, or if the single 0.95 escalation still
   fails Go. Remain numeric-only; do not search \(L\); do not open held-out.
 
-Machine-readable stamp (later task): `artifacts/summaries/SCORE_PILOT_GATE.json`.
+Machine-readable stamp: `artifacts/summaries/SCORE_PILOT_GATE.json`
+(recorded after the sealed score-only pilot; do not reopen raw score
+distributions beyond the stamp summaries).
 
 ## Cutoff search (training)
 

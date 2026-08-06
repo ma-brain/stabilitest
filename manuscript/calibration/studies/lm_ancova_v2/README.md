@@ -13,8 +13,9 @@ for eligible significant canonical 1-df ANCOVA on a jackknife-light score
 - Bands: Fragile if score ≤ L; else Not fragile.
 - Primary fitting strata: null and clear only.
 - Borderline (~60% power) is diagnostic-only — not a fitting or acceptance target.
-- Clear default target power is `0.90`; escalate to `0.95` only via a recorded
-  score-pilot decision when 0.90 separation is marginal.
+- Clear target power is **frozen at `0.90`** after a recorded score-pilot go
+  (`artifacts/summaries/SCORE_PILOT_GATE.json`); escalate to `0.95` only if a
+  future re-pilot records marginal separation under the SAP formulas.
 - Workers default `4`, `n_boot = 1000`, `max_screen_draws = 10000`, quotas
   ≥100 significant per required scenario.
 - v1 validation seeds/IDs are absent from v2 ledgers; Welch 55/70 is not an
@@ -34,6 +35,7 @@ for eligible significant canonical 1-df ANCOVA on a jackknife-light score
 
 ## Status
 
-Gate A SAP frozen (Track A). Adapter, cutoff fitter, score-pilot execution, and
-production compute remain out of scope until subsequent plan tasks. Package
-labels stay suppressed until a later Gate B integration.
+Gate A SAP frozen (Track A). Score-only pilot **passed** (clear power frozen at
+`0.90`). Production training / cutoff search and held-out acceptance remain
+subsequent plan tasks. Package labels stay suppressed until a later Gate B
+integration.
