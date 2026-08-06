@@ -381,6 +381,146 @@ test_that("caller-supplied malformed registries fail closed", {
   )$applicable)
 })
 
+# --- proportion profile plumbing (Task 1) ------------------------------------
+# The runtime fail-closed profile for binary-proportion results.  At this stage
+# the active fisher_exact registry row is still uncalibrated, so the predicate
+# block below is pure plumbing: it never selects cutoffs until Gate B activates
+# the row.  These tests pin the plumbing against a synthetic validated registry
+# and confirm Welch remains unaffected by the new analysis_profile argument.
+
+.canonical_prop_profile <- function(...) {
+  utils::modifyList(list(
+    version = "prop-profile-1", calibration_unit = "fisher_exact",
+    canonical_fisher = TRUE, two_arm_individual_level = TRUE,
+    complete_cases = TRUE, n1 = 100L, n2 = 100L, allocation_ratio = 1,
+    events1 = 45L, non_events1 = 55L, rate1 = 0.45,
+    events2 = 20L, non_events2 = 80L, rate2 = 0.20,
+    alpha = 0.05, n_boot = 1000L, correct = TRUE,
+    weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+    max_removal_pct = 0.30
+  ), list(...))
+}
+
+.validated_fisher_exact_registry <- function() {
+  registry <- load_calibration_registry()
+  idx <- registry$calibration_unit == "fisher_exact"
+  registry$status[idx] <- "validated_method_specific"
+  registry$cutoff_fragile[idx] <- 45
+  registry$cutoff_robust[idx] <- 65
+  registry$version[idx] <- "fisher-fixture-1"
+  registry$source[idx] <- "fixture:validated-fisher-exact"
+  registry$supported_conditions[idx] <- "canonical significant Fisher fixture"
+  registry
+}
+
+test_that("validated fisher_exact applies only to a complete canonical profile", {
+  registry <- .validated_fisher_exact_registry()
+  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+
+  eligible <- resolve_result_calibration(
+    "fisher_exact", "risk_difference", "significant",
+    weights, 0.30,
+    registry = registry,
+    analysis_profile = .canonical_prop_profile()
+  )
+  expect_true(eligible$applicable)
+  expect_identical(eligible$status, "validated_method_specific")
+  expect_equal(c(eligible$cutoff_fragile, eligible$cutoff_robust), c(45, 65))
+
+  inapplicable <- list(
+    missing_profile = NULL,
+    wrong_version = .canonical_prop_profile(version = "other"),
+    wrong_unit = .canonical_prop_profile(calibration_unit = "chi_square_2x2"),
+    noncanonical = .canonical_prop_profile(canonical_fisher = FALSE),
+    not_two_arm = .canonical_prop_profile(two_arm_individual_level = FALSE),
+    incomplete = .canonical_prop_profile(complete_cases = FALSE),
+    n1_small = .canonical_prop_profile(n1 = 24L, events1 = 5L,
+                                        non_events1 = 19L, rate1 = 5 / 24),
+    n1_large = .canonical_prop_profile(n1 = 201L, events1 = 90L,
+                                        non_events1 = 111L, rate1 = 90 / 201),
+    n2_small = .canonical_prop_profile(n2 = 24L, events2 = 5L,
+                                        non_events2 = 19L, rate2 = 5 / 24),
+    unbalanced = .canonical_prop_profile(n1 = 120L, n2 = 60L,
+                                          allocation_ratio = 2),
+    control_rate_low = .canonical_prop_profile(
+      events2 = 2L, non_events2 = 98L, rate2 = 0.02),
+    control_rate_high = .canonical_prop_profile(
+      events2 = 102L, non_events2 = 18L, rate2 = 0.85),
+    control_events_lt3 = .canonical_prop_profile(
+      events2 = 2L, non_events2 = 98L, rate2 = 0.02),
+    alpha = .canonical_prop_profile(alpha = 0.01),
+    n_boot = .canonical_prop_profile(n_boot = 500L),
+    weights = .canonical_prop_profile(
+      weights = c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)),
+    removal = .canonical_prop_profile(max_removal_pct = 0.20)
+  )
+
+  for (name in names(inapplicable)) {
+    result <- resolve_result_calibration(
+      "fisher_exact", "risk_difference", "significant",
+      weights, 0.30,
+      registry = registry,
+      analysis_profile = inapplicable[[name]]
+    )
+    expect_false(result$applicable, info = name)
+    expect_true(is.na(result$cutoff_fragile), info = name)
+    expect_true(is.na(result$cutoff_robust), info = name)
+  }
+})
+
+test_that("fisher_exact profile bounds use the frozen edges inclusively", {
+  registry <- .validated_fisher_exact_registry()
+  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+  probe <- function(profile) {
+    resolve_result_calibration(
+      "fisher_exact", "risk_difference", "significant",
+      weights, 0.30, registry = registry, analysis_profile = profile
+    )$applicable
+  }
+
+  # Frozen bounds: per-arm n in [25, 200]; allocation ratio in [0.8, 1.25];
+  # observed control-arm rate in [0.08, 0.55] with >= 3 events and >= 3
+  # non-events in the control arm.  All edges below are the boundary values
+  # themselves and must remain eligible.
+  expect_true(probe(.canonical_prop_profile(n1 = 25L, events1 = 8L,
+                                             non_events1 = 17L, rate1 = 8 / 25)))
+  expect_true(probe(.canonical_prop_profile(n1 = 200L)))
+  expect_true(probe(.canonical_prop_profile(
+    n2 = 100L, events2 = 8L, non_events2 = 92L, rate2 = 0.08)))
+  expect_true(probe(.canonical_prop_profile(
+    n2 = 100L, events2 = 55L, non_events2 = 45L, rate2 = 0.55)))
+  expect_true(probe(.canonical_prop_profile(
+    n1 = 125L, n2 = 100L, allocation_ratio = 1.25)))
+  expect_true(probe(.canonical_prop_profile(
+    n1 = 80L, n2 = 100L, allocation_ratio = 0.8)))
+})
+
+test_that("active fisher_exact stays uncalibrated despite canonical profiles", {
+  # No synthetic registry: the installed row is uncalibrated, so a canonical
+  # profile must not manufacture cutoffs.
+  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+  result <- resolve_result_calibration(
+    "fisher_exact", "risk_difference", "significant",
+    weights, 0.30, analysis_profile = .canonical_prop_profile()
+  )
+  expect_false(result$applicable)
+  expect_identical(result$status, "uncalibrated")
+  expect_true(all(is.na(c(result$cutoff_fragile, result$cutoff_robust))))
+})
+
+test_that("Welch resolution ignores analysis_profile", {
+  supported <- resolve_result_calibration(
+    calibration_unit = "welch_unpaired",
+    endpoint = "mean_difference",
+    conclusion_type = "significant",
+    weights = c(jackknife = .4, fragility = .4, bootstrap = .2),
+    max_removal_pct = .30,
+    analysis_profile = .canonical_prop_profile()
+  )
+  expect_true(supported$applicable)
+  expect_identical(supported$status, "validated_method_specific")
+})
+
 test_that("malformed calibration metadata suppresses score labels", {
   malformed <- list(
     list(applicable = TRUE, status = NULL,
