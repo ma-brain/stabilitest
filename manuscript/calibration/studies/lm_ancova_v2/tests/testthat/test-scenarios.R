@@ -102,9 +102,59 @@ test_that("lm_ancova_v2 scenarios form the isolated study contract", {
   testthat::expect_true(min(core$scenario_seed) >= 41001L)
   testthat::expect_true(min(held_out$scenario_seed) >= 42001L)
   testthat::expect_true(min(stress$scenario_seed) >= 43001L)
+  testthat::expect_length(
+    intersect(scenarios$scenario_seed, 31001L:33006L),
+    0L
+  )
+
+  stress_ids <- sort(stress$scenario_id)
+  testthat::expect_identical(
+    stress_ids,
+    sort(c(
+      "lm_ancova_v2_stress_allocation_2to1",
+      "lm_ancova_v2_stress_heteroscedastic",
+      "lm_ancova_v2_stress_heavy_tails",
+      "lm_ancova_v2_stress_missing_baseline",
+      "lm_ancova_v2_stress_nonlinear_baseline",
+      "lm_ancova_v2_stress_interaction"
+    ))
+  )
 
   # Loader reuses v1 analytic power / generator helpers without mutating v1.
   testthat::expect_true(is.function(env$solve_ancova_effect))
   testthat::expect_true(is.function(env$generate_lm_ancova))
   testthat::expect_true(is.function(env$ancova_nominal_power))
+})
+
+test_that("study root cwd fallback never resolves to v1", {
+  env <- new.env(parent = globalenv())
+  sys.source(file.path(.study_root(), "R", "load_study.R"), envir = env)
+
+  v1_root <- normalizePath(
+    file.path(.project_root(), "manuscript", "calibration", "studies", "lm_ancova"),
+    mustWork = TRUE
+  )
+  v2_root <- .study_root()
+  testthat::expect_true(dir.exists(v1_root))
+  testthat::expect_true(
+    file.exists(file.path(v1_root, "R", "load_study.R"))
+  )
+  testthat::expect_true(
+    file.exists(file.path(v1_root, "config", "scenarios.R"))
+  )
+
+  old_wd <- getwd()
+  on.exit(setwd(old_wd), add = TRUE)
+
+  # Ambiguous cwd: v1 has the same generic markers as v2.
+  setwd(v1_root)
+  resolved_from_v1 <- env$.lm_ancova_v2_study_root(script_path = NULL)
+  testthat::expect_identical(resolved_from_v1, v2_root)
+  testthat::expect_identical(basename(resolved_from_v1), "lm_ancova_v2")
+  testthat::expect_false(identical(resolved_from_v1, v1_root))
+
+  # Sibling studies/ cwd must still land on v2, not v1.
+  setwd(dirname(v1_root))
+  resolved_from_studies <- env$.lm_ancova_v2_study_root(script_path = NULL)
+  testthat::expect_identical(resolved_from_studies, v2_root)
 })

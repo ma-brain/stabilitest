@@ -9,8 +9,13 @@
     },
     character(1)
   )
+  v2_marker <- paste0(
+    "studies", .Platform$file.sep, "lm_ancova_v2", .Platform$file.sep
+  )
   source_files <- source_files[
-    !is.na(source_files) & basename(source_files) == "load_study.R"
+    !is.na(source_files) &
+      basename(source_files) == "load_study.R" &
+      grepl(v2_marker, source_files, fixed = TRUE)
   ]
   if (length(source_files) > 0L) {
     return(normalizePath(source_files[[length(source_files)]], mustWork = TRUE))
@@ -19,12 +24,15 @@
   file_args <- sub(
     "^--file=", "", grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
   )
-  file_args <- file_args[basename(file_args) == "load_study.R"]
+  file_args <- file_args[
+    basename(file_args) == "load_study.R" &
+      grepl(v2_marker, file_args, fixed = TRUE)
+  ]
   if (length(file_args) == 1L) {
     return(normalizePath(file_args[[1L]], mustWork = TRUE))
   }
 
-  stop("Unable to locate load_study.R", call. = FALSE)
+  stop("Unable to locate lm_ancova_v2 load_study.R", call. = FALSE)
 }
 
 .lm_ancova_v2_study_script_file <- tryCatch(
@@ -32,25 +40,42 @@
   error = function(error) NULL
 )
 
+.lm_ancova_v2_is_study_root <- function(path) {
+  if (!nzchar(path) || !dir.exists(path)) {
+    return(FALSE)
+  }
+  root <- normalizePath(path, mustWork = FALSE)
+  if (!identical(basename(root), "lm_ancova_v2")) {
+    return(FALSE)
+  }
+  markers <- file.path(root, c("R/load_study.R", "config/scenarios.R"))
+  all(file.exists(markers))
+}
+
 .lm_ancova_v2_study_root <- function(script_path = .lm_ancova_v2_study_script_file) {
   if (!is.null(script_path) && nzchar(script_path)) {
-    return(dirname(dirname(normalizePath(script_path, mustWork = TRUE))))
+    root <- dirname(dirname(normalizePath(script_path, mustWork = TRUE)))
+    if (!.lm_ancova_v2_is_study_root(root)) {
+      stop(
+        "script_path does not resolve to the lm_ancova_v2 study root",
+        call. = FALSE
+      )
+    }
+    return(root)
   }
 
+  # Fallback when sourced without ofile: walk from getwd() looking for the
+  # v2-specific study root. Generic markers alone are not enough — v1 shares
+  # R/load_study.R + config/scenarios.R and must never win.
   candidate <- normalizePath(getwd(), mustWork = TRUE)
   repeat {
-    markers <- file.path(
-      candidate,
-      c("R/load_study.R", "config/scenarios.R")
-    )
-    if (all(file.exists(markers))) {
+    if (.lm_ancova_v2_is_study_root(candidate)) {
       return(candidate)
     }
     nested <- file.path(
       candidate, "manuscript", "calibration", "studies", "lm_ancova_v2"
     )
-    nested_markers <- file.path(nested, c("R/load_study.R", "config/scenarios.R"))
-    if (all(file.exists(nested_markers))) {
+    if (.lm_ancova_v2_is_study_root(nested)) {
       return(normalizePath(nested, mustWork = TRUE))
     }
     parent <- dirname(candidate)
