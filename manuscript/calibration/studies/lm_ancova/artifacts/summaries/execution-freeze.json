@@ -43,5 +43,6 @@
     "projected_core_hours_workers_1": 4.4601,
     "projected_core_hours_workers_10": 0.446
   },
-  "code_commit": "7052e23873ee65b13d66fbef52e10a8184d4715f"
+  "code_commit": "433c9671a15882d80652b435305563aa0274b801",
+  "execution_freeze_commit": "433c9671a15882d80652b435305563aa0274b801"
 }

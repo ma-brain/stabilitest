@@ -84,7 +84,7 @@ remain frozen for the Gate A protocol.
 
 | Field | Value |
 | --- | --- |
-| Code commit | `7052e23873ee65b13d66fbef52e10a8184d4715f` |
+| Code commit | `433c9671a15882d80652b435305563aa0274b801` |
 | Gate A reviewed commit | `96141f2f3df6c45d3cc04f5c5c9696f56473a3bc` |
 | All-scenario hash | `5b97d1cdee060ac2c29f6f6256f75912` |
 | Training (core+stress) hash | `784f035d4965f2f3a626af4f0a2ce2a3` |
