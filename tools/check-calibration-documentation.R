@@ -19,7 +19,8 @@ policy_files <- file.path(root, c(
   "vignettes/pain-case-study.Rmd",
   "manuscript/robustness_analysis_manuscript.md",
   "manuscript/methodological_review.md",
-  "manuscript/calibration/CALIBRATION_SAP.md"))
+  "manuscript/calibration/CALIBRATION_SAP.md",
+  "manuscript/calibration/studies/binary_proportion/CALIBRATION_SAP.md"))
 existing_policy_files <- policy_files[file.exists(policy_files)]
 if (!length(existing_policy_files)) {
   stop("No source policy files were found under ", root, call. = FALSE)
@@ -46,11 +47,41 @@ assert_match("public `?robustness_analysis[(][)]`? dispatcher",
 assert_match("lm_ancova", "active policy does not name lm_ancova",
              ignore.case = FALSE)
 
+# Proportions Phase 1 SAP key sentences.  These pin the frozen policy so a
+# silent change to the weights, gates, truth target, or freeze discipline is
+# caught by the audit.
+assert_match("fisher_exact", "proportions policy does not name fisher_exact",
+             ignore.case = FALSE)
+assert_match("fragility = 0\\.5.*bootstrap = 0\\.5.*jackknife = 0",
+             "proportions policy does not freeze the jackknife-light weights")
+assert_match("clear exact power 0\\.95",
+             "proportions policy does not freeze the clear-power 0.95 target")
+assert_match("borderline exact power 0\\.60 \\(diagnostic only\\)",
+             "proportions policy does not mark borderline diagnostic-only")
+assert_match("training 61001\\+, validation 62001\\+, stress 63001\\+",
+             "proportions policy does not freeze the disjoint seed blocks")
+assert_match("projected RI >= 0\\.72",
+             "proportions policy does not freeze the pilot go threshold")
+assert_match("FR <= 0\\.05 with Wilson upper <= 0\\.10",
+             "proportions policy does not freeze the Track A FR gate")
+assert_match("RI >= 0\\.70 with Wilson lower >= 0\\.60",
+             "proportions policy does not freeze the Track A RI gate")
+assert_match("20260809L",
+             "proportions policy does not freeze the case-study seed")
+assert_match("appear in no[[:space:]]+calibration ledger",
+             "proportions policy does not isolate the case-study seed from ledgers")
+assert_match("per-arm n within \\[25, 200\\]",
+             "proportions policy does not freeze the runtime n bounds")
+assert_match("chi_square_2x2",
+             "proportions policy does not sequence the Phase 2 unit",
+             ignore.case = FALSE)
+
 scan_files <- file.path(root, c(
   "README.md", "NEWS.md", "R", "man", "vignettes",
   "manuscript/robustness_analysis_manuscript.md",
   "manuscript/methodological_review.md",
-  "manuscript/calibration/CALIBRATION_SAP.md"))
+  "manuscript/calibration/CALIBRATION_SAP.md",
+  "manuscript/calibration/studies/binary_proportion"))
 files <- unique(unlist(lapply(scan_files, function(path) {
   if (dir.exists(path)) {
     return(list.files(path, pattern = "\\.(R|Rd|md|Rmd)$",
