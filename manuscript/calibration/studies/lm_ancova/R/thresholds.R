@@ -78,7 +78,10 @@ ancova_cutoff_metrics <- function(data, cutoffs) {
       medians[["borderline"]] < medians[["clear"]]
   )
 
-  balanced <- mean(unlist(class_accuracy))
+  balanced <- mean(unlist(class_accuracy), na.rm = TRUE)
+  if (!length(class_accuracy) || all(is.na(unlist(class_accuracy)))) {
+    balanced <- NA_real_
+  }
   list(
     cutoffs = cutoffs,
     n = nrow(data),
