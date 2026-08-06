@@ -4,7 +4,7 @@
 
 **Goal:** Build, execute, and publish an independently validated categorical-band calibration for eligible significant canonical 1-df ANCOVA treatment effects, while leaving all other linear-model results numeric-only.
 
-**Architecture:** Add an isolated `lm_ancova` calibration study beneath the existing calibration harness, reusing shared schemas, execution, checkpoint, seed, and uncertainty helpers. Add a fail-closed runtime analysis profile to `robustness_lm()`, but do not activate labels until the full training -> frozen candidate -> fresh held-out gate passes and its artifacts are reviewed.
+**Architecture:** Add an isolated `lm_ancova` calibration study beneath the existing calibration harness, reusing shared schemas, execution, checkpoint, seed, and uncertainty helpers. Add a fail-closed runtime analysis profile to `robustness_lm()`, but do not activate labels until the full training -> frozen candidate -> fresh held-out gate passes and its artifacts are reviewed. Freeze a separate row-level synthetic pain-trial dataset before production calibration and use it only in a manuscript section after the calibration results and in a matching package vignette.
 
 **Tech Stack:** R >= 4.2, base `stats::lm`, noncentral t calculations, `testthat`, `tibble`, `dplyr`, existing `stabilitest` calibration helpers, `devtools`, `roxygen2`, and `rcmdcheck`.
 
@@ -19,6 +19,11 @@
 - Do not inspect held-out scores before the candidate artifact and hash are frozen.
 - Do not update the active package registry unless the held-out gate passes.
 - Do not reuse the historical Task 15 validation results.
+- Freeze the illustrative dataset's generator parameters and seed before
+  production score inspection; never regenerate or select it by p-value,
+  component metric, score, or categorical band.
+- Keep the illustrative case-study ID and seed out of every calibration
+  scenario, screening run, training artifact, candidate fit, and held-out run.
 - Keep large raw/checkpoint outputs ignored; commit only code, SAPs, compact
   summaries, manifests, registries, and hash ledgers.
 
@@ -772,7 +777,149 @@ git add -f manuscript/calibration/studies/lm_ancova/tests/fixtures \
 git commit -m "test: lock ancova calibration workflow"
 ```
 
-### Task 11: Freeze the ANCOVA SAP and Gate A documentation
+### Task 11: Freeze the illustrative synthetic ANCOVA pain trial
+
+**Files:**
+- Create: `data-raw/pain_ancova_trial.R`
+- Create: `data/pain_ancova_trial.rda`
+- Create: `R/data_pain_ancova.R`
+- Create: `tests/testthat/test-data-pain-ancova.R`
+- Create: `manuscript/calibration/studies/lm_ancova/manuscript.md`
+- Create: `vignettes/ancova-case-study.Rmd`
+
+**Step 1: Write failing dataset-contract tests**
+
+Require the packaged object to be a complete 80-row data frame with exactly:
+
+```r
+c("subject_id", "arm", "baseline_pain", "week12_pain", "change")
+```
+
+Test unique subject IDs, 40 participants per arm, factor levels
+`c("Placebo", "Active")`, numeric pain fields, `change == week12_pain -
+baseline_pain` to floating-point tolerance, no missing values, and plausible
+0--100 baseline/outcome values.
+
+Source `data-raw/pain_ancova_trial.R` into a clean environment and require exact
+identity between the regenerated and packaged objects. Assert its seed is not
+present in `lm_ancova_scenarios()` or either calibration seed ledger.
+
+**Step 2: Run focused tests and verify failure**
+
+```bash
+Rscript -e 'devtools::test(filter = "data-pain-ancova")'
+```
+
+Expected: FAIL because `pain_ancova_trial` and its frozen generator do not
+exist.
+
+**Step 3: Implement and freeze the generator before inspecting its analysis**
+
+Use one committed generator with an exact balanced randomized assignment and a
+single unconditional draw. Freeze constants in the script:
+
+```r
+PAIN_ANCOVA_CASE_SEED <- 20260806L
+PAIN_ANCOVA_CASE_N <- 80L
+
+generate_pain_ancova_trial <- function(seed = PAIN_ANCOVA_CASE_SEED) {
+  set.seed(seed)
+  arm <- sample(rep(c("Placebo", "Active"), each = PAIN_ANCOVA_CASE_N / 2L))
+  baseline <- round(
+    pmin(90, pmax(35, stats::rnorm(PAIN_ANCOVA_CASE_N, 65, 12))), 1
+  )
+  week12 <- round(
+    20 + 0.60 * baseline - 7.5 * (arm == "Active") +
+      stats::rnorm(PAIN_ANCOVA_CASE_N, 0, 10),
+    1
+  )
+  data.frame(
+    subject_id = sprintf("PAIN-A%03d", seq_len(PAIN_ANCOVA_CASE_N)),
+    arm = factor(arm, levels = c("Placebo", "Active")),
+    baseline_pain = baseline,
+    week12_pain = week12,
+    change = round(week12 - baseline, 1),
+    stringsAsFactors = FALSE
+  )
+}
+```
+
+If the plausibility test shows values outside 0--100, revise the prespecified
+DGP and seed before saving or analyzing the object. Once the contract passes,
+save the first generated dataset with serialization version 2. Do not inspect
+its coefficient p-value, robustness score, or band before committing this
+freeze.
+
+**Step 4: Document the package dataset**
+
+In `R/data_pain_ancova.R`, state that the data are fixed, synthetic,
+prospectively frozen, and excluded from calibration fitting and validation.
+Document all five fields and reference the data-raw generator.
+
+**Step 5: Commit the frozen data before any primary or robustness analysis**
+
+```bash
+git add data-raw/pain_ancova_trial.R data/pain_ancova_trial.rda \
+  R/data_pain_ancova.R tests/testthat/test-data-pain-ancova.R
+git commit -m "data: freeze synthetic ancova pain trial"
+```
+
+Record this commit, the generator seed, and the dataset MD5. From this point,
+changing the DGP, seed, or rows requires a new explicitly versioned case-study
+dataset; it may never be changed to improve the observed analysis.
+
+**Step 6: Create manuscript and vignette structure without outcome claims**
+
+The study manuscript must order its major sections as:
+
+```text
+Methods
+Calibration results
+Illustrative synthetic case study
+Discussion
+```
+
+The case-study section and `vignettes/ancova-case-study.Rmd` must contain the
+same primary call:
+
+```r
+case_result <- robustness_lm(
+  week12_pain ~ arm + baseline_pain,
+  pain_ancova_trial,
+  term = "armActive",
+  alpha = 0.05,
+  n_boot = 1000,
+  max_removal_pct = 0.30,
+  weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+  seed = 1408
+)
+```
+
+At Gate A, describe the dataset and intended outputs but make no claim about
+the final score or band. State that the vignette will honestly render either a
+validated label or an uncalibrated numeric-only result.
+
+**Step 7: Run dataset tests and render the vignette**
+
+```bash
+Rscript -e 'devtools::test(filter = "data-pain-ancova")'
+Rscript -e 'rmarkdown::render("vignettes/ancova-case-study.Rmd", output_dir = tempdir(), quiet = TRUE)'
+```
+
+Expected: PASS; the vignette renders with the active Gate A policy and does not
+claim a calibrated ANCOVA band.
+
+**Step 8: Commit the case-study manuscript and vignette structure**
+
+```bash
+git add manuscript/calibration/studies/lm_ancova/manuscript.md \
+  vignettes/ancova-case-study.Rmd
+git commit -m "docs: add synthetic ancova pain case study"
+```
+
+Record both commits and the dataset MD5 in the ANCOVA SAP before Task 14 begins.
+
+### Task 12: Freeze the ANCOVA SAP and Gate A documentation
 
 **Files:**
 - Create: `manuscript/calibration/studies/lm_ancova/CALIBRATION_SAP.md`
@@ -792,7 +939,10 @@ Require documentation to state:
 - multi-df labels remain suppressed;
 - score weights remain frozen;
 - 55/70 is a Welch comparator, not ANCOVA fallback;
-- active `lm_ancova` remains uncalibrated until Gate B.
+- active `lm_ancova` remains uncalibrated until Gate B;
+- `pain_ancova_trial` is a prospectively frozen synthetic illustration that
+  never enters training or held-out evidence;
+- the manuscript case study follows, rather than precedes, calibration results.
 
 **Step 2: Run the audit and verify failure**
 
@@ -807,8 +957,10 @@ Expected: FAIL on missing ANCOVA policy text.
 Document exact scenario grids, power validation draw count/tolerance, master
 seeds, scenario quotas, `n_boot = 1000`, full screening budget, failure limits,
 cutoff search, tie-breaks, held-out bounds, cluster bootstrap seed/draw count,
-and publication hash targets. Include canonical smoke, pilot, training, freeze,
-held-out, and publication commands.
+publication hash targets, the frozen case-study commit/seed/dataset MD5, and an
+assertion that the case-study ID and seed are absent from calibration ledgers.
+Include canonical smoke, pilot, training, freeze, held-out, and publication
+commands.
 
 **Step 4: Update user-facing Gate A wording**
 
@@ -822,6 +974,7 @@ Rscript tools/check-calibration-documentation.R
 Rscript -e 'devtools::test()'
 Rscript -e 'testthat::test_dir("manuscript/calibration/tests/testthat", reporter = "summary")'
 Rscript -e 'testthat::test_dir("manuscript/calibration/studies/lm_ancova/tests/testthat", reporter = "summary")'
+Rscript -e 'rmarkdown::render("vignettes/ancova-case-study.Rmd", output_dir = tempdir(), quiet = TRUE)'
 ```
 
 Expected: all PASS.
@@ -835,7 +988,7 @@ git add README.md NEWS.md manuscript/calibration/README.md \
 git commit -m "docs: freeze ancova calibration protocol"
 ```
 
-### Task 12: Verify Gate A before spending production compute
+### Task 13: Verify Gate A before spending production compute
 
 **Files:**
 - No code changes expected.
@@ -855,6 +1008,7 @@ Expected: PASS with no whitespace errors.
 Rscript -e 'devtools::test()'
 Rscript -e 'testthat::test_dir("manuscript/calibration/tests/testthat", reporter = "summary")'
 Rscript -e 'testthat::test_dir("manuscript/calibration/studies/lm_ancova/tests/testthat", reporter = "summary")'
+Rscript -e 'rmarkdown::render("vignettes/ancova-case-study.Rmd", output_dir = tempdir(), quiet = TRUE)'
 ```
 
 Expected: all PASS.
@@ -883,7 +1037,7 @@ Expected: 0 errors, 0 warnings, and only the accepted `New submission` NOTE.
 If verification generated no changes, record the verified commit hash in the
 pilot manifest rather than creating an empty commit.
 
-### Task 13: Run pilot, power gate, and production training
+### Task 14: Run pilot, power gate, and production training
 
 **Files:**
 - Create after successful runs: compact files under
@@ -942,12 +1096,12 @@ candidate exists:
 - publish the explicit training-stage `uncalibrated/no_feasible_thresholds`
   artifact;
 - do not run validation;
-- skip to Task 15's uncalibrated path.
+- skip to Task 16's uncalibrated path.
 
 If a candidate exists, commit its compact diagnostics, manifest, and hash
 before continuing.
 
-### Task 14: Open held-out once and publish the decision
+### Task 15: Open held-out once and publish the decision
 
 **Files:**
 - Create: compact artifacts under
@@ -995,7 +1149,7 @@ git add manuscript/calibration/studies/lm_ancova/published \
 git commit -m "data: publish ancova calibration decision"
 ```
 
-### Task 15: Integrate the reviewed outcome into the active package policy
+### Task 16: Integrate the reviewed outcome into the active package policy
 
 **Files:**
 - Modify: `inst/extdata/calibration-registry.csv`
@@ -1006,7 +1160,10 @@ git commit -m "data: publish ancova calibration decision"
 - Modify: `README.md`
 - Modify: `NEWS.md`
 - Modify: `man/robustness_lm.Rd` through roxygen generation
+- Modify: `man/pain_ancova_trial.Rd` through roxygen generation
 - Modify: `manuscript/calibration/README.md`
+- Modify: `manuscript/calibration/studies/lm_ancova/manuscript.md`
+- Modify: `vignettes/ancova-case-study.Rmd`
 - Modify: `tools/check-calibration-documentation.R`
 
 **Step 1: Choose the path strictly from the reviewed artifact**
@@ -1048,7 +1205,19 @@ supported_conditions = <approved canonical profile text>
 
 Keep all other calibration units unchanged.
 
-**Step 5: Update documentation and regenerate roxygen output**
+**Step 5: Populate the post-results case study without selecting the data**
+
+Run the exact frozen analysis once and populate the manuscript section after
+the calibration results with the adjusted treatment estimate and p-value,
+profile eligibility, component metrics, composite score, label status, and
+deletion/influence figures. Update the vignette to explain the same outcome.
+
+If calibration validated but the frozen case result is non-significant, report
+that no band is applicable. If calibration remained uncalibrated, report the
+numeric score/components and the suppressed label. Do not regenerate, replace,
+or edit the dataset in either case.
+
+**Step 6: Update documentation and regenerate roxygen output**
 
 ```bash
 Rscript -e 'roxygen2::roxygenise()'
@@ -1056,7 +1225,7 @@ Rscript -e 'roxygen2::roxygenise()'
 
 Ensure examples do not imply multi-df or arbitrary-LM coverage.
 
-**Step 6: Run final verification**
+**Step 7: Run final verification**
 
 ```bash
 git diff --check
@@ -1064,22 +1233,25 @@ Rscript tools/check-calibration-documentation.R
 Rscript -e 'devtools::test()'
 Rscript -e 'testthat::test_dir("manuscript/calibration/tests/testthat", reporter = "summary")'
 Rscript -e 'testthat::test_dir("manuscript/calibration/studies/lm_ancova/tests/testthat", reporter = "summary")'
+Rscript -e 'rmarkdown::render("vignettes/ancova-case-study.Rmd", output_dir = tempdir(), quiet = TRUE)'
 Rscript -e 'rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))'
 ```
 
 Expected: all tests pass; package check has 0 errors, 0 warnings, and only the
 accepted `New submission` NOTE.
 
-**Step 7: Commit the reviewed integration**
+**Step 8: Commit the reviewed integration**
 
 ```bash
 git add inst/extdata/calibration-registry.csv R/calibration_registry.R \
   R/robustness_models.R tests/testthat README.md NEWS.md man \
-  manuscript/calibration/README.md tools/check-calibration-documentation.R
+  manuscript/calibration/README.md \
+  manuscript/calibration/studies/lm_ancova/manuscript.md \
+  vignettes/ancova-case-study.Rmd tools/check-calibration-documentation.R
 git commit -m "feat: integrate ancova calibration decision"
 ```
 
-### Task 16: Final review and branch handoff
+### Task 17: Final review and branch handoff
 
 **Files:**
 - No code changes expected.
@@ -1088,7 +1260,8 @@ git commit -m "feat: integrate ancova calibration decision"
 
 Confirm that the implementation still satisfies
 `docs/plans/2026-08-06-lm-ancova-calibration-design.md`, especially the 1-df
-scope, no-refit rule, and fail-closed behavior.
+scope, no-refit rule, fail-closed behavior, post-results manuscript ordering,
+and complete separation of `pain_ancova_trial` from calibration evidence.
 
 **Step 2: Confirm repository state and commits**
 

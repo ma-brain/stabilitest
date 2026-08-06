@@ -34,6 +34,10 @@ arbitrary linear-model coefficients.
   bootstrap configuration. Fit only the two categorical cutoffs.
 - Fail closed: if no candidate passes the frozen held-out criteria,
   `lm_ancova` remains uncalibrated.
+- Freeze a purpose-built row-level synthetic pain-trial dataset before
+  calibration execution and use it only as a post-results illustration.
+- Add the illustrative case study to the ANCOVA manuscript after the
+  calibration results and provide a matching package vignette.
 
 ## Goals
 
@@ -44,6 +48,8 @@ arbitrary linear-model coefficients.
 - Enforce every mechanically observable supported condition at runtime.
 - Keep training, candidate freezing, held-out evaluation, failures, and
   publication provenance auditable.
+- Provide a fixed, reproducible worked example of the eligible ANCOVA workflow
+  without using that example as calibration evidence.
 
 ## Non-Goals
 
@@ -54,6 +60,9 @@ arbitrary linear-model coefficients.
   interactions, nonlinear models, or nonrandomized analyses.
 - Treating Welch's 55/70 cutoffs as an ANCOVA default or fallback.
 - Reusing previously inspected Task 15 validation results as confirmatory data.
+- Selecting, regenerating, or modifying the illustrative dataset because of
+  its p-value, robustness score, component values, or eventual categorical
+  band.
 
 ## Alternatives Considered
 
@@ -90,6 +99,11 @@ The study lives under an ANCOVA-specific area within
 - frozen candidate and registry artifacts;
 - a publication hash ledger;
 - reduced fixtures for automated end-to-end tests.
+
+The study also owns a prospectively frozen synthetic case-study specification
+and an ANCOVA manuscript. The package owns the resulting documented dataset
+and vignette. Neither is sourced by the scenario loader, cutoff fitter, or
+held-out validator.
 
 It sources or calls existing shared helpers for replicate schemas, deterministic
 seeds, screening, execution, checkpoints, failure records, Wilson intervals,
@@ -284,6 +298,59 @@ A held-out failure leaves `lm_ancova` uncalibrated. No second candidate,
 threshold adjustment, scenario removal, or validation refit is allowed. A
 future attempt requires a new calibration version and a fresh held-out block.
 
+## Illustrative Synthetic Case Study
+
+The package ships a new row-level synthetic dataset named
+`pain_ancova_trial`. It is a purpose-built companion to the existing Welch
+pain example, not a retrofit of baseline values onto `pain_treatment` and
+`pain_placebo`.
+
+The dataset is generated once from a prospectively frozen script, parameter
+set, and generator seed `20260806` before production calibration scores are
+inspected. The worked robustness analysis separately uses bootstrap seed
+`1408`. It contains:
+
+- `subject_id`;
+- `arm`, a balanced two-level factor;
+- `baseline_pain`, a continuous baseline score;
+- `week12_pain`, a continuous outcome;
+- `change`, a documented derived descriptive variable.
+
+The primary worked analysis is:
+
+```r
+robustness_lm(
+  week12_pain ~ arm + baseline_pain,
+  pain_ancova_trial,
+  term = "armActive",
+  alpha = 0.05,
+  n_boot = 1000,
+  max_removal_pct = 0.30,
+  weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+  seed = 1408
+)
+```
+
+The dataset is never screened for significance, regenerated after seeing an
+analysis, or used in training, candidate selection, held-out validation, or
+acceptance decisions. If its primary result is non-significant, or if the
+calibration study remains uncalibrated, the manuscript and vignette report the
+numeric components and the absence of a categorical label without replacing
+the dataset.
+
+The ANCOVA manuscript places an **Illustrative synthetic case study** section
+after the calibration results. It reports the adjusted treatment estimate and
+p-value, calibration-profile eligibility, jackknife stability, worst-case
+removal fragility, bootstrap reproducibility, composite score, applicable
+label (if any), and deletion/influence plots. It states explicitly that the
+example did not contribute calibration evidence.
+
+The package vignette `vignettes/ancova-case-study.Rmd` reproduces the same
+analysis with the exact calibrated configuration (`n_boot = 1000`) so runtime
+applicability is not changed merely to shorten the example. It must render
+correctly for either final study outcome: a validated label or an explicit
+uncalibrated numeric-only result.
+
 ## Failure and Exclusion Policy
 
 - Record every attempted replicate and its final stage/status.
@@ -343,6 +410,14 @@ Exercise both eligible and rejected profiles, including:
 
 - Run a deterministic reduced training -> freeze -> held-out fixture.
 - Check manifests, failure accounting, artifact hashes, and no-refit metadata.
+- Rebuild `pain_ancova_trial` from its frozen source script and require exact
+  identity with the packaged dataset.
+- Verify that the case-study ID/seed never appears in calibration scenarios,
+  seed ledgers, training rows, or validation rows.
+- Render `vignettes/ancova-case-study.Rmd` and verify its reported model,
+  profile, score, and label status against a direct analysis.
+- Verify that the ANCOVA manuscript orders calibration results before the
+  illustrative case-study section and labels the example non-calibrating.
 - Run the calibration-specific `testthat` suite.
 - Run `devtools::test()` and the calibration documentation audit.
 - Run `rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))` before
@@ -359,6 +434,11 @@ calibration documentation must state that:
 - multi-df and noncanonical LM results remain numeric-only;
 - 55/70 is a Welch comparator, not an ANCOVA default;
 - an unsuccessful calibration remains a valid, publishable uncalibrated result.
+
+The ANCOVA manuscript and vignette additionally state that
+`pain_ancova_trial` is a prospectively frozen synthetic illustration. The
+manuscript presents it only after the calibration results, and neither artifact
+describes it as threshold-fitting or validation evidence.
 
 Validated provenance includes the calibration version, source commit/artifact,
 scenario manifest hash, candidate hash, registry hash, execution options,
