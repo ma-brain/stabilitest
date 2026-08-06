@@ -11,9 +11,17 @@
 # Archived comparator only (v1); never fitted, never emitted as a label.
 .prop_v1_comparator_weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
 
+# Unwrap a generator output to the data contract the engine consumes.  The
+# generator returns list(data = <contract>, truth = ...); the engine and the
+# shared .two_sample_data() helper expect the inner <contract> (a list with
+# group1/group2 vectors, or a data frame with those columns).
+.prop_input_data <- function(x) {
+  if (is.list(x) && !is.data.frame(x) && !is.null(x$data)) x$data else x
+}
+
 fisher_exact_primary_decision <- function(data, scenario = list(),
                                           alpha = NULL) {
-  groups <- .two_sample_data(data)
+  groups <- .two_sample_data(.prop_input_data(data))
   analysis <- .two_sample_analysis(scenario)
   alpha <- if (is.null(alpha)) .two_sample_alpha(analysis, scenario) else alpha
   tested <- .two_sample_primary_test(
@@ -33,7 +41,7 @@ fisher_exact_primary_decision <- function(data, scenario = list(),
 
 .run_binary_proportion_robustness <- function(data, scenario = list(),
                                               n_boot = NULL, seed = NULL, ...) {
-  groups <- .two_sample_data(data)
+  groups <- .two_sample_data(.prop_input_data(data))
   analysis <- .two_sample_analysis(scenario)
   alpha <- .two_sample_alpha(analysis, scenario)
   if (is.null(n_boot)) {

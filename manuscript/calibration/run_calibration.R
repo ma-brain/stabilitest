@@ -129,6 +129,25 @@
 }
 
 .calibration_target_by_stratum <- function(scenario, plan) {
+  screening <- NULL
+  if (is.data.frame(scenario) && "parameters" %in% names(scenario) &&
+      nrow(scenario) >= 1L && is.list(scenario$parameters[[1L]])) {
+    screening <- scenario$parameters[[1L]]$screening
+  } else if (is.list(scenario) && is.list(scenario$parameters)) {
+    params <- scenario$parameters
+    if (length(params) == 1L && is.list(params[[1L]]) &&
+        !is.null(params[[1L]]$screening)) {
+      screening <- params[[1L]]$screening
+    } else {
+      screening <- params$screening
+    }
+  }
+  if (is.list(screening) && length(screening$conclusions)) {
+    target <- as.integer(screening$target_n)
+    keys <- paste(scenario$truth_class[[1L]], screening$conclusions, sep = "::")
+    return(stats::setNames(rep(target, length(keys)), keys))
+  }
+
   target <- if (is.null(plan$replicates_per_stratum)) {
     # The publication contract requires at least 500 completed core analyses;
     # use that frozen lower bound when no pilot quota is supplied.
@@ -299,7 +318,27 @@ run_calibration <- function(args = commandArgs(trailingOnly = TRUE), project_roo
 
 .calibration_is_direct <- function() {
   args <- commandArgs(trailingOnly = FALSE)
-  any(grepl("run_calibration[.]R$", args))
+  # Match only the shared manuscript/calibration entry point. Study runners
+  # such as studies/binary_proportion/run_calibration.R also end in run_calibration.R
+  # and must not trigger this auto-run when they sys.source this file.
+  file_arg <- sub("^--file=", "", grep("^--file=", args, value = TRUE))
+  if (!length(file_arg)) {
+    return(FALSE)
+  }
+  normalized <- tryCatch(
+    normalizePath(file_arg[[1L]], mustWork = FALSE),
+    error = function(e) file_arg[[1L]]
+  )
+  grepl(
+    paste0(
+      "manuscript", .Platform$file.sep, "calibration", .Platform$file.sep,
+      "run_calibration[.]R$"
+    ),
+    normalized
+  ) && !grepl(
+    paste0(.Platform$file.sep, "studies", .Platform$file.sep),
+    normalized
+  )
 }
 
-if (.calibration_is_direct()) run_calibration()
+if (identical(sys.nframe(), 0L) && .calibration_is_direct()) run_calibration()
