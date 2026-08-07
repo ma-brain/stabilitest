@@ -1,0 +1,14 @@
+generated_at: 2026-08-07T12:30:10+0300
+runtime_seconds: 0.807447910308838
+package_version: 0.6.0
+r_version: R version 4.6.1 (2026-06-24)
+n_boot: 2000
+seed: 123
+test_type: t.test
+dataset: pain_treatment / pain_placebo (packaged data)
+overall_robustness: 72.0376470588235
+original_p: 0.00181840488949761
+original_significant: TRUE
+worstcase_fragility_k: 6
+bootstrap_reproducibility: 89.6
+jackknife_conclusion_stability: 100

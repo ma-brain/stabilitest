@@ -1,0 +1,11 @@
+"engine","n_per_arm","seconds"
+"robustness_analysis (Welch)",50,0.500698089599609
+"robustness_lm (ANCOVA)",50,0.917825937271118
+"robustness_glm (binomial)",50,1.48187804222107
+"robustness_surv (Cox)",50,1.45284008979797
+"robustness_tost (mean equivalence)",50,0.714776992797852
+"robustness_analysis (Welch)",150,1.34180808067322
+"robustness_lm (ANCOVA)",150,3.91569900512695
+"robustness_glm (binomial)",150,7.49471092224121
+"robustness_surv (Cox)",150,5.54249095916748
+"robustness_tost (mean equivalence)",150,1.40865707397461
