@@ -1,0 +1,29 @@
+{
+  "generated_at_start": "2026-08-07T12:29:17+0300",
+  "generated_at_end": "2026-08-07T12:46:33+0300",
+  "runtime_seconds": 1036.471,
+  "package_version": "0.6.0",
+  "r_version": "R version 4.6.1 (2026-06-24)",
+  "platform": "aarch64-apple-darwin23",
+  "master_seed": 20260807,
+  "nrep_per_scenario": 500,
+  "n_boot": 200,
+  "scenario_count": 12,
+  "scenario_seeds": {
+    "scenario_01": 20260808,
+    "scenario_02": 20260809,
+    "scenario_03": 20260810,
+    "scenario_04": 20260811,
+    "scenario_05": 20260812,
+    "scenario_06": 20260813,
+    "scenario_07": 20260814,
+    "scenario_08": 20260815,
+    "scenario_09": 20260816,
+    "scenario_10": 20260817,
+    "scenario_11": 20260818,
+    "scenario_12": 20260819
+  },
+  "script_path": "/Users/Marius/Github/stabilitest/manuscript/rjournal/tools/regenerate-simulation.R",
+  "script_md5": "8f45764e80cd1391250aa4fa4ad7efe2",
+  "smoke": false
+}
