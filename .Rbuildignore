@@ -3,12 +3,15 @@
 ^.*\.Rproj$
 ^\.github$
 ^\.git$
+^\.worktrees$
+^\.claude$
 ^AGENTS\.md$
 ^docs$
 ^doc$
 ^Meta$
 ^tools$
 ^manuscript$
+^graphify-out$
 ^vignettes/.*\.html$
 ^vignettes/.*\.R$
 ^doc$

@@ -1,42 +1,26 @@
-# stabilitest 0.5.1
+# stabilitest 0.6.0
 
-## Binary-proportion (`fisher_exact`) calibration
+## Gate B: active `fisher_exact` two-band calibration
 
-* Added an independent calibration study for the `fisher_exact` unit
-  (`manuscript/calibration/studies/binary_proportion/`). It validates a
-  two-band Fragile / Not-fragile decision at cutoff `L = 58` (Fragile iff
-  score ≤ L) for eligible significant canonical two-arm Fisher exact results,
-  using the jackknife-light weights `fragility = 0.5`, `bootstrap = 0.5`,
-  `jackknife = 0`. Truth targets are exact-power-defined (clear power 0.95,
-  justified up front by committed analytic evidence; borderline 0.60
-  diagnostic-only; null exact). The decision was confirmed on a fresh held-out
-  grid under the conservative-of-Wilson-and-cluster-bootstrap rule (FR upper
-  0.0617, RI lower 0.6767). Published artifacts include the candidate, held-out
-  validation, registry snapshot, manifests, and a hash ledger.
-* Added a runtime `prop_calibration_profile()` recorded on every two-sample
-  result, gating a future `fisher_exact` label on canonical eligibility bounds
-  (per-arm n in [25, 200], allocation ratio in [0.8, 1.25], control-arm event
-  rate in [0.08, 0.55] with at least 3 events and 3 non-events). The active
-  registry row for `fisher_exact` remains `uncalibrated` until the published
-  decision is activated under separate review (Gate B); proportion results
-  retain numeric scores and component metrics with labels suppressed.
-* Added the prospectively frozen synthetic `onc_response_trial` dataset
-  (60/arm, seed `20260809`) and a `proportions-case-study` vignette.
+* Activated the published `fisher_exact` Gate B decision in the runtime
+  registry: validated two-band Fragile / Not fragile at cutoff `L = 58`
+  (version `fisher-2026-1`; provenance `study:binary_proportion@cc3344931614`).
+  There is no Robust tier for Fisher. Labels emit only under the explicit
+  jackknife-light weights `fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`
+  with a canonical two-arm profile; default 0.4/0.4/0.2 scores remain
+  numeric-only.
+* Added the independent calibration study for `fisher_exact`
+  (`manuscript/calibration/studies/binary_proportion/`). Truth targets are
+  exact-power-defined (clear power 0.95; borderline 0.60 diagnostic-only;
+  null exact). Held-out confirmation used the conservative-of-Wilson-and-
+  cluster-bootstrap rule (FR upper 0.0617, RI lower 0.6767).
+* Added runtime `prop_calibration_profile()` on every two-sample result,
+  gating Fisher labels on canonical eligibility bounds (per-arm n in
+  [25, 200], allocation ratio in [0.8, 1.25], control-arm event rate in
+  [0.08, 0.55] with at least 3 events and 3 non-events).
 
-## Calibration policy
+## ANCOVA negative-result program
 
-* Added method-specific calibration metadata. Numeric scores and component
-  metrics are retained for every supported method, but categorical labels are
-  emitted only for an applicable significant `welch_unpaired` result under the
-  documented default score definition and weights. Labels are suppressed for
-  uncalibrated methods and conclusions; the public `robustness_analysis()`
-  dispatcher remains unchanged.
-* Removed the generic `two_sample` identity from the active calibration
-  registry. Exact units include `welch_unpaired`, `paired_t`, `fisher_exact`,
-  `lm_ancova`, and `lm_ancova_v2`; both ANCOVA units remain uncalibrated after
-  fail-closed Gate B decisions. Task 15's broad-family tables and manifests
-  remain archived as historical evidence and are not used for runtime
-  interpretation.
 * Gate A freezes an isolated ANCOVA calibration study for eligible significant
   canonical 1-df treatment effects with 60%/90% power-defined truth strata.
   Multi-df labels remain suppressed, score weights remain frozen, and Welch
@@ -60,8 +44,7 @@
   `manuscript/calibration/studies/lm_ancova_v2/published/`. This empirical
   outcome confirms Finding 4 in
   `docs/plans/2026-08-06-lm-ancova-v3-design.md`. The v1 `lm_ancova`
-  provenance row remains the immutable historical uncalibrated record; Welch
-  55/70 is not an ANCOVA fallback.
+  provenance row remains the immutable historical uncalibrated record.
 * Gate A for Track A unit `lm_ancova_v2` freezes a two-band (Fragile / Not
   fragile) jackknife-light SAP (`fragility = 0.5`, `bootstrap = 0.5`,
   `jackknife = 0`; null+clear fitting; borderline diagnostic-only). Gate B
@@ -75,6 +58,38 @@
   `manuscript/calibration/studies/lm_ancova_v3/published/` (verdict hash
   `8fe6c66f28b5c788a637eff0cb8a3029`). Track D remains parked. No package
   registry or runtime behavior change.
+* Registry taxonomy now includes `lm_ancova` and `lm_ancova_v2` provenance
+  rows (both uncalibrated after fail-closed Gate B). Task 15's broad-family
+  tables remain archived historical evidence.
+
+## Datasets and vignettes
+
+* Added prospectively frozen synthetic datasets `pain_ancova_trial` and
+  `onc_response_trial` (illustration only; excluded from calibration ledgers).
+* Added vignettes `ancova-case-study` and `proportions-case-study` alongside
+  the existing `pain-case-study` vignette (three vignettes total).
+
+## Documentation
+
+* Updated README, manuscript, and roxygen to document active Welch three-band
+  and Fisher two-band vocabularies, plus the ANCOVA named negative-result
+  contribution. Next positive calibration target is `chi_square_2x2`.
+
+# stabilitest 0.5.1
+
+## Calibration policy
+
+* Added method-specific calibration metadata. Numeric scores and component
+  metrics are retained for every supported method, but categorical labels are
+  emitted only for an applicable significant `welch_unpaired` result under the
+  documented default score definition and weights. Labels are suppressed for
+  uncalibrated methods and conclusions; the public `robustness_analysis()`
+  dispatcher remains unchanged.
+* Removed the generic `two_sample` identity from the active calibration
+  registry. Exact units include `welch_unpaired`, `paired_t`, `fisher_exact`,
+  and `lm_ancova`; the latter is the next independent calibration target.
+  Task 15's broad-family tables and manifests remain archived as historical
+  evidence and are not used for runtime interpretation.
 * The 0.5.1 production freeze found all seven calibration families
   `uncalibrated` / `no_feasible_thresholds`. Accordingly, categorical
   Fragile/Moderate/Robust labels are reserved for statistically significant

@@ -287,7 +287,7 @@ Statistical significance answers "is there an effect?" Robustness analysis answe
 
 ## References
 
-Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.5.1; 2026. Available from: https://github.com/ma-brain/stabilitest
+Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.6.0; 2026. Available from: https://github.com/ma-brain/stabilitest
 
 Belsley DA, Kuh E, Welsch RE. *Regression Diagnostics: Identifying Influential Data and Sources of Collinearity*. John Wiley & Sons; 1980.
 
