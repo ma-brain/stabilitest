@@ -10,9 +10,48 @@
   dispatcher remains unchanged.
 * Removed the generic `two_sample` identity from the active calibration
   registry. Exact units include `welch_unpaired`, `paired_t`, `fisher_exact`,
-  and `lm_ancova`; the latter is the next independent calibration target.
-  Task 15's broad-family tables and manifests remain archived as historical
-  evidence and are not used for runtime interpretation.
+  `lm_ancova`, and `lm_ancova_v2`; both ANCOVA units remain uncalibrated after
+  fail-closed Gate B decisions. Task 15's broad-family tables and manifests
+  remain archived as historical evidence and are not used for runtime
+  interpretation.
+* Gate A freezes an isolated ANCOVA calibration study for eligible significant
+  canonical 1-df treatment effects with 60%/90% power-defined truth strata.
+  Multi-df labels remain suppressed, score weights remain frozen, and Welch
+  55/70 remains a Welch comparator rather than an ANCOVA fallback. The
+  prospectively frozen `pain_ancova_trial` illustration never enters training
+  or held-out evidence; the manuscript case study follows calibration results.
+* Gate B for `lm_ancova` v1 closed fail-closed: status `uncalibrated`, reason
+  `no_feasible_thresholds`, held-out not opened, version `lm-ancova-2026-1`.
+  Categorical labels stay suppressed; compact decision artifacts are under
+  `manuscript/calibration/studies/lm_ancova/published/`. Welch 55/70 is not an
+  ANCOVA fallback.
+* Gate B for Track A unit `lm_ancova_v2` was executed fail-closed after a
+  sealed pilot GO (Δ = 24.4, overlap = 0.034, AUC = 0.892) whose location
+  metrics were a false-GO relative to training: status `uncalibrated`, reason
+  `no_feasible_thresholds` (candidate hash
+  `3dc2a1f840b3eb725bea629dc130f070`), held-out not opened, version
+  `lm-ancova-v2-2026-1`. The jackknife-light two-band attempt
+  (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`) found no feasible L;
+  best RI at the FR-safe L was 0.554 vs gate 0.70. Categorical labels stay
+  suppressed. Compact decision artifacts are under
+  `manuscript/calibration/studies/lm_ancova_v2/published/`. This empirical
+  outcome confirms Finding 4 in
+  `docs/plans/2026-08-06-lm-ancova-v3-design.md`. The v1 `lm_ancova`
+  provenance row remains the immutable historical uncalibrated record; Welch
+  55/70 is not an ANCOVA fallback.
+* Gate A for Track A unit `lm_ancova_v2` freezes a two-band (Fragile / Not
+  fragile) jackknife-light SAP (`fragility = 0.5`, `bootstrap = 0.5`,
+  `jackknife = 0`; null+clear fitting; borderline diagnostic-only). Gate B
+  integration of that SAP is the fail-closed uncalibrated decision above; v1
+  provenance is unchanged.
+* Phase 1 Track E for `lm_ancova_v3` (pre-registered violation-detection
+  ΔAUC among significant clear ANCOVA rows) is published **not confirmed**:
+  pooled ΔAUC = 0.0053 with bootstrap 95% CI [−0.1109, 0.1289] against the
+  frozen gate (ΔAUC ≥ 0.10 and CI lower bound > 0). Quotas were met
+  (2,100 completed / 0 failed). Compact artifacts are under
+  `manuscript/calibration/studies/lm_ancova_v3/published/` (verdict hash
+  `8fe6c66f28b5c788a637eff0cb8a3029`). Track D remains parked. No package
+  registry or runtime behavior change.
 * The 0.5.1 production freeze found all seven calibration families
   `uncalibrated` / `no_feasible_thresholds`. Accordingly, categorical
   Fragile/Moderate/Robust labels are reserved for statistically significant

@@ -1,0 +1,4 @@
+lm_ancova_v3 Track E power check
+draws=10000 seed=20260807 tol_power=0.02
+clean_gated=3 violated_descriptive=15
+n_fail_clean=0

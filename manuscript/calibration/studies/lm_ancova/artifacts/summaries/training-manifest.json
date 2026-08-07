@@ -1,0 +1,15 @@
+{
+  "phase": "training",
+  "workers": 4,
+  "code_commit": "8b57753ca9c3fba9414fa5867cb58f35aabc24d5",
+  "scenario_manifest_hash": "5b97d1cdee060ac2c29f6f6256f75912",
+  "training_artifact_hash": "f552139cea8e573e45196607f71550d2",
+  "n_core_completed": 2700,
+  "n_audit": 3300,
+  "candidate_status": "uncalibrated",
+  "candidate_hash": "9ccfc2fca7c0a07c19a3a18838e9a3f2",
+  "cutoffs": ["NA", "NA"],
+  "validation_accessed": false,
+  "assembled_from": "checkpoints/full",
+  "note": "Parent process died after writing run-results.rds; recovery assembled from complete scenario checkpoints."
+}

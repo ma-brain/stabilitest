@@ -13,7 +13,9 @@ scores and component metrics are retained for every method, while categorical
 labels are suppressed for uncalibrated methods and conclusions. The only
 active validated label mapping is significant `welch_unpaired` under its
 documented default conditions. The public `robustness_analysis()` dispatcher
-is unchanged. `lm_ancova` is the next independent calibration target.
+is unchanged. `lm_ancova` and `lm_ancova_v2` remain uncalibrated after
+fail-closed Gate B decisions (see `studies/lm_ancova/` and
+`studies/lm_ancova_v2/`).
 
 ## Frozen truth classes and simulation score bands
 

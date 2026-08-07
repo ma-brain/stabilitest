@@ -121,8 +121,8 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #' `test_type` values are unchanged. Method-specific calibration is represented
 #' by exact units such as `paired_t`, `fisher_exact`, and `two_sample_prop`, not
 #' by a generic `two_sample` calibration identity. The archived Task 15
-#' broad-family simulation is historical evidence only. `lm_ancova` is the
-#' next independent calibration target.
+#' broad-family simulation is historical evidence only. `lm_ancova` and
+#' `lm_ancova_v2` remain uncalibrated after fail-closed Gate B decisions.
 #'
 #' Rank-based options: `"wilcoxon"` (Mann–Whitney / Wilcoxon rank-sum) assumes
 #' exchangeable distributions under the null (equal shapes/variances for a pure

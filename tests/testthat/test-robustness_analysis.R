@@ -304,6 +304,107 @@ test_that("robustness_lm binary factor term label resolves to single coef", {
   expect_false(is.na(res$original_estimate))
 })
 
+test_that("canonical ANCOVA produces an eligible structural profile", {
+  set.seed(101)
+  dat <- data.frame(
+    outcome = rnorm(80),
+    treatment = factor(rep(c("A", "B"), each = 40)),
+    baseline = rnorm(80)
+  )
+  fit <- lm(outcome ~ treatment + baseline, dat)
+  term <- stabilitest:::resolve_model_term(fit, "treatmentB")
+
+  profile <- stabilitest:::lm_calibration_profile(
+    fit, term, original_n = nrow(dat), alpha = 0.05,
+    n_boot = 1000L,
+    weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+    max_removal_pct = 0.30
+  )
+
+  expect_true(profile$canonical_ancova)
+  expect_identical(profile$term_type, "single")
+  expect_identical(profile$term_df, 1L)
+  expect_identical(profile$treatment_levels, 2L)
+  expect_identical(profile$baseline_count, 1L)
+  expect_false(profile$omitted_rows)
+  expect_identical(profile$version, "lm-profile-1")
+  expect_identical(profile$n, 80L)
+  expect_identical(profile$n_boot, 1000L)
+
+  res <- robustness_lm(
+    outcome ~ treatment + baseline, dat, term = "treatmentB",
+    n_boot = 1000, seed = 101
+  )
+  expect_true(is.list(res$analysis_profile))
+  expect_true(res$analysis_profile$canonical_ancova)
+  expect_identical(res$n_boot, 1000L)
+})
+
+test_that("noncanonical LM profiles are marked ineligible", {
+  set.seed(102)
+  dat <- data.frame(
+    outcome = rnorm(80),
+    treatment = factor(rep(c("A", "B"), each = 40)),
+    baseline = rnorm(80),
+    extra = rnorm(80)
+  )
+  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+
+  profile_for <- function(formula, term, data = dat, original_n = nrow(data)) {
+    fit <- lm(formula, data)
+    term_spec <- stabilitest:::resolve_model_term(fit, term)
+    stabilitest:::lm_calibration_profile(
+      fit, term_spec, original_n = original_n, alpha = 0.05,
+      n_boot = 1000L, weights = weights, max_removal_pct = 0.30
+    )
+  }
+
+  expect_false(profile_for(outcome ~ treatment + baseline, "baseline")$canonical_ancova)
+  expect_false(
+    profile_for(
+      outcome ~ arm + baseline,
+      "armC",
+      data = transform(dat, arm = factor(rep(c("A", "B", "C"), length.out = 80)))
+    )$canonical_ancova
+  )
+  expect_false(
+    profile_for(outcome ~ treatment * baseline, "treatmentB")$canonical_ancova
+  )
+  expect_false(
+    profile_for(outcome ~ treatment + baseline + extra, "treatmentB")$canonical_ancova
+  )
+  expect_false(
+    profile_for(outcome ~ treatment + I(baseline^2), "treatmentB")$canonical_ancova
+  )
+
+  dat_na <- dat
+  dat_na$baseline[1] <- NA_real_
+  omitted <- profile_for(
+    outcome ~ treatment + baseline, "treatmentB",
+    data = dat_na, original_n = nrow(dat_na)
+  )
+  expect_true(omitted$omitted_rows)
+  expect_false(omitted$canonical_ancova)
+})
+
+test_that("active lm_ancova remains uncalibrated despite canonical profiles", {
+  set.seed(103)
+  dat <- data.frame(
+    outcome = rnorm(80, mean = rep(c(0, 1), each = 40)),
+    treatment = factor(rep(c("A", "B"), each = 40)),
+    baseline = rnorm(80)
+  )
+  res <- robustness_lm(
+    outcome ~ treatment + baseline, dat, term = "treatmentB",
+    n_boot = 1000, seed = 103
+  )
+  expect_true(res$analysis_profile$canonical_ancova)
+  expect_identical(res$calibration$calibration_unit, "lm_ancova")
+  expect_identical(res$calibration$status, "uncalibrated")
+  expect_false(res$calibration$applicable)
+  expect_true(is.na(res$interpretation_label))
+})
+
 test_that("robustness_surv works on a Cox term", {
   skip_if_not_installed("survival")
   set.seed(1)

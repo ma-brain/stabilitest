@@ -1,0 +1,7 @@
+label=pilot
+input=/Users/Marius/Github/stabilitest/.worktrees/lm-ancova-calibration/manuscript/calibration/studies/lm_ancova_v3/outputs/pilot
+n_scenarios=18
+completed_total=1800
+failed_total=0
+max_failure_rate=0.0000
+runtime_sec_total=1360.1

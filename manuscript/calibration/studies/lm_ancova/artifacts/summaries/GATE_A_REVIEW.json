@@ -1,0 +1,18 @@
+{
+  "gate": "A",
+  "reviewed_commit": "96141f2f3df6c45d3cc04f5c5c9696f56473a3bc",
+  "reviewed_at": "2026-08-06",
+  "checks": {
+    "git_diff_check": "PASS",
+    "documentation_audit": "PASS",
+    "package_tests": "PASS",
+    "package_tests_count": 663,
+    "shared_calibration_tests": "PASS",
+    "study_tests": "PASS",
+    "vignette_render": "PASS",
+    "roxygen_drift": "none",
+    "rcmdcheck": "PASS",
+    "rcmdcheck_notes": ["New submission"]
+  },
+  "source_changes_required": false
+}

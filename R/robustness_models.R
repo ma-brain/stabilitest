@@ -16,7 +16,10 @@
 # Numeric scores and component metrics are always retained. Categorical labels
 # are suppressed until the exact method-specific calibration unit is validated;
 # the only active validated unit is the narrow significant `welch_unpaired`
-# configuration. `lm_ancova` is the next independent calibration target.
+# configuration. `lm_ancova` (v1) and `lm_ancova_v2` (Track A jackknife-light)
+# both closed Gate B fail-closed as uncalibrated / no_feasible_thresholds;
+# interactive `robustness_lm()` defaults still resolve to `lm_ancova` and keep
+# labels suppressed. Welch 55/70 is not an ANCOVA fallback.
 # Companion to robustness_analysis.R (two-sample version); see
 # manuscript/methodological_review.md for the rationale behind the v2 metrics.
 # ==============================================================================
@@ -356,6 +359,65 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
 }
 
 # ------------------------------------------------------------------------------
+# LM / ANCOVA calibration profile (machine-checkable structural eligibility)
+# ------------------------------------------------------------------------------
+coefficient_term_label <- function(fit, coefficient) {
+  mm <- stats::model.matrix(fit)
+  index <- match(coefficient, colnames(mm))
+  if (is.na(index)) return(NA_character_)
+  assignment <- attr(mm, "assign")[[index]]
+  if (is.na(assignment) || assignment == 0L) return(NA_character_)
+  attr(stats::terms(fit), "term.labels")[[assignment]]
+}
+
+lm_calibration_profile <- function(fit, term_spec, original_n, alpha, n_boot,
+                                   weights, max_removal_pct) {
+  frame <- stats::model.frame(fit)
+  response <- stats::model.response(frame)
+  labels <- attr(stats::terms(fit), "term.labels")
+  target_label <- coefficient_term_label(fit, term_spec$coef_name)
+  direct_labels <- labels[grepl("^[.A-Za-z][.A-Za-z0-9_]*$", labels)]
+  baseline_labels <- setdiff(direct_labels, target_label)
+  target <- if (length(target_label) == 1L && !is.na(target_label) &&
+                target_label %in% names(frame)) {
+    frame[[target_label]]
+  } else {
+    NULL
+  }
+  baseline <- if (length(baseline_labels) == 1L &&
+                  baseline_labels %in% names(frame)) {
+    frame[[baseline_labels]]
+  } else {
+    NULL
+  }
+  omitted <- !is.null(fit$na.action) || stats::nobs(fit) != original_n
+  canonical <- identical(term_spec$type, "single") &&
+    identical(as.integer(term_spec$ndf), 1L) && is.numeric(response) &&
+    is.factor(target) && nlevels(target) == 2L &&
+    length(labels) == 2L && length(direct_labels) == 2L &&
+    is.numeric(baseline) && !omitted
+
+  list(
+    version = "lm-profile-1",
+    canonical_ancova = canonical,
+    term_type = term_spec$type,
+    term_df = as.integer(term_spec$ndf),
+    target_term = target_label,
+    treatment_levels = if (is.factor(target)) nlevels(target) else NA_integer_,
+    baseline_count = as.integer(length(baseline_labels)),
+    response_numeric = is.numeric(response),
+    baseline_numeric = is.numeric(baseline),
+    additive_direct_terms = length(labels) == 2L && length(direct_labels) == 2L,
+    omitted_rows = omitted,
+    n = as.integer(stats::nobs(fit)),
+    alpha = alpha,
+    n_boot = as.integer(n_boot),
+    weights = weights,
+    max_removal_pct = max_removal_pct
+  )
+}
+
+# ------------------------------------------------------------------------------
 #' Robustness analysis for a linear model / ANCOVA term
 #'
 #' @param formula Model formula, e.g. `change ~ arm + baseline`
@@ -465,6 +527,15 @@ robustness_lm <- function(formula, data, term,
   )
   out$model <- paste(deparse(formula), collapse = " ")
   out$type <- "Linear model (lm)"
+  out$n_boot <- as.integer(n_boot)
+  out$analysis_profile <- lm_calibration_profile(
+    fit0, term_spec,
+    original_n = nrow(data),
+    alpha = alpha,
+    n_boot = as.integer(n_boot),
+    weights = weights,
+    max_removal_pct = max_removal_pct
+  )
   out <- attach_result_calibration(
     out,
     calibration_unit = calibration_unit_for_model("lm"),

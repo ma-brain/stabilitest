@@ -1,0 +1,2 @@
+"scenario_id","design_layer","truth_class","completed","failed","failure_rate","runtime_sec"
+"lm_ancova_v3_clean_n40_r2_40_clear","core","clear",18,0,0,3.492

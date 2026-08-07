@@ -1,0 +1,16 @@
+"scenario_id","design_layer","truth_class","violation_type","sample_size","draws","seed","target","achieved","abs_error","tolerance","pass","gated","used_v3_generator","used_robustness_score"
+"lm_ancova_v3_viol_n160_r2_40_clear_allocation_2to1","core","clear","allocation_2to1",160,10000,20260810,0.9,0.8661,0.0339,NA,NA,FALSE,TRUE,FALSE
+"lm_ancova_v3_viol_n160_r2_40_clear_heavy_tails","core","clear","heavy_tails",160,10000,20260811,0.9,0.906,0.006,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n160_r2_40_clear_heteroscedastic","core","clear","heteroscedastic",160,10000,20260812,0.9,0.5252,0.3748,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n160_r2_40_clear_interaction","core","clear","interaction",160,10000,20260813,0.9,0.8967,0.00329999999999997,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n160_r2_40_clear_missing_baseline","core","clear","missing_baseline",160,10000,20260814,0.9,0.8628,0.0372,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n40_r2_40_clear_allocation_2to1","core","clear","allocation_2to1",40,10000,20260815,0.9,0.8511,0.0489000000000001,NA,NA,FALSE,TRUE,FALSE
+"lm_ancova_v3_viol_n40_r2_40_clear_heavy_tails","core","clear","heavy_tails",40,10000,20260816,0.9,0.901,0.001,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n40_r2_40_clear_heteroscedastic","core","clear","heteroscedastic",40,10000,20260817,0.9,0.5284,0.3716,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n40_r2_40_clear_interaction","core","clear","interaction",40,10000,20260818,0.9,0.871,0.029,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n40_r2_40_clear_missing_baseline","core","clear","missing_baseline",40,10000,20260819,0.9,0.8553,0.0447000000000001,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n80_r2_40_clear_allocation_2to1","core","clear","allocation_2to1",80,10000,20260820,0.9,0.8655,0.0345,NA,NA,FALSE,TRUE,FALSE
+"lm_ancova_v3_viol_n80_r2_40_clear_heavy_tails","core","clear","heavy_tails",80,10000,20260821,0.9,0.9076,0.00759999999999994,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n80_r2_40_clear_heteroscedastic","core","clear","heteroscedastic",80,10000,20260822,0.9,0.512,0.388,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n80_r2_40_clear_interaction","core","clear","interaction",80,10000,20260823,0.9,0.8875,0.0125000000000001,NA,NA,FALSE,FALSE,FALSE
+"lm_ancova_v3_viol_n80_r2_40_clear_missing_baseline","core","clear","missing_baseline",80,10000,20260824,0.9,0.8599,0.0401,NA,NA,FALSE,FALSE,FALSE

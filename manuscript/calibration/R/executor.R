@@ -292,12 +292,27 @@ run_full_scenario <- function(scenario, adapter, selected = NULL, replicate_ids 
   path <- if (!is.null(checkpoint_root)) checkpoint_path(checkpoint_root, values$scenario_id, "full") else NULL
   existing <- NULL
   if (isTRUE(resume) && !is.null(path) && file.exists(path)) {
-    existing <- tryCatch(read_checkpoint(path, manifest_hash)$replicates,
-                         error = function(error) NULL)
-    existing <- if (!is.null(existing)) {
-      tryCatch({ validate_calibration_replicates(existing); existing },
-               error = function(error) NULL)
-    } else NULL
+    existing_payload <- tryCatch(
+      read_checkpoint(path, manifest_hash),
+      error = function(error) {
+        stop(
+          sprintf("checkpoint manifest hash mismatch: %s", conditionMessage(error)),
+          call. = FALSE
+        )
+      }
+    )
+    existing <- tryCatch(
+      {
+        validate_calibration_replicates(existing_payload$replicates)
+        existing_payload$replicates
+      },
+      error = function(error) {
+        stop(
+          sprintf("checkpoint manifest hash mismatch: %s", conditionMessage(error)),
+          call. = FALSE
+        )
+      }
+    )
     ids_match <- !is.null(existing) && nrow(existing) == target_n &&
       identical(sort(as.integer(existing$replicate_id)), sort(replicate_ids)) &&
       all(existing$scenario_id == values$scenario_id)

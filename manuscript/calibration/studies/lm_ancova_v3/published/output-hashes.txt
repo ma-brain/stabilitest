@@ -1,0 +1,7 @@
+e7182b4ed63d567fea26cf2b567bc401  power-verification.csv  588
+ca6b72a43082546d275adeb7d7fa383b  README.md  642
+8fe6c66f28b5c788a637eff0cb8a6929  TRACK_E_VERDICT.json  1978
+a8dfc68fcfebcad78193ef4e53b9e49e  track-e-failures.csv  38
+85dac1a29f6441c4aac7f77b8898d0f8  track-e-occupancy.csv  2308
+490183ed1528f1e728815ccd84ca8e79  track-e-per-violation.csv  391
+c71d98d8139f8725ee3b21902489974b  workers-deviation.json  654

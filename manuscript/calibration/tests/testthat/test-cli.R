@@ -174,6 +174,35 @@ testthat::test_that("screening targets include both conclusion outcomes per trut
   )
 })
 
+testthat::test_that("optional screening block overrides conclusion quotas", {
+  runner_env <- new.env(parent = globalenv())
+  sys.source(file.path("..", "..", "run_calibration.R"), envir = runner_env)
+  plan <- list(replicates_per_stratum = 500L)
+
+  with_override <- data.frame(
+    truth_class = "null",
+    target_conclusion = "significant",
+    stringsAsFactors = FALSE
+  )
+  with_override$parameters <- list(list(
+    screening = list(conclusions = "significant", target_n = 100L)
+  ))
+  testthat::expect_identical(
+    runner_env$.calibration_target_by_stratum(with_override, plan),
+    c("null::significant" = 100L)
+  )
+
+  historical <- data.frame(
+    truth_class = "null",
+    target_conclusion = "significant",
+    stringsAsFactors = FALSE
+  )
+  testthat::expect_identical(
+    runner_env$.calibration_target_by_stratum(historical, plan),
+    c("null::significant" = 500L, "null::non_significant" = 500L)
+  )
+})
+
 testthat::test_that("analyse hook records empty selection as unsupported", {
   runner_env <- new.env(parent = globalenv())
   sys.source(file.path("..", "..", "run_calibration.R"), envir = runner_env)

@@ -22,6 +22,56 @@ preserved for provenance, not runtime lookup.  The inspected Task 15
 validation rows cannot be reused as fresh held-out confirmation; any reanalysis
 of them is exploratory.
 
+## Independent ANCOVA study (Gate A / Gate B)
+
+`studies/lm_ancova/` owns a separate method-specific calibration for eligible
+significant canonical 1-df ANCOVA treatment effects. Its scenario contract,
+SAP, runner, and publication tools are isolated from the historical
+mixed-family experiment. Gate B closed fail-closed: the active `lm_ancova`
+registry row remains `uncalibrated` with reason `no_feasible_thresholds`
+(version `lm-ancova-2026-1`); held-out validation was not opened; multi-df
+labels remain suppressed; score weights remain frozen; and Welch 55/70 is a
+Welch comparator rather than an ANCOVA fallback. Compact published decision
+artifacts are under `studies/lm_ancova/published/`. The prospectively frozen
+`pain_ancova_trial` illustration never enters training or held-out evidence.
+
+## ANCOVA v2 Track A study (executed fail-closed)
+
+`studies/lm_ancova_v2/` is a separate calibration unit for a weaker two-band
+claim (Fragile / Not fragile) on a jackknife-light score
+(`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`). The Gate A SAP freezes
+null+clear fitting strata, borderline as diagnostic-only, sealed pilot
+go/no-go formulas, clear-power `0.90` default with recorded `0.95` escalation
+only, workers `4` / `n_boot = 1000` / quotas ≥100 significant, and FR/RI
+acceptance gates. Gate B was executed fail-closed after a sealed pilot GO
+(Δ = 24.4, overlap = 0.034, AUC = 0.892) whose location metrics were a
+false-GO relative to training: the active `lm_ancova_v2` registry row is
+`uncalibrated` with reason `no_feasible_thresholds` (candidate hash
+`3dc2a1f840b3eb725bea629dc130f070`; version `lm-ancova-v2-2026-1`); held-out
+validation was not opened; best RI at the FR-safe L was 0.554 vs gate 0.70;
+categorical labels stay suppressed. Compact published decision artifacts are
+under `studies/lm_ancova_v2/published/`. This empirical outcome confirms
+Finding 4 in `docs/plans/2026-08-06-lm-ancova-v3-design.md`. v1 validation
+seeds/IDs are absent from v2 ledgers; v1 `lm_ancova` provenance stays the
+immutable uncalibrated historical record. Welch 55/70 is not an ANCOVA
+fallback.
+
+## ANCOVA v3 Phase 1 Track E (published not confirmed)
+
+`studies/lm_ancova_v3/` owns the pre-registered violation-detection study
+(Tracks F + E; Track D parked). Among significant clear rows, the
+jackknife-light score did **not** clear the frozen gate: pooled ΔAUC =
+0.0053, bootstrap 95% CI [−0.1109, 0.1289] (need ΔAUC ≥ 0.10 and CI lower
+bound > 0). Quotas were met (2,100 completed, 0 failed). Verdict artifact
+`TRACK_E_VERDICT.json` (md5 `8fe6c66f28b5c788a637eff0cb8a3029`) and compact
+occupancy / per-violation / hash-ledger files are under
+`studies/lm_ancova_v3/published/`. This is a publishable negative outcome and
+an honest bound on added value beyond p under the frozen violation suite. No
+package registry or runtime behavior change. Track D seed ranges `51001+` /
+`52001+` / `53001+` remain reserved pending explicit human un-parking after
+the binary-proportion replication-curve review. Welch 55/70 is not an ANCOVA
+fallback; v1/v2 publications stay immutable.
+
 The scenario table is deliberately independent of generated data.  Calibration
 runners must use the current checkout (via `R/load_calibration.R`), preserve the
 scenario seed, and write intermediate files below `artifacts/`.  Only the
