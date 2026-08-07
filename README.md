@@ -140,7 +140,7 @@ res_or <- robustness_tost(b1, b2, type = "noninferiority", endpoint = "or",
 
 ## Status
 
-Experimental (v0.5.1). API may change. See [NEWS.md](NEWS.md) for release
+Experimental (v0.6.0). API may change. See [NEWS.md](NEWS.md) for release
 notes. Cite with `citation("stabilitest")`. Browse the vignette with
 `browseVignettes("stabilitest")` or
 `vignette("pain-case-study", package = "stabilitest")`. `NAMESPACE` and `man/`
