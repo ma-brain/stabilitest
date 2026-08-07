@@ -1,0 +1,12 @@
+stabilitest
+ggplot2
+knitr
+rmarkdown
+rjtools
+survival
+patchwork
+dplyr
+purrr
+tibble
+testthat
+devtools
