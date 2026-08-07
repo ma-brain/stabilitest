@@ -424,6 +424,24 @@ assert_match("chi_square_2x2",
              "proportions policy does not sequence the Phase 2 unit",
              ignore.case = FALSE)
 
+# Gate B active fisher_exact two-band calibration (lockstep with registry).
+assert_match("fisher-2026-1",
+             "Gate B docs omit fisher-2026-1 version",
+             ignore.case = FALSE)
+assert_match(
+  "L = 58|cutoff `L = 58`|Fragile.{0,40}Not fragile.{0,80}58|58.{0,80}Not fragile",
+  "Gate B docs omit L=58 Fragile / Not fragile decision"
+)
+assert_match(
+  "study:binary_proportion@cc3344931614|binary_proportion@cc3344931614",
+  "Gate B docs omit study:binary_proportion@cc3344931614 provenance",
+  ignore.case = FALSE
+)
+assert_match(
+  "Gate B is active|active.{0,40}fisher_exact|fisher_exact.{0,80}Gate B is active",
+  "Gate B docs omit that fisher_exact Gate B is active"
+)
+
 scan_files <- file.path(root, c(
   "README.md", "NEWS.md", "R", "man", "vignettes",
   "manuscript/robustness_analysis_manuscript.md",

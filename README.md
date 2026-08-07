@@ -17,13 +17,18 @@ analyses into interpretable metrics:
 A data-dependent composite score from 0–100 summarises the components. The
 numeric score and its component metrics are returned for every supported
 method. Categorical interpretation labels are deliberately conservative: the
-current release assigns **Robust**, **Moderately Robust**, or **Fragile** only
-to an applicable, statistically significant `welch_unpaired` result using the
-documented default score definition and weights. Labels are `NA` for
-uncalibrated methods or conclusions, while scores and components remain
-available for descriptive review. The 55/70 thresholds are retained only as
-the narrow Welch calibration; the broader Task 15 simulation is historical
-evidence, not a runtime calibration claim.
+current release assigns **Robust**, **Moderately Robust**, or **Fragile** to an
+applicable, statistically significant `welch_unpaired` result using the
+documented default score definition and weights, and assigns **Fragile** or
+**Not fragile** to an applicable, statistically significant `fisher_exact`
+result under the explicit jackknife-light weights
+(`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`; cutoff `L = 58`,
+version `fisher-2026-1`, provenance `study:binary_proportion@cc3344931614`).
+There is no Robust tier for Fisher. Labels are `NA` for uncalibrated methods
+or conclusions, while scores and components remain available for descriptive
+review. The 55/70 thresholds are retained only as the narrow Welch
+calibration; the broader Task 15 simulation is historical evidence, not a
+runtime calibration claim.
 
 Calibration is keyed by the resolved method (`welch_unpaired`, `paired_t`,
 `wilcoxon_rank_sum`, `wilcoxon_signed_rank`, `brunner_munzel`,
@@ -47,11 +52,15 @@ no feasible L, so labels stay suppressed. The prospectively frozen
 or held-out evidence.
 
 A method-specific calibration study for `fisher_exact` (binary-proportion
-Phase 1) has validated a two-band Fragile / Not-fragile decision at cutoff
-`L = 58` on a fresh held-out grid; its published artifacts live in
-`manuscript/calibration/studies/binary_proportion/`. Runtime activation in the
-package registry is pending separate review (Gate B); until then, proportion
-results retain numeric scores and component metrics with labels suppressed.
+Phase 1) validated a two-band Fragile / Not fragile decision at cutoff
+`L = 58` on a fresh held-out grid; published artifacts live in
+`manuscript/calibration/studies/binary_proportion/`. Gate B is active: the
+package registry emits Fragile / Not fragile for eligible significant
+canonical two-arm Fisher results under the explicit jackknife-light weights
+above (`fisher-2026-1`; `study:binary_proportion@cc3344931614`). Default
+0.4/0.4/0.2 weights and non-canonical profiles keep labels suppressed while
+retaining numeric scores and component metrics. Phase 2 targets
+`chi_square_2x2`.
 
 ## Installation
 

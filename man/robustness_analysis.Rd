@@ -78,10 +78,13 @@ difference depending on \code{test_type}).}
 \item{robustness_metrics}{Component scores (jackknife conclusion
 stability, worst-case fragility, bootstrap reproducibility, overall
 composite) and related diagnostics. Alias: \code{metrics} (same tibble).}
-\item{robustness_interpretation}{A calibrated categorical label
-(\code{"Robust"}, \code{"Moderately Robust"}, or \code{"Fragile"}) only for an
-applicable significant Welch result; otherwise \code{NA}. Numeric scores and
-component metrics remain available when the label is suppressed. Alias:
+\item{robustness_interpretation}{A calibrated categorical label. For
+applicable significant Welch results: \code{"Robust"},
+\code{"Moderately Robust"}, or \code{"Fragile"}. For applicable significant
+\code{fisher_exact} results under explicit jackknife-light weights:
+\code{"Fragile"} or \code{"Not fragile"} (no Robust tier; \code{L = 58},
+\code{fisher-2026-1}). Otherwise \code{NA}. Numeric scores and component metrics
+remain available when the label is suppressed. Alias:
 \code{interpretation_label}.}
 \item{calibration}{Method-specific calibration metadata, including
 applicability, status, cutoffs, version, and provenance.}
@@ -105,15 +108,20 @@ continuous API. Barnard's exact test is not implemented in this version.
 }
 \details{
 Numeric scores and all component metrics are returned for every supported
-test. Categorical interpretation labels are assigned only when the resolved
-method is an applicable, significant \code{welch_unpaired} result under the
-documented default score definition and weights. Labels are suppressed for
-uncalibrated methods and conclusions; the public dispatcher and its existing
-\code{test_type} values are unchanged. Method-specific calibration is represented
-by exact units such as \code{paired_t}, \code{fisher_exact}, and \code{two_sample_prop}, not
-by a generic \code{two_sample} calibration identity. The archived Task 15
-broad-family simulation is historical evidence only. \code{lm_ancova} is the
-next independent calibration target.
+test. Categorical interpretation labels use two calibrated vocabularies:
+\code{"Robust"} / \code{"Moderately Robust"} / \code{"Fragile"} for an applicable
+significant \code{welch_unpaired} result under the documented default score
+definition and weights, and \code{"Fragile"} / \code{"Not fragile"} for an applicable
+significant \code{fisher_exact} result under the explicit jackknife-light weights
+(\code{fragility = 0.5}, \code{bootstrap = 0.5}, \code{jackknife = 0}; cutoff \code{L = 58},
+version \code{fisher-2026-1}). There is no Robust tier for Fisher. Labels are
+suppressed for uncalibrated methods and conclusions; the public dispatcher
+and its existing \code{test_type} values are unchanged. Method-specific
+calibration is represented by exact units such as \code{paired_t},
+\code{fisher_exact}, and \code{two_sample_prop}, not by a generic \code{two_sample}
+calibration identity. The archived Task 15 broad-family simulation is
+historical evidence only. \code{lm_ancova} and \code{lm_ancova_v2} remain uncalibrated
+after fail-closed Gate B decisions.
 
 Rank-based options: \code{"wilcoxon"} (Mann–Whitney / Wilcoxon rank-sum) assumes
 exchangeable distributions under the null (equal shapes/variances for a pure

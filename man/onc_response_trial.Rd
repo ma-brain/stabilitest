@@ -17,7 +17,7 @@ A data frame with 120 rows and 3 variables:
 Simulated; see \code{data-raw/onc_response_trial.R}.
 }
 \usage{
-data(onc_response_trial)
+onc_response_trial
 }
 \description{
 Row-level synthetic two-arm oncology responder trial. The dataset was
