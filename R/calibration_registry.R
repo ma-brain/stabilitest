@@ -409,6 +409,38 @@ conclusion_type_for_tost <- tost_conclusion_type
     .is_lm_ancova_v2_calibration_design(profile$weights, profile$max_removal_pct)
 }
 
+# Fail-closed eligibility predicate for a Phase 1 fisher_exact calibration.
+# Bounds mirror the frozen runtime profile in the proportions calibration
+# design: two-arm individual-level binary input, complete cases, per-arm n in
+# [25, 200], allocation ratio in [0.8, 1.25], observed control-arm (group2)
+# event rate in [0.08, 0.55] with >= 3 events and >= 3 non-events, default
+# 0.4/0.4/0.2 weights, alpha 0.05, n_boot 1000, max_removal_pct 0.30.
+.is_supported_fisher_exact_profile <- function(profile) {
+  is.list(profile) && identical(profile$version, "prop-profile-1") &&
+    identical(profile$calibration_unit, "fisher_exact") &&
+    isTRUE(profile$canonical_fisher) &&
+    isTRUE(profile$two_arm_individual_level) &&
+    isTRUE(profile$complete_cases) &&
+    is.numeric(profile$n1) && length(profile$n1) == 1L &&
+    !is.na(profile$n1) && profile$n1 >= 25L && profile$n1 <= 200L &&
+    is.numeric(profile$n2) && length(profile$n2) == 1L &&
+    !is.na(profile$n2) && profile$n2 >= 25L && profile$n2 <= 200L &&
+    is.numeric(profile$allocation_ratio) &&
+    length(profile$allocation_ratio) == 1L &&
+    !is.na(profile$allocation_ratio) &&
+    profile$allocation_ratio >= 0.8 && profile$allocation_ratio <= 1.25 &&
+    is.numeric(profile$rate2) && length(profile$rate2) == 1L &&
+    !is.na(profile$rate2) &&
+    profile$rate2 >= 0.08 && profile$rate2 <= 0.55 &&
+    is.numeric(profile$events2) && length(profile$events2) == 1L &&
+    !is.na(profile$events2) && profile$events2 >= 3L &&
+    is.numeric(profile$non_events2) && length(profile$non_events2) == 1L &&
+    !is.na(profile$non_events2) && profile$non_events2 >= 3L &&
+    isTRUE(all.equal(profile$alpha, 0.05)) &&
+    identical(as.integer(profile$n_boot), 1000L) &&
+    .is_default_calibration_design(profile$weights, profile$max_removal_pct)
+}
+
 # Resolve a result to exactly one registry row.  Resolution is deliberately
 # fail-closed: only the narrow validated Welch configuration receives cutoffs;
 # every other method/configuration retains scores but has no categorical bands.
@@ -508,6 +540,17 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
     return(.registry_result(
       row, status = "uncalibrated", applicable = FALSE,
       reason = "Observed analysis profile is outside the validated lm_ancova_v2 design"
+    ))
+  }
+  # The Phase 1 fisher_exact calibration applies only to results whose runtime
+  # analysis profile satisfies the frozen canonical bounds.  The active row is
+  # currently uncalibrated, so this branch is inert until Gate B; Welch and
+  # every other unit ignore the profile entirely.
+  if (identical(unit, "fisher_exact") &&
+      !.is_supported_fisher_exact_profile(analysis_profile)) {
+    return(.registry_result(
+      row, status = "uncalibrated", applicable = FALSE,
+      reason = "Observed analysis profile is outside the validated fisher_exact design"
     ))
   }
 

@@ -1,0 +1,14 @@
+473dfe827b3afbe54ec139e29025c8dc  completed_training.rds
+7c0361b68d1de9241695eb1200d8f9ed  completed_validation.rds
+96f374a149be0f1219efc6a39ebc29b3  audit_training.rds
+7c0361b68d1de9241695eb1200d8f9ed  audit_validation.rds
+270e48a11119f244962160c48239dccf  training-occupancy.csv
+6038ff275464df6118948b8bf39d8ed4  candidate.rds
+9c01d426e2915534f9c1464612bcad57  validation.rds
+13c08dc696b8a87847b892bd1bcee3a2  registry.rds
+ea00b11d993b7dff552b525637c4c68b  training-manifest.rds
+002fc054678fbbbf7a6bbc054b999c6c  validation-manifest.rds
+cbc538ffaf702e2f1ac71dba400eb802  training-replication-curve.rds
+8c19d80065b9102c830edd6a94b74a5e  candidate-diagnostics.json
+575ede4a5f7e96accb7f7be9aebe0461  SCORE_PILOT_GATE.json
+f03f5303f511f9c325cb1784a35f54ed  registry.csv

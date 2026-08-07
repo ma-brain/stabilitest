@@ -46,6 +46,13 @@ no feasible L, so labels stay suppressed. The prospectively frozen
 `pain_ancova_trial` dataset is an illustration only and never enters training
 or held-out evidence.
 
+A method-specific calibration study for `fisher_exact` (binary-proportion
+Phase 1) has validated a two-band Fragile / Not-fragile decision at cutoff
+`L = 58` on a fresh held-out grid; its published artifacts live in
+`manuscript/calibration/studies/binary_proportion/`. Runtime activation in the
+package registry is pending separate review (Gate B); until then, proportion
+results retain numeric scores and component metrics with labels suppressed.
+
 ## Installation
 
 ```r

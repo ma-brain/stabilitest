@@ -317,10 +317,11 @@ run_calibration <- function(args = commandArgs(trailingOnly = TRUE), project_roo
 `%||%` <- function(left, right) if (is.null(left)) right else left
 
 .calibration_is_direct <- function() {
-  # Match only the shared manuscript/calibration entry point. Study runners
-  # such as studies/lm_ancova/run_calibration.R also end in run_calibration.R
-  # and must not trigger this auto-run when they sys.source this file.
   args <- commandArgs(trailingOnly = FALSE)
+  # Match only the shared manuscript/calibration entry point. Study runners
+  # such as studies/lm_ancova/run_calibration.R or
+  # studies/binary_proportion/run_calibration.R also end in run_calibration.R
+  # and must not trigger this auto-run when they sys.source this file.
   file_arg <- sub("^--file=", "", grep("^--file=", args, value = TRUE))
   if (!length(file_arg)) {
     return(FALSE)

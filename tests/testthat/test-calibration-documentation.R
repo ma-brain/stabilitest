@@ -292,3 +292,32 @@ test_that("Phase 1 ANCOVA v3 Track E SAP freezes the violation-detection protoco
   expect_identical(attr(status, "status"), NULL)
   expect_true(any(grepl("audit passed", status, ignore.case = TRUE)))
 })
+
+test_that("the calibration documentation audit passes", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  audit <- file.path(root, "tools", "check-calibration-documentation.R")
+  skip_if_not(file.exists(audit),
+              "audit script is not shipped in the package tarball")
+  status <- system2(
+    file.path(R.home("bin"), "Rscript"), audit,
+    stdout = TRUE, stderr = TRUE
+  )
+  attr(status, "status") <- attr(status, "status")
+  if (is.null(attr(status, "status"))) attr(status, "status") <- 0L
+  expect_equal(attr(status, "status"), 0L,
+               info = paste(status, collapse = "\n"))
+})
+
+test_that("the proportions Phase 1 SAP freezes the key constants", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  sap <- file.path(root, "manuscript", "calibration", "studies",
+                   "binary_proportion", "CALIBRATION_SAP.md")
+  skip_if_not(file.exists(sap),
+              "proportions SAP is not shipped in the package tarball")
+  text <- paste(readLines(sap, warn = FALSE), collapse = "\n")
+  expect_true(grepl("fragility = 0.5.*bootstrap = 0.5.*jackknife = 0", text))
+  expect_true(grepl("clear exact power 0.95", text))
+  expect_true(grepl("projected RI >= 0.72", text))
+  expect_true(grepl("20260809L", text))
+  expect_true(grepl("appear in no[[:space:]]+calibration ledger", text))
+})

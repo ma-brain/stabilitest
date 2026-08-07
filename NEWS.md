@@ -1,5 +1,28 @@
 # stabilitest 0.5.1
 
+## Binary-proportion (`fisher_exact`) calibration
+
+* Added an independent calibration study for the `fisher_exact` unit
+  (`manuscript/calibration/studies/binary_proportion/`). It validates a
+  two-band Fragile / Not-fragile decision at cutoff `L = 58` (Fragile iff
+  score ≤ L) for eligible significant canonical two-arm Fisher exact results,
+  using the jackknife-light weights `fragility = 0.5`, `bootstrap = 0.5`,
+  `jackknife = 0`. Truth targets are exact-power-defined (clear power 0.95,
+  justified up front by committed analytic evidence; borderline 0.60
+  diagnostic-only; null exact). The decision was confirmed on a fresh held-out
+  grid under the conservative-of-Wilson-and-cluster-bootstrap rule (FR upper
+  0.0617, RI lower 0.6767). Published artifacts include the candidate, held-out
+  validation, registry snapshot, manifests, and a hash ledger.
+* Added a runtime `prop_calibration_profile()` recorded on every two-sample
+  result, gating a future `fisher_exact` label on canonical eligibility bounds
+  (per-arm n in [25, 200], allocation ratio in [0.8, 1.25], control-arm event
+  rate in [0.08, 0.55] with at least 3 events and 3 non-events). The active
+  registry row for `fisher_exact` remains `uncalibrated` until the published
+  decision is activated under separate review (Gate B); proportion results
+  retain numeric scores and component metrics with labels suppressed.
+* Added the prospectively frozen synthetic `onc_response_trial` dataset
+  (60/arm, seed `20260809`) and a `proportions-case-study` vignette.
+
 ## Calibration policy
 
 * Added method-specific calibration metadata. Numeric scores and component

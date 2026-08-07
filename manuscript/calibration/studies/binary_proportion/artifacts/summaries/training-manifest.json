@@ -1,0 +1,14 @@
+{
+  "phase": "training",
+  "workers": 4,
+  "code_commit": "36ba211878a5d3187c4b2eaf77719ed9189236e7",
+  "scenario_manifest_hash": "a276bbc3864db015b6db6058e79abb1f",
+  "training_artifact_hash": "473dfe827b3afbe54ec139e29025c8dc",
+  "n_core_significant": 3596,
+  "n_audit": 3996,
+  "n_replication_draws": 3596,
+  "candidate_status": "candidate",
+  "candidate_hash": "cc334493161406ab6c23c0c457445722",
+  "cutoff": 58,
+  "validation_accessed": false
+}
