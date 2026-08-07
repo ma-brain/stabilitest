@@ -1,0 +1,71 @@
+{
+  "study": "lm_ancova_v3",
+  "phase": "phase1_track_e",
+  "verdict": "not confirmed",
+  "confirmed": false,
+  "pooled": {
+    "auc_score": 0.5569,
+    "auc_p": 0.5516,
+    "delta_auc": 0.0053,
+    "p_direction": "as_is",
+    "ci_lower": -0.1109,
+    "ci_upper": 0.1289,
+    "cluster_B": 1000,
+    "cluster_seed": 20260807
+  },
+  "per_violation": [
+    {
+      "violation_type": "allocation_2to1",
+      "auc_score": 0.6193,
+      "auc_p": 0.5598,
+      "delta_auc": 0.0595
+    },
+    {
+      "violation_type": "heavy_tails",
+      "auc_score": 0.4185,
+      "auc_p": 0.4315,
+      "delta_auc": -0.013
+    },
+    {
+      "violation_type": "heteroscedastic",
+      "auc_score": 0.7096,
+      "auc_p": 0.7118,
+      "delta_auc": -0.0022
+    },
+    {
+      "violation_type": "interaction",
+      "auc_score": 0.5141,
+      "auc_p": 0.5076,
+      "delta_auc": 0.0065
+    },
+    {
+      "violation_type": "missing_baseline",
+      "auc_score": 0.523,
+      "auc_p": 0.5471,
+      "delta_auc": -0.0241
+    }
+  ],
+  "gate": {
+    "delta_min": 0.1,
+    "ci_lower_gt": 0
+  },
+  "quotas": {
+    "ok": true,
+    "messages": [],
+    "primary_min_completed": 100,
+    "diagnostic_min_completed": 50,
+    "max_failure_rate": 0.05
+  },
+  "execution": {
+    "workers": 2,
+    "workers_plan_frozen_max": 4,
+    "workers_authorized_sequence": [10, 6, 4, 2],
+    "workers_deviation": "Human authorized workers above frozen max 4 (10 then 6). WSL OOM persisted at 4 workers after raising WSL RAM to 48GB (~12GB RSS per forked R child). Production completed at workers=2. Assemble/publish from scenario checkpoints after aborting a hung gzip saveRDS of run-results.rds. No other frozen constants changed.",
+    "code_commit": "b3c9288337c143a7614e05057be1339fc95cb974",
+    "input": "/home/marius/stabilitest-lm-ancova-v3-prod/manuscript/calibration/studies/lm_ancova_v3/artifacts/raw/track-e",
+    "source": "checkpoints",
+    "n_completed": 2100,
+    "n_failed": 0,
+    "n_checkpoints": 24
+  }
+}

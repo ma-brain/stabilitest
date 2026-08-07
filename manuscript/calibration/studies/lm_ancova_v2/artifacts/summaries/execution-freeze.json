@@ -1,0 +1,48 @@
+{
+  "score_pilot": {
+    "decision": "go",
+    "pass": true,
+    "clear_power": 0.9,
+    "searched_L": false,
+    "stamp": "artifacts/summaries/SCORE_PILOT_GATE.json",
+    "commit": "ebc97ea441df3fb1e81b21f09a72e55dfee7c9c2",
+    "n_scenarios": 27,
+    "analyse_completed": 1919,
+    "analyse_failed": 0,
+    "screen_complete": 18,
+    "validation_accessed": false
+  },
+  "power": {
+    "calibration_unit": "lm_ancova_v2",
+    "clear_target_power": 0.9,
+    "draws": 10000,
+    "master_seed": 20260806,
+    "tol_power": 0.02,
+    "tol_null": 0.02,
+    "n_scenarios": 45,
+    "n_fail": 0,
+    "any_robustness_score": false,
+    "output": "/Users/Marius/Github/stabilitest/.worktrees/lm-ancova-calibration/manuscript/calibration/studies/lm_ancova_v2/artifacts/summaries/power-verification.csv",
+    "sha256": "eda951887de7c888d2a67216282aacc539d2ecf81b2e2fd359e76c24137dcaea"
+  },
+  "hashes": {
+    "all_scenarios": "f69bb4388a70765d1008d0fdc1748b80",
+    "core_only": "4485162d1af3ce3a424662472f7a6779",
+    "training_core_plus_stress": "865117678951797d2090259e8d046d32",
+    "validation": "a6181acd67201d01a8626f3733c4b583"
+  },
+  "production_plan": {
+    "n_boot": 1000,
+    "max_screen_draws": 10000,
+    "screening_target_n": 100,
+    "workers": 4,
+    "training_scenarios": 33,
+    "core_scenarios": 27,
+    "stress_scenarios": 6,
+    "validation_scenarios": 18,
+    "clear_target_power": 0.9,
+    "note": "Workers capped at 4; do not open validation; do not fit L in Task 7"
+  },
+  "code_commit": "0cedfaaca515bc92b89fd6e74ce44329aca9cb60",
+  "execution_freeze_commit": "0cedfaaca515bc92b89fd6e74ce44329aca9cb60"
+}

@@ -87,15 +87,15 @@ test_that("the installed registry exactly matches the active taxonomy", {
   expected <- data.frame(
     family = c(
       rep("continuous_parametric", 2), rep("rank_nonparametric", 3),
-      rep("binary_proportion", 3), "linear_model",
+      rep("binary_proportion", 3), rep("linear_model", 2),
       rep("generalized_linear_model", 2), "survival",
       rep("equivalence_noninferiority", 6)
     ),
     calibration_unit = c(
       "welch_unpaired", "paired_t", "wilcoxon_rank_sum",
       "wilcoxon_signed_rank", "brunner_munzel", "fisher_exact",
-      "chi_square_2x2", "two_sample_prop", "lm_ancova", "glm_binomial",
-      "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
+      "chi_square_2x2", "two_sample_prop", "lm_ancova", "lm_ancova_v2",
+      "glm_binomial", "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
       "tost_risk_difference", "tost_risk_difference", "tost_odds_ratio",
       "tost_odds_ratio"
     ),
@@ -103,22 +103,125 @@ test_that("the installed registry exactly matches the active taxonomy", {
       "mean_difference", "mean_difference", "location_shift",
       "location_shift", "location_shift", "risk_difference",
       "risk_difference", "risk_difference", "coefficient", "coefficient",
-      "coefficient", "hazard_ratio", "mean_difference", "mean_difference",
-      "risk_difference", "risk_difference", "odds_ratio", "odds_ratio"
+      "coefficient", "coefficient", "hazard_ratio", "mean_difference",
+      "mean_difference", "risk_difference", "risk_difference", "odds_ratio",
+      "odds_ratio"
     ),
     conclusion_type = c(
-      rep("significant", 12), "equivalence", "noninferiority",
+      rep("significant", 13), "equivalence", "noninferiority",
       "equivalence", "noninferiority", "equivalence", "noninferiority"
     ),
-    status = c("validated_method_specific", rep("uncalibrated", 17)),
-    cutoff_fragile = c(55, rep(NA_real_, 17)),
-    cutoff_robust = c(70, rep(NA_real_, 17)),
-    version = c("welch-2026-1", rep("taxonomy-2026-1", 17)),
+    status = c(
+      "validated_method_specific", rep("uncalibrated", 4),
+      "validated_method_specific", rep("uncalibrated", 13)
+    ),
+    cutoff_fragile = c(55, rep(NA_real_, 4), 58, rep(NA_real_, 13)),
+    cutoff_robust = c(70, rep(NA_real_, 18)),
+    version = c(
+      "welch-2026-1", rep("taxonomy-2026-1", 4), "fisher-2026-1",
+      rep("taxonomy-2026-1", 2), "lm-ancova-2026-1", "lm-ancova-v2-2026-1",
+      rep("taxonomy-2026-1", 9)
+    ),
     stringsAsFactors = FALSE
   )
   row.names(actual) <- NULL
 
   expect_identical(actual, expected)
+})
+
+test_that("active lm_ancova Gate B remains uncalibrated with auditable reason", {
+  registry <- load_calibration_registry()
+  ancova <- registry[registry$calibration_unit == "lm_ancova", , drop = FALSE]
+
+  expect_identical(nrow(ancova), 1L)
+  expect_identical(ancova$status, "uncalibrated")
+  expect_identical(ancova$version, "lm-ancova-2026-1")
+  expect_true(is.na(ancova$cutoff_fragile))
+  expect_true(is.na(ancova$cutoff_robust))
+  expect_match(ancova$source, "manuscript/calibration/studies/lm_ancova/published",
+               fixed = TRUE)
+  expect_match(ancova$supported_conditions, "no_feasible_thresholds", fixed = TRUE)
+  expect_match(ancova$supported_conditions, "held-out not opened|held.out not opened",
+               perl = TRUE)
+  expect_match(ancova$supported_conditions, "labels? suppressed|categorical bands suppressed",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(ancova$supported_conditions,
+               "Welch 55/70 is not an ANCOVA fallback|not an ANCOVA fallback",
+               perl = TRUE)
+  expect_match(ancova$supported_conditions,
+               "9ccfc2fca7c0a07c19a3a18838e9a3f2",
+               fixed = TRUE)
+
+  resolved <- resolve_result_calibration(
+    "lm_ancova", "coefficient", "significant",
+    c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2), 0.30,
+    analysis_profile = .canonical_profile_fixture()
+  )
+  expect_false(resolved$applicable)
+  expect_identical(resolved$status, "uncalibrated")
+  expect_true(all(is.na(c(resolved$cutoff_fragile, resolved$cutoff_robust))))
+  expect_match(resolved$supported_conditions, "no_feasible_thresholds", fixed = TRUE)
+  expect_true(is.na(score_label_from_calibration(80, resolved)))
+  expect_true(is.na(score_label_from_calibration(60, resolved)))
+  expect_true(is.na(score_label_from_calibration(40, resolved)))
+})
+
+test_that("active lm_ancova_v2 Gate B remains uncalibrated with auditable reason", {
+  registry <- load_calibration_registry()
+  ancova_v2 <- registry[registry$calibration_unit == "lm_ancova_v2", , drop = FALSE]
+
+  expect_identical(nrow(ancova_v2), 1L)
+  expect_identical(ancova_v2$status, "uncalibrated")
+  expect_identical(ancova_v2$version, "lm-ancova-v2-2026-1")
+  expect_true(is.na(ancova_v2$cutoff_fragile))
+  expect_true(is.na(ancova_v2$cutoff_robust))
+  expect_match(
+    ancova_v2$source,
+    "manuscript/calibration/studies/lm_ancova_v2/published",
+    fixed = TRUE
+  )
+  expect_match(ancova_v2$supported_conditions, "no_feasible_thresholds",
+               fixed = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "jackknife-light|fragility=0\\.5|jackknife = 0",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "two-band|Fragile/Not fragile|Fragile / Not fragile",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "held-out not opened|held.out not opened",
+               perl = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "labels? suppressed|categorical bands suppressed",
+               perl = TRUE, ignore.case = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "Welch 55/70 is not an ANCOVA fallback|not an ANCOVA fallback",
+               perl = TRUE)
+  expect_match(ancova_v2$supported_conditions,
+               "3dc2a1f840b3eb725bea629dc130f070",
+               fixed = TRUE)
+
+  # v1 historical row must remain intact beside v2.
+  ancova_v1 <- registry[registry$calibration_unit == "lm_ancova", , drop = FALSE]
+  expect_identical(nrow(ancova_v1), 1L)
+  expect_identical(ancova_v1$version, "lm-ancova-2026-1")
+
+  resolved <- resolve_result_calibration(
+    "lm_ancova_v2", "coefficient", "significant",
+    c(jackknife = 0, fragility = 0.5, bootstrap = 0.5), 0.30,
+    analysis_profile = .canonical_profile_fixture()
+  )
+  expect_false(resolved$applicable)
+  expect_identical(resolved$status, "uncalibrated")
+  expect_true(all(is.na(c(resolved$cutoff_fragile, resolved$cutoff_robust))))
+  expect_match(resolved$supported_conditions, "no_feasible_thresholds",
+               fixed = TRUE)
+  expect_true(is.na(score_label_from_calibration(80, resolved)))
+  expect_true(is.na(score_label_from_calibration(50, resolved)))
+  expect_true(is.na(score_label_from_calibration(20, resolved)))
+
+  # Default interactive lm resolution stays on historical v1 unit.
+  expect_identical(calibration_unit_for_model("lm"), "lm_ancova")
 })
 
 test_that("the Welch row cites durable tracked provenance", {
@@ -241,6 +344,30 @@ test_that("active registry validation locks family and Welch calibration", {
   }
 })
 
+test_that("active registry validation locks fisher_exact Gate B calibration", {
+  registry <- load_calibration_registry()
+  fisher <- registry$calibration_unit == "fisher_exact"
+  mutations <- list(
+    status = "uncalibrated",
+    cutoff_fragile = 57,
+    cutoff_robust = 70,
+    version = "fisher-untracked"
+  )
+
+  for (field in names(mutations)) {
+    changed <- registry
+    changed[fisher, field] <- mutations[[field]]
+    if (identical(field, "status")) {
+      changed$cutoff_fragile[fisher] <- NA_real_
+      changed$cutoff_robust[fisher] <- NA_real_
+    }
+    expect_error(
+      validate_active_calibration_registry(changed),
+      "active calibration registry must exactly match"
+    )
+  }
+})
+
 test_that("registry validation requires finite ordered validated cutoffs", {
   registry <- .valid_calibration_registry()
   registry$cutoff_robust <- 55
@@ -249,6 +376,24 @@ test_that("registry validation requires finite ordered validated cutoffs", {
 
   registry <- .valid_calibration_registry()
   registry$cutoff_fragile <- Inf
+  expect_error(validate_calibration_registry(registry),
+               "finite ordered cutoffs")
+})
+
+test_that("registry validation accepts two-band NA robust cutoffs", {
+  registry <- .valid_calibration_registry()
+  registry$cutoff_robust <- NA_real_
+  expect_silent(validate_calibration_registry(registry))
+
+  registry <- .valid_calibration_registry()
+  registry$cutoff_fragile <- NA_real_
+  registry$cutoff_robust <- NA_real_
+  expect_error(validate_calibration_registry(registry),
+               "finite ordered cutoffs")
+
+  registry <- .valid_calibration_registry()
+  registry$cutoff_fragile <- Inf
+  registry$cutoff_robust <- NA_real_
   expect_error(validate_calibration_registry(registry),
                "finite ordered cutoffs")
 })
@@ -361,6 +506,30 @@ test_that("score labels require applicable calibration", {
   expect_true(is.na(score_label_from_calibration(80, uncalibrated)))
 })
 
+test_that("two-band calibration labels Fragile / Not fragile", {
+  two_band <- list(
+    applicable = TRUE,
+    status = "validated_method_specific",
+    cutoff_fragile = 58,
+    cutoff_robust = NA_real_
+  )
+  expect_identical(score_label_from_calibration(58, two_band), "Fragile")
+  expect_identical(score_label_from_calibration(58.5, two_band), "Not fragile")
+  expect_identical(score_label_from_calibration(100, two_band), "Not fragile")
+  expect_false(identical(
+    score_label_from_calibration(100, two_band), "Robust"
+  ))
+
+  # Inf robust is not two-band; labeler keys on is.na, not !is.finite.
+  inf_robust <- list(
+    applicable = TRUE,
+    status = "validated_method_specific",
+    cutoff_fragile = 58,
+    cutoff_robust = Inf
+  )
+  expect_true(is.na(score_label_from_calibration(80, inf_robust)))
+})
+
 test_that("caller-supplied malformed registries fail closed", {
   malformed <- .valid_calibration_registry()
   malformed$cutoff_fragile <- NA_real_
@@ -379,6 +548,174 @@ test_that("caller-supplied malformed registries fail closed", {
     c(jackknife = .4, fragility = .4, bootstrap = .2), .30,
     registry = data.frame(not_a_registry = 1)
   )$applicable)
+})
+
+# --- proportion profile plumbing + Gate B activation -------------------------
+# Phase 1 fisher_exact is calibrated under jackknife-light weights
+# (fragility=0.5, bootstrap=0.5, jackknife=0). Default 0.4/0.4/0.2 scores remain
+# numeric-only: labels require the explicit calibrated weight design.
+
+.fisher_exact_weights <- c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)
+.default_score_weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+
+.canonical_prop_profile <- function(...) {
+  utils::modifyList(list(
+    version = "prop-profile-1", calibration_unit = "fisher_exact",
+    canonical_fisher = TRUE, two_arm_individual_level = TRUE,
+    complete_cases = TRUE, n1 = 100L, n2 = 100L, allocation_ratio = 1,
+    events1 = 45L, non_events1 = 55L, rate1 = 0.45,
+    events2 = 20L, non_events2 = 80L, rate2 = 0.20,
+    alpha = 0.05, n_boot = 1000L, correct = TRUE,
+    weights = .fisher_exact_weights,
+    max_removal_pct = 0.30
+  ), list(...))
+}
+
+.validated_fisher_exact_registry <- function() {
+  registry <- load_calibration_registry()
+  idx <- registry$calibration_unit == "fisher_exact"
+  registry$status[idx] <- "validated_method_specific"
+  registry$cutoff_fragile[idx] <- 58
+  registry$cutoff_robust[idx] <- NA_real_
+  registry$version[idx] <- "fisher-2026-1"
+  registry$source[idx] <- "study:binary_proportion@cc3344931614"
+  registry$supported_conditions[idx] <-
+    "canonical significant two-arm fisher_exact (binary_proportion Phase 1)"
+  registry
+}
+
+test_that("validated fisher_exact applies only to a complete canonical profile", {
+  registry <- .validated_fisher_exact_registry()
+  weights <- .fisher_exact_weights
+
+  eligible <- resolve_result_calibration(
+    "fisher_exact", "risk_difference", "significant",
+    weights, 0.30,
+    registry = registry,
+    analysis_profile = .canonical_prop_profile()
+  )
+  expect_true(eligible$applicable)
+  expect_identical(eligible$status, "validated_method_specific")
+  expect_equal(eligible$cutoff_fragile, 58)
+  expect_true(is.na(eligible$cutoff_robust))
+  expect_identical(eligible$version, "fisher-2026-1")
+
+  inapplicable <- list(
+    missing_profile = NULL,
+    wrong_version = .canonical_prop_profile(version = "other"),
+    wrong_unit = .canonical_prop_profile(calibration_unit = "chi_square_2x2"),
+    noncanonical = .canonical_prop_profile(canonical_fisher = FALSE),
+    not_two_arm = .canonical_prop_profile(two_arm_individual_level = FALSE),
+    incomplete = .canonical_prop_profile(complete_cases = FALSE),
+    n1_small = .canonical_prop_profile(n1 = 24L, events1 = 5L,
+                                        non_events1 = 19L, rate1 = 5 / 24),
+    n1_large = .canonical_prop_profile(n1 = 201L, events1 = 90L,
+                                        non_events1 = 111L, rate1 = 90 / 201),
+    n2_small = .canonical_prop_profile(n2 = 24L, events2 = 5L,
+                                        non_events2 = 19L, rate2 = 5 / 24),
+    unbalanced = .canonical_prop_profile(n1 = 120L, n2 = 60L,
+                                          allocation_ratio = 2),
+    control_rate_low = .canonical_prop_profile(
+      events2 = 2L, non_events2 = 98L, rate2 = 0.02),
+    control_rate_high = .canonical_prop_profile(
+      events2 = 102L, non_events2 = 18L, rate2 = 0.85),
+    control_events_lt3 = .canonical_prop_profile(
+      events2 = 2L, non_events2 = 98L, rate2 = 0.02),
+    alpha = .canonical_prop_profile(alpha = 0.01),
+    n_boot = .canonical_prop_profile(n_boot = 500L),
+    weights = .canonical_prop_profile(weights = .default_score_weights),
+    removal = .canonical_prop_profile(max_removal_pct = 0.20)
+  )
+
+  for (name in names(inapplicable)) {
+    result <- resolve_result_calibration(
+      "fisher_exact", "risk_difference", "significant",
+      weights, 0.30,
+      registry = registry,
+      analysis_profile = inapplicable[[name]]
+    )
+    expect_false(result$applicable, info = name)
+    expect_true(is.na(result$cutoff_fragile), info = name)
+    expect_true(is.na(result$cutoff_robust), info = name)
+  }
+})
+
+test_that("fisher_exact profile bounds use the frozen edges inclusively", {
+  registry <- .validated_fisher_exact_registry()
+  weights <- .fisher_exact_weights
+  probe <- function(profile) {
+    resolve_result_calibration(
+      "fisher_exact", "risk_difference", "significant",
+      weights, 0.30, registry = registry, analysis_profile = profile
+    )$applicable
+  }
+
+  # Frozen bounds: per-arm n in [25, 200]; allocation ratio in [0.8, 1.25];
+  # observed control-arm rate in [0.08, 0.55] with >= 3 events and >= 3
+  # non-events in the control arm.  All edges below are the boundary values
+  # themselves and must remain eligible.
+  expect_true(probe(.canonical_prop_profile(n1 = 25L, events1 = 8L,
+                                             non_events1 = 17L, rate1 = 8 / 25)))
+  expect_true(probe(.canonical_prop_profile(n1 = 200L)))
+  expect_true(probe(.canonical_prop_profile(
+    n2 = 100L, events2 = 8L, non_events2 = 92L, rate2 = 0.08)))
+  expect_true(probe(.canonical_prop_profile(
+    n2 = 100L, events2 = 55L, non_events2 = 45L, rate2 = 0.55)))
+  expect_true(probe(.canonical_prop_profile(
+    n1 = 125L, n2 = 100L, allocation_ratio = 1.25)))
+  expect_true(probe(.canonical_prop_profile(
+    n1 = 80L, n2 = 100L, allocation_ratio = 0.8)))
+})
+
+test_that("active fisher_exact Gate B applies only under jackknife-light weights", {
+  # Canonical profile + explicit calibrated weights → applicable two-band.
+  activated <- resolve_result_calibration(
+    "fisher_exact", "risk_difference", "significant",
+    .fisher_exact_weights, 0.30,
+    analysis_profile = .canonical_prop_profile()
+  )
+  expect_true(activated$applicable)
+  expect_identical(activated$status, "validated_method_specific")
+  expect_equal(activated$cutoff_fragile, 58)
+  expect_true(is.na(activated$cutoff_robust))
+  expect_identical(activated$version, "fisher-2026-1")
+  expect_identical(activated$source, "study:binary_proportion@cc3344931614")
+
+  # Default interactive weights remain suppressed even with a canonical profile.
+  default_weights <- resolve_result_calibration(
+    "fisher_exact", "risk_difference", "significant",
+    .default_score_weights, 0.30,
+    analysis_profile = .canonical_prop_profile(weights = .default_score_weights)
+  )
+  expect_false(default_weights$applicable)
+  expect_identical(default_weights$status, "uncalibrated")
+  expect_true(all(is.na(c(
+    default_weights$cutoff_fragile, default_weights$cutoff_robust
+  ))))
+
+  # Non-canonical profile suppresses even under calibrated weights.
+  noncanonical <- resolve_result_calibration(
+    "fisher_exact", "risk_difference", "significant",
+    .fisher_exact_weights, 0.30,
+    analysis_profile = .canonical_prop_profile(canonical_fisher = FALSE)
+  )
+  expect_false(noncanonical$applicable)
+  expect_true(all(is.na(c(
+    noncanonical$cutoff_fragile, noncanonical$cutoff_robust
+  ))))
+})
+
+test_that("Welch resolution ignores analysis_profile", {
+  supported <- resolve_result_calibration(
+    calibration_unit = "welch_unpaired",
+    endpoint = "mean_difference",
+    conclusion_type = "significant",
+    weights = c(jackknife = .4, fragility = .4, bootstrap = .2),
+    max_removal_pct = .30,
+    analysis_profile = .canonical_prop_profile()
+  )
+  expect_true(supported$applicable)
+  expect_identical(supported$status, "validated_method_specific")
 })
 
 test_that("malformed calibration metadata suppresses score labels", {
@@ -404,4 +741,83 @@ test_that("malformed calibration metadata suppresses score labels", {
   for (calibration in malformed) {
     expect_true(is.na(score_label_from_calibration(80, calibration)))
   }
+})
+
+.canonical_profile_fixture <- function(...) {
+  utils::modifyList(list(
+    version = "lm-profile-1", canonical_ancova = TRUE,
+    term_type = "single", term_df = 1L, treatment_levels = 2L,
+    baseline_count = 1L, response_numeric = TRUE, baseline_numeric = TRUE,
+    additive_direct_terms = TRUE, omitted_rows = FALSE, n = 80L,
+    alpha = 0.05, n_boot = 1000L,
+    weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+    max_removal_pct = 0.30
+  ), list(...))
+}
+
+.validated_lm_ancova_registry <- function() {
+  registry <- load_calibration_registry()
+  idx <- registry$calibration_unit == "lm_ancova"
+  registry$status[idx] <- "validated_method_specific"
+  registry$cutoff_fragile[idx] <- 50
+  registry$cutoff_robust[idx] <- 65
+  registry$version[idx] <- "lm-ancova-fixture-1"
+  registry$source[idx] <- "fixture:validated-lm-ancova"
+  registry$supported_conditions[idx] <- "canonical significant 1-df ANCOVA fixture"
+  registry
+}
+
+test_that("validated lm_ancova applies only to a complete canonical profile", {
+  registry <- .validated_lm_ancova_registry()
+  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+
+  eligible <- resolve_result_calibration(
+    "lm_ancova", "coefficient", "significant",
+    weights, 0.30,
+    registry = registry,
+    analysis_profile = .canonical_profile_fixture()
+  )
+  expect_true(eligible$applicable)
+  expect_identical(eligible$status, "validated_method_specific")
+  expect_equal(c(eligible$cutoff_fragile, eligible$cutoff_robust), c(50, 65))
+
+  inapplicable <- list(
+    missing_profile = NULL,
+    joint_term = .canonical_profile_fixture(term_type = "joint", term_df = 2L,
+                                            canonical_ancova = FALSE),
+    noncanonical = .canonical_profile_fixture(canonical_ancova = FALSE),
+    small_n = .canonical_profile_fixture(n = 39L),
+    large_n = .canonical_profile_fixture(n = 241L),
+    alpha = .canonical_profile_fixture(alpha = 0.01),
+    n_boot = .canonical_profile_fixture(n_boot = 500L),
+    weights = .canonical_profile_fixture(
+      weights = c(jackknife = 0.5, fragility = 0.3, bootstrap = 0.2)
+    ),
+    removal = .canonical_profile_fixture(max_removal_pct = 0.20)
+  )
+
+  for (name in names(inapplicable)) {
+    result <- resolve_result_calibration(
+      "lm_ancova", "coefficient", "significant",
+      weights, 0.30,
+      registry = registry,
+      analysis_profile = inapplicable[[name]]
+    )
+    expect_false(result$applicable, info = name)
+    expect_true(is.na(result$cutoff_fragile), info = name)
+    expect_true(is.na(result$cutoff_robust), info = name)
+  }
+})
+
+test_that("Welch resolution ignores analysis_profile", {
+  supported <- resolve_result_calibration(
+    calibration_unit = "welch_unpaired",
+    endpoint = "mean_difference",
+    conclusion_type = "significant",
+    weights = c(jackknife = .4, fragility = .4, bootstrap = .2),
+    max_removal_pct = .30,
+    analysis_profile = .canonical_profile_fixture()
+  )
+  expect_true(supported$applicable)
+  expect_identical(supported$status, "validated_method_specific")
 })

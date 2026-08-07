@@ -20,11 +20,11 @@ abstract: |
 
   **Objective:** To develop, validate, and calibrate a framework for assessing the robustness of statistical test conclusions through combined jackknife, worst-case observation removal, and bootstrap resampling.
 
-  **Methods:** The framework comprises: (1) jackknife leave-one-out analysis identifying influential observations; (2) a *worst-case removal analysis* — greedy adversarial deletion in the spirit of the maximum influence perturbation (Broderick, Giordano & Meager, 2023) — yielding a *removal fragility index*, a greedy upper bound on the size of a minimal overturning subset; (3) bootstrap resampling estimating the *reproducibility probability* (Goodman, 1992). A composite 0–100 score combines the components with pre-specifiable weights (default 0.4/0.4/0.2). The Task 15 simulation study is retained as historical evidence for the original Welch calibration; it does not transfer interpretation bands to other method families. The framework extends to linear-model (ANCOVA), GLM, and Cox terms via a common case-deletion engine; the accompanying software (v0.5.1) also supports proportion tests, Brunner–Munzel, and TOST equivalence/non-inferiority.
+  **Methods:** The framework comprises: (1) jackknife leave-one-out analysis identifying influential observations; (2) a *worst-case removal analysis* — greedy adversarial deletion in the spirit of the maximum influence perturbation (Broderick, Giordano & Meager, 2023) — yielding a *removal fragility index*, a greedy upper bound on the size of a minimal overturning subset; (3) bootstrap resampling estimating the *reproducibility probability* (Goodman, 1992). A composite 0–100 score combines the components with pre-specifiable weights (default 0.4/0.4/0.2; Fisher Gate B uses jackknife-light 0/0.5/0.5). The Task 15 simulation study is retained as historical evidence for the original Welch calibration; it does not transfer interpretation bands to other method families. Independent calibrations for `fisher_exact` (validated two-band) and `lm_ancova` / `lm_ancova_v2` / `lm_ancova_v3` (named negative results) are reported. The framework extends to linear-model (ANCOVA), GLM, and Cox terms via a common case-deletion engine; the accompanying software also supports proportion tests, Brunner–Munzel, and TOST equivalence/non-inferiority.
 
-  **Results:** Type I error was preserved in clean data (0.046–0.052) and inflated by contamination (up to 0.092), which the historical Task 15 simulation correctly flagged. Conditional on statistical significance, chance findings under the null averaged a robustness score of 52 with a median worst-case fragility of 1–2 observations (2% of the sample), whereas true large effects (d = 0.8, n = 50) averaged 75 with median fragility of 12–14 observations. Grand-mean-ranked removal — the usual "remove the outliers" heuristic — overstated robustness dramatically (median flipping set 13–31 observations vs 2–6 under adversarial removal in the same data). These 55/70 bands are retained only for the narrowly documented significant Welch configuration; labels are suppressed for uncalibrated methods and conclusions.
+  **Results:** Type I error was preserved in clean data (0.046–0.052) and inflated by contamination (up to 0.092), which the historical Task 15 simulation correctly flagged. Conditional on statistical significance, chance findings under the null averaged a robustness score of 52 with a median worst-case fragility of 1–2 observations (2% of the sample), whereas true large effects (d = 0.8, n = 50) averaged 75 with median fragility of 12–14 observations. Grand-mean-ranked removal — the usual "remove the outliers" heuristic — overstated robustness dramatically (median flipping set 13–31 observations vs 2–6 under adversarial removal in the same data). These 55/70 bands are retained only for the narrowly documented significant Welch configuration. Separately, `fisher_exact` Gate B activates a two-band Fragile / Not fragile mapping at L = 58 under explicit jackknife-light weights (held-out FR ≤ 0.0617, RI ≥ 0.6767). ANCOVA categorical-band attempts closed fail-closed (v1/v2) or were not confirmed for violation detection (v3 Track E ΔAUC 0.0053).
 
-  **Conclusions:** The framework provides transparent, quantitative robustness assessment suitable for regulatory submissions, operationalizing ICH E9(R1) sensitivity-analysis principles with numeric component metrics available across methods. Categorical interpretation is intentionally limited to the applicable significant Welch configuration until independent method-specific calibration is completed.
+  **Conclusions:** The framework provides transparent, quantitative robustness assessment suitable for regulatory submissions, operationalizing ICH E9(R1) sensitivity-analysis principles with numeric component metrics available across methods. Categorical interpretation is limited to the applicable significant Welch three-band configuration and the applicable significant `fisher_exact` two-band configuration; ANCOVA demonstrates why transfer of Welch bands must not be assumed.
 papersize: a4
 fontsize: 10pt
 page-numbering: "1"
@@ -58,13 +58,21 @@ The runtime registry is keyed by the resolved method, endpoint, and observed
 conclusion (`welch_unpaired`, `paired_t`, `fisher_exact`, `lm_ancova`, and so
 on); it does not use the generic `two_sample` identity. Every analysis returns
 the numeric composite score and component metrics. Categorical labels are
-suppressed (`NA`) unless the result is a significant, applicable
-`welch_unpaired` analysis using the documented default score definition,
-weights, and independent-groups conditions. The public
+emitted only for (i) a significant, applicable `welch_unpaired` analysis using
+the documented default score definition, weights, and independent-groups
+conditions (three-band Robust / Moderately Robust / Fragile at 55/70), or
+(ii) a significant, applicable `fisher_exact` analysis under the explicit
+jackknife-light weights `fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`
+(two-band Fragile / Not fragile at `L = 58`; version `fisher-2026-1`;
+provenance `study:binary_proportion@cc3344931614`). Default 0.4/0.4/0.2 Fisher
+scores remain numeric-only. Labels are otherwise suppressed (`NA`). The public
 `robustness_analysis()` dispatcher and its existing test choices are unchanged.
 Task 15's broad-family tables are archived as historical evidence under
 `manuscript/calibration/published/`; they are not active calibration inputs.
-The next independent calibration target is `lm_ancova`.
+The historical `lm_ancova` calibration program (v1–v3) is retained as a named
+negative-result contribution with uncalibrated registry rows; the next
+independent positive calibration target is `chi_square_2x2` (binary-proportion
+Phase 2).
 
 ---
 
@@ -84,22 +92,70 @@ Given two samples (or a model term; Section 2.6) and a test with significance le
 
 ### 2.2 Composite robustness score
 
-R = w₁·S_jack + w₂·F + w₃·S_boot, where F = 100·min(k_frag/(k_max+1), 1) rescales the worst-case fragility index to the full 0–100 range (in v1 this term was bounded below by ~70, inflating all scores). Default weights w = (0.4, 0.4, 0.2): influence and fragility carry equal weight; the reproducibility term is down-weighted because it largely restates the p-value. Weights are an explicit argument of the software and should be pre-specified in the SAP.
+R = w₁·S_jack + w₂·F + w₃·S_boot, where F = 100·min(k_frag/(k_max+1), 1) rescales the worst-case fragility index to the full 0–100 range (in v1 this term was bounded below by ~70, inflating all scores). Default weights w = (0.4, 0.4, 0.2): influence and fragility carry equal weight; the reproducibility term is down-weighted because it largely restates the p-value. Weights are an explicit argument of the software and should be pre-specified in the SAP. The active `fisher_exact` calibration uses jackknife-light weights (0, 0.5, 0.5) and does not change the default numeric output for interactive analyses.
 
-### 2.3 Interpretation policy and active Welch calibration
+### 2.3 Interpretation policy and active calibrations
 
 Scores and component metrics are descriptive outputs for every supported
-method. The only active categorical mapping is the significant
-`welch_unpaired` row with the documented default score definition and weights:
-score > 70 is **Robust**, (55, 70] is **Moderately Robust**, and ≤ 55 is
-**Fragile**. Exact 70 is moderately robust; exact 55 is fragile. The mapping
-does not apply to paired t, rank, binary, model, Cox, or TOST methods, to
-non-significant results, or to custom weights/unsupported conditions; those
-results retain scores and components but have a suppressed (`NA`) label.
+method. Two active categorical mappings are licensed:
+
+1. **Welch three-band.** Significant `welch_unpaired` with the documented
+   default score definition and weights: score > 70 is **Robust**, (55, 70]
+   is **Moderately Robust**, and ≤ 55 is **Fragile**. Exact 70 is moderately
+   robust; exact 55 is fragile.
+2. **Fisher two-band.** Significant `fisher_exact` under explicit
+   jackknife-light weights, a canonical two-arm profile (per-arm n in
+   [25, 200], allocation ratio in [0.8, 1.25], control-arm event rate in
+   [0.08, 0.55] with ≥ 3 events and ≥ 3 non-events, α = 0.05, n_boot = 1000),
+   and max_removal_pct = 0.30: score ≤ 58 is **Fragile**, score > 58 is
+   **Not fragile**. There is no Robust tier. Version `fisher-2026-1`;
+   provenance `study:binary_proportion@cc3344931614`.
+
+Paired t, rank, non-canonical binary, model, Cox, and TOST methods, as well as
+non-significant results and unsupported weight/design configurations, retain
+scores and components but have a suppressed (`NA`) label.
+
+### 2.3.1 `fisher_exact` calibration (binary-proportion Phase 1)
+
+An independent study
+(`manuscript/calibration/studies/binary_proportion/`) delivered a validated
+two-band Fragile / Not fragile decision at cutoff `L = 58` for eligible
+significant canonical two-arm Fisher exact results. Truth strata were
+exact-power-defined against enumerated exact Fisher power (null exact;
+borderline exact power 0.60 diagnostic-only; clear exact power 0.95). Training
+selected L = 58 (FR 0.0493, Wilson upper 0.0607; RI 0.7608, Wilson lower
+0.74). Held-out confirmation under the conservative-of-Wilson-and-cluster-bootstrap
+rule yielded FR upper ≤ 0.0617 and RI lower ≥ 0.6767. Gate B activates this
+decision in the runtime registry only when the analysis profile and explicit
+jackknife-light weights match the frozen design; default 0.4/0.4/0.2 weights
+never emit the band. The prospectively frozen `onc_response_trial` illustration
+is excluded from calibration ledgers.
+
+### 2.3.2 ANCOVA calibration as a named negative result
+
+The `lm_ancova` program is reported as a named negative-result contribution,
+not as a transferable Welch fallback:
+
+- **v1 Gate B** closed fail-closed (`no_feasible_thresholds`; candidate hash
+  `9ccfc2fca7c0a07c19a3a18838e9a3f2`; held-out not opened; version
+  `lm-ancova-2026-1`).
+- **v2 Gate B** (Track A jackknife-light two-band) likewise closed fail-closed
+  after a sealed pilot that returned a false-GO on location metrics
+  (Δ = 24.4, overlap = 0.034, AUC = 0.892) while training found no feasible L
+  (best RI 0.554 < 0.70; candidate hash `3dc2a1f840b3eb725bea629dc130f070`;
+  version `lm-ancova-v2-2026-1`; held-out not opened).
+- **v3 Track E** (violation detection) met quotas but was **not confirmed**:
+  pooled ΔAUC = AUC_score − AUC_p = 0.0053 with scenario-cluster bootstrap
+  95% CI [−0.111, 0.129] (gate required ΔAUC ≥ 0.10 and CI lower bound > 0).
+
+Registry rows for `lm_ancova` and `lm_ancova_v2` remain uncalibrated with
+auditable provenance; categorical labels stay suppressed. Welch 55/70 is a
+Welch comparator only and is never an ANCOVA fallback. The frozen
+`pain_ancova_trial` dataset is an illustration only and never enters training.
 
 ### 2.4 Statistical implementation
 
-Implemented in the `stabilitest` R package (v0.5.1; this repository). `robustness_analysis()` covers two-sample location tests (Welch and paired t; Wilcoxon rank-sum/signed-rank; Brunner–Munzel) and two-group binary proportion tests (`fisher`, `chisq`, `prop`) without changing the public dispatcher. Rank-based location analyses report the Hodges–Lehmann shift as the effect summary. Model engines: `robustness_lm()` (linear/ANCOVA), `robustness_glm()` (binomial logit / Poisson log), and `robustness_surv()` (Cox); each accepts a single coefficient or a multi-df factor term tested jointly (F for lm; LRT for glm/surv). Equivalence and non-inferiority use `robustness_tost()` (TOST / one-sided margin tests) for mean, risk-difference, and odds-ratio endpoints. Numeric scores and components are retained across all these engines; categorical labels are suppressed until each exact calibration unit is validated. Computational cost is dominated by the greedy search: O(n·k_max) test evaluations, about 3,400 tests for n = 55 — under a second for closed-form tests, minutes for model refits at n of a few hundred.
+Implemented in the `stabilitest` R package (this repository). `robustness_analysis()` covers two-sample location tests (Welch and paired t; Wilcoxon rank-sum/signed-rank; Brunner–Munzel) and two-group binary proportion tests (`fisher`, `chisq`, `prop`) without changing the public dispatcher. Rank-based location analyses report the Hodges–Lehmann shift as the effect summary. Model engines: `robustness_lm()` (linear/ANCOVA), `robustness_glm()` (binomial logit / Poisson log), and `robustness_surv()` (Cox); each accepts a single coefficient or a multi-df factor term tested jointly (F for lm; LRT for glm/surv). Equivalence and non-inferiority use `robustness_tost()` (TOST / one-sided margin tests) for mean, risk-difference, and odds-ratio endpoints. Numeric scores and components are retained across all these engines; categorical labels are emitted only for the active Welch and `fisher_exact` calibrations described in Section 2.3. Computational cost is dominated by the greedy search: O(n·k_max) test evaluations, about 3,400 tests for n = 55 — under a second for closed-form tests, minutes for model refits at n of a few hundred.
 
 ### 2.5 Application context
 
@@ -203,35 +259,35 @@ Suggested reporting text (Results): "Robustness analysis (stabilitest v0.5.1; B 
 
 ### 5.1 Principal findings
 
-The framework separates three questions usually blurred together — who drives the result, how small a deletion overturns it, and would it replicate — and, in the historical Task 15 Welch simulation, the summary score had empirical anchors: chance-significant findings scored ~52 and true large effects ~75. Those anchors are not transferable to other method-specific units, which retain numeric scores and components with categorical labels suppressed until independently calibrated. The starkest practical lesson from the simulation is the gap between adversarial and symmetric removal: robustness claims based on "we removed the outliers and the result held" can overstate stability several-fold.
+The framework separates three questions usually blurred together — who drives the result, how small a deletion overturns it, and would it replicate — and, in the historical Task 15 Welch simulation, the summary score had empirical anchors: chance-significant findings scored ~52 and true large effects ~75. Those Welch anchors are not transferable to other method-specific units. Independently, `fisher_exact` Gate B licenses a two-band Fragile / Not fragile mapping at L = 58 under explicit jackknife-light weights, while the `lm_ancova` program (v1 fail-closed, v2 false-GO then fail-closed, v3 Track E not confirmed) shows why transfer of Welch bands must not be assumed. The starkest practical lesson from the Welch simulation remains the gap between adversarial and symmetric removal: robustness claims based on "we removed the outliers and the result held" can overstate stability several-fold.
 
 ### 5.2 Interpretation guidance
 
-For an applicable, significant `welch_unpaired` result using the documented default configuration, score > 70 supports confirmatory-grade reporting; (55, 70] calls for transparent component reporting, clinical review of the worst-case removal set, and a rank-based supplementary analysis; ≤ 55 indicates the profile typical of chance findings — treat as hypothesis-generating. Other methods and conclusions retain numeric scores and components but have suppressed categorical labels until independently calibrated. Worst-case fragility below ~5% of the sample should always trigger review of the removed subjects, whatever the score. For non-significant results, use the components descriptively; the score bands do not apply (Section 2.3).
+For an applicable, significant `welch_unpaired` result using the documented default configuration, score > 70 supports confirmatory-grade reporting; (55, 70] calls for transparent component reporting, clinical review of the worst-case removal set, and a rank-based supplementary analysis; ≤ 55 indicates the profile typical of chance findings — treat as hypothesis-generating. For an applicable, significant `fisher_exact` result under explicit jackknife-light weights (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`) and a canonical profile, score ≤ 58 is **Fragile** and score > 58 is **Not fragile**; there is no Robust tier for Fisher, and default 0.4/0.4/0.2 weights keep the label suppressed. Other methods and conclusions retain numeric scores and components but have suppressed categorical labels. Worst-case fragility below ~5% of the sample should always trigger review of the removed subjects, whatever the score. For non-significant results, use the components descriptively; the score bands do not apply (Section 2.3).
 
 ### 5.3 Regulatory alignment
 
-The framework operationalizes ICH guidance on conclusion robustness. ICH E9 states that it is important to evaluate "the robustness of the results and primary conclusions of the trial," defining robustness as "the sensitivity of the overall conclusions to various limitations of the data, assumptions, and analytic approaches to data analysis." The E9(R1) addendum elaborates this under sensitivity analysis: inferences for an estimand should be robust to data limitations and deviations from the main estimator's assumptions, assessed through pre-specified sensitivity analyses. Accordingly, pre-specify components and weights in the SAP (template, Appendix B), and pre-specify the 55/70 bands only when the primary analysis is the applicable significant Welch configuration; for other methods, report numeric scores/components and the suppressed label. Report component metrics in the SAR and give clinical context for the worst-case removal set in the CSR. Because all metrics are descriptive functions of one pre-specified primary analysis, no multiplicity adjustment is implied.
+The framework operationalizes ICH guidance on conclusion robustness. ICH E9 states that it is important to evaluate "the robustness of the results and primary conclusions of the trial," defining robustness as "the sensitivity of the overall conclusions to various limitations of the data, assumptions, and analytic approaches to data analysis." The E9(R1) addendum elaborates this under sensitivity analysis: inferences for an estimand should be robust to data limitations and deviations from the main estimator's assumptions, assessed through pre-specified sensitivity analyses. Accordingly, pre-specify components and weights in the SAP (template, Appendix B), and pre-specify categorical bands only when the primary analysis matches an active calibrated configuration (Welch 55/70 or Fisher L = 58 under jackknife-light weights); for other methods, report numeric scores/components and the suppressed label. Report component metrics in the SAR and give clinical context for the worst-case removal set in the CSR. Because all metrics are descriptive functions of one pre-specified primary analysis, no multiplicity adjustment is implied.
 
 ### 5.4 Limitations
 
-(1) The binary significance framing is inherited from the fragility concept itself; a flip from p = 0.047 to 0.053 is a knife-edge event, and the p-value trajectory should always accompany the index. (2) The greedy fragility index is an upper bound on the minimal overturning subset; exact minimal sets are combinatorially hard, though greedy search is near-optimal for monotone single-deletion influence. (3) Adversarial removal answers "could the data support the opposite conclusion?", which is deliberately pessimistic; it should complement, not replace, assumption-based sensitivity analyses (missing data, model form). (4) Independence of observations is assumed. (5) Calibration is retained only for the Welch test under normality with directional contamination. Bands for model-based, proportion, rank, Brunner–Munzel, Cox, and TOST engines are not transferable and their labels remain suppressed pending independent calibration. (6) Weight choice remains a convention, now explicit and pre-specifiable; each method-specific calibration must be earned independently.
+(1) The binary significance framing is inherited from the fragility concept itself; a flip from p = 0.047 to 0.053 is a knife-edge event, and the p-value trajectory should always accompany the index. (2) The greedy fragility index is an upper bound on the minimal overturning subset; exact minimal sets are combinatorially hard, though greedy search is near-optimal for monotone single-deletion influence. (3) Adversarial removal answers "could the data support the opposite conclusion?", which is deliberately pessimistic; it should complement, not replace, assumption-based sensitivity analyses (missing data, model form). (4) Independence of observations is assumed. (5) Active categorical calibration covers Welch three-band (55/70) and `fisher_exact` two-band (L = 58 under explicit jackknife-light weights). Transfer of either mapping to other engines is not assumed — the `lm_ancova` negative-result program demonstrates why. Bands for remaining model-based, proportion (`chi_square_2x2`, `two_sample_prop`), rank, Brunner–Munzel, Cox, and TOST engines stay suppressed pending independent calibration. (6) Weight choice remains a convention, now explicit and pre-specifiable; each method-specific calibration must be earned independently.
 
 ### 5.5 Future work
 
- Independent calibration for `lm_ancova` (the next priority), followed by GLM/Cox, proportion, rank, and TOST units; clustered and longitudinal data; exact or certified bounds on minimal overturning subsets (integer-programming formulations); Bayesian analogues (prior-sensitivity and posterior-probability fragility); CDISC ADaM integration; interactive reporting.
+Independent calibration for `chi_square_2x2` (binary-proportion Phase 2) is the next positive target. The `lm_ancova` negative-result program (v1–v3) remains archived with suppressed labels; further ANCOVA categorical attempts would require a redesigned truth definition and feasibility-projection pilot, not reuse of Welch 55/70. Remaining priorities: GLM/Cox, rank, and TOST units; clustered and longitudinal data; exact or certified bounds on minimal overturning subsets (integer-programming formulations); Bayesian analogues (prior-sensitivity and posterior-probability fragility); CDISC ADaM integration; interactive reporting.
 
 ---
 
 ## 6. Conclusions
 
-Statistical significance answers "is there an effect?" Robustness analysis answers "how much of the data does that answer rest on?" The revised framework quantifies both fragility (worst-case removal) and reproducibility (bootstrap), identifies the specific patients who carry the conclusion, and retains numeric scores/components across methods. The historical Welch calibration distinguishes chance findings from true effects only for its applicable significant configuration; other methods have suppressed labels pending independent calibration. We recommend pre-specified application to primary endpoints of confirmatory trials, with the component metrics — not the composite alone — as the substance of reporting.
+Statistical significance answers "is there an effect?" Robustness analysis answers "how much of the data does that answer rest on?" The revised framework quantifies both fragility (worst-case removal) and reproducibility (bootstrap), identifies the specific patients who carry the conclusion, and retains numeric scores/components across methods. Active categorical interpretation covers Welch three-band and `fisher_exact` two-band configurations; the ANCOVA program is reported as a named negative result so that transfer is not assumed. We recommend pre-specified application to primary endpoints of confirmatory trials, with the component metrics — not the composite alone — as the substance of reporting.
 
 ---
 
 ## References
 
-Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.5.1; 2026. Available from: https://github.com/ma-brain/stabilitest
+Ally M. *stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions*. R package version 0.6.0; 2026. Available from: https://github.com/ma-brain/stabilitest
 
 Belsley DA, Kuh E, Welsch RE. *Regression Diagnostics: Identifying Influential Data and Sources of Collinearity*. John Wiley & Sons; 1980.
 
@@ -291,7 +347,7 @@ checkout with `pkgload`; it does not use a potentially stale installed copy of
 
 ## Appendix B: SAP/SAR template (updated)
 
-**SAP — Sensitivity and Robustness Analyses.** Robustness of the primary efficacy analysis will be assessed with the stabilitest framework: (1) jackknife leave-one-out analysis (influence criterion: significance flip or |Δp| > 0.05); (2) worst-case greedy removal up to 30% of the sample, yielding the removal fragility index; (3) bootstrap resampling (B = [1000] iterations) estimating the reproducibility probability. The numeric composite score and component metrics will be reported for every method. Categorical bands (> 70 robust; (55, 70] moderately robust; ≤ 55 fragile) will be reported only for an applicable significant Welch result under the documented default configuration; labels will be suppressed for uncalibrated methods and conclusions. If the worst-case fragility index is below 5% of the sample, the subjects in the removal set will be reviewed for data quality and a rank-based supplementary analysis performed.
+**SAP — Sensitivity and Robustness Analyses.** Robustness of the primary efficacy analysis will be assessed with the stabilitest framework: (1) jackknife leave-one-out analysis (influence criterion: significance flip or |Δp| > 0.05); (2) worst-case greedy removal up to 30% of the sample, yielding the removal fragility index; (3) bootstrap resampling (B = [1000] iterations) estimating the reproducibility probability. The numeric composite score and component metrics will be reported for every method. Categorical bands will be reported only for an applicable calibrated configuration: Welch three-band (> 70 robust; (55, 70] moderately robust; ≤ 55 fragile) under the documented default weights, or Fisher two-band (Fragile iff score ≤ 58; Not fragile iff score > 58; no Robust tier) under explicit jackknife-light weights. Labels will be suppressed for uncalibrated methods and conclusions. If the worst-case fragility index is below 5% of the sample, the subjects in the removal set will be reviewed for data quality and a rank-based supplementary analysis performed.
 
 **SAR — Results skeleton.** Overall score [XX]/100 ([band]). Jackknife: [XX]% stability; influential subjects [IDs]; leave-one-out p-range [[X], [X]]. Worst-case removal: fragility index [k] ([X]% of sample); p-value trajectory [Table/Figure]; removed subjects [IDs]. Extreme-value removal (descriptive): index [k]. Bootstrap: reproducibility [XX]% (B = [X]); bootstrap p mean [X], percentile interval [[X], [X]]. Clinical review note: [context for removal-set subjects].
 

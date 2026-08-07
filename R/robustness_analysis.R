@@ -44,6 +44,64 @@ prop_table_2x2 <- function(g1, g2) {
   )
 }
 
+# Runtime analysis profile for binary-proportion results.
+#
+# Records the canonical eligibility facts used by the proportions calibration
+# fail-closed resolver (R/calibration_registry.R).  The bounds here mirror the
+# frozen runtime profile in the proportions calibration design: two-arm
+# individual-level binary input, complete cases, per-arm n in [25, 200],
+# allocation ratio in [0.8, 1.25], and the observed control-arm rate in
+# [0.08, 0.55] with at least 3 events and 3 non-events.  Only `fisher_exact`
+# is canonical in Phase 1; `chi_square_2x2` and `two_sample_prop` are recorded
+# but never eligible until their own phases.  Group 2 is treated as the control
+# arm (matching the engine's input contract: group1 = active, group2 = control).
+prop_calibration_profile <- function(test_type, group1, group2, alpha, n_boot,
+                                     weights, max_removal_pct, correct) {
+  n1 <- length(group1)
+  n2 <- length(group2)
+  events1 <- sum(group1)
+  events2 <- sum(group2)
+  non_events1 <- n1 - events1
+  non_events2 <- n2 - events2
+  rate1 <- events1 / n1
+  rate2 <- events2 / n2
+  allocation_ratio <- n1 / n2
+  complete_cases <- !anyNA(group1) && !anyNA(group2)
+  unit <- calibration_unit_for_test(test_type)
+
+  canonical_fisher <- identical(unit, "fisher_exact") &&
+    complete_cases &&
+    n1 >= 25L && n1 <= 200L && n2 >= 25L && n2 <= 200L &&
+    allocation_ratio >= 0.8 && allocation_ratio <= 1.25 &&
+    rate2 >= 0.08 && rate2 <= 0.55 &&
+    events2 >= 3L && non_events2 >= 3L &&
+    isTRUE(all.equal(alpha, 0.05)) &&
+    identical(as.integer(n_boot), 1000L) &&
+    .is_fisher_exact_calibration_design(weights, max_removal_pct)
+
+  list(
+    version = "prop-profile-1",
+    calibration_unit = unit,
+    canonical_fisher = canonical_fisher,
+    two_arm_individual_level = TRUE,
+    complete_cases = complete_cases,
+    n1 = as.integer(n1),
+    n2 = as.integer(n2),
+    allocation_ratio = allocation_ratio,
+    events1 = as.integer(events1),
+    non_events1 = as.integer(non_events1),
+    rate1 = rate1,
+    events2 = as.integer(events2),
+    non_events2 = as.integer(non_events2),
+    rate2 = rate2,
+    alpha = alpha,
+    n_boot = as.integer(n_boot),
+    correct = correct,
+    weights = weights,
+    max_removal_pct = max_removal_pct
+  )
+}
+
 # Hodges–Lehmann two-sample location shift: median of all pairwise diffs x_i - y_j
 hodges_lehmann_unpaired <- function(x, y) {
   as.numeric(stats::median(outer(x, y, `-`)))
@@ -114,15 +172,20 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #' continuous API. Barnard's exact test is not implemented in this version.
 #'
 #' Numeric scores and all component metrics are returned for every supported
-#' test. Categorical interpretation labels are assigned only when the resolved
-#' method is an applicable, significant `welch_unpaired` result under the
-#' documented default score definition and weights. Labels are suppressed for
-#' uncalibrated methods and conclusions; the public dispatcher and its existing
-#' `test_type` values are unchanged. Method-specific calibration is represented
-#' by exact units such as `paired_t`, `fisher_exact`, and `two_sample_prop`, not
-#' by a generic `two_sample` calibration identity. The archived Task 15
-#' broad-family simulation is historical evidence only. `lm_ancova` is the
-#' next independent calibration target.
+#' test. Categorical interpretation labels use two calibrated vocabularies:
+#' `"Robust"` / `"Moderately Robust"` / `"Fragile"` for an applicable
+#' significant `welch_unpaired` result under the documented default score
+#' definition and weights, and `"Fragile"` / `"Not fragile"` for an applicable
+#' significant `fisher_exact` result under the explicit jackknife-light weights
+#' (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`; cutoff `L = 58`,
+#' version `fisher-2026-1`). There is no Robust tier for Fisher. Labels are
+#' suppressed for uncalibrated methods and conclusions; the public dispatcher
+#' and its existing `test_type` values are unchanged. Method-specific
+#' calibration is represented by exact units such as `paired_t`,
+#' `fisher_exact`, and `two_sample_prop`, not by a generic `two_sample`
+#' calibration identity. The archived Task 15 broad-family simulation is
+#' historical evidence only. `lm_ancova` and `lm_ancova_v2` remain uncalibrated
+#' after fail-closed Gate B decisions.
 #'
 #' Rank-based options: `"wilcoxon"` (Mann–Whitney / Wilcoxon rank-sum) assumes
 #' exchangeable distributions under the null (equal shapes/variances for a pure
@@ -181,10 +244,13 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'   \item{robustness_metrics}{Component scores (jackknife conclusion
 #'     stability, worst-case fragility, bootstrap reproducibility, overall
 #'     composite) and related diagnostics. Alias: `metrics` (same tibble).}
-#'   \item{robustness_interpretation}{A calibrated categorical label
-#'     (`"Robust"`, `"Moderately Robust"`, or `"Fragile"`) only for an
-#'     applicable significant Welch result; otherwise `NA`. Numeric scores and
-#'     component metrics remain available when the label is suppressed. Alias:
+#'   \item{robustness_interpretation}{A calibrated categorical label. For
+#'     applicable significant Welch results: `"Robust"`,
+#'     `"Moderately Robust"`, or `"Fragile"`. For applicable significant
+#'     `fisher_exact` results under explicit jackknife-light weights:
+#'     `"Fragile"` or `"Not fragile"` (no Robust tier; `L = 58`,
+#'     `fisher-2026-1`). Otherwise `NA`. Numeric scores and component metrics
+#'     remain available when the label is suppressed. Alias:
 #'     `interpretation_label`.}
 #'   \item{calibration}{Method-specific calibration metadata, including
 #'     applicability, status, cutoffs, version, and provenance.}
@@ -547,12 +613,27 @@ robustness_analysis <- function(group1, group2,
     prop_diff = "risk_difference",
     NA_character_
   )
+  # Binary-proportion (and any two-sample) results carry a runtime analysis
+  # profile so fisher_exact Gate B can fail closed on non-canonical inputs.
+  # Welch resolution deliberately ignores the profile.
+  correct_value <- if (is_prop) correct else TRUE
+  analysis_profile <- prop_calibration_profile(
+    test_type = test_type,
+    group1 = group1,
+    group2 = group2,
+    alpha = alpha,
+    n_boot = as.integer(n_boot),
+    weights = weights,
+    max_removal_pct = max_removal_pct,
+    correct = correct_value
+  )
   calibration <- resolve_result_calibration(
     calibration_unit = calibration_unit,
     endpoint = calibration_endpoint,
     conclusion_type = superiority_conclusion_type(original_significant),
     weights = weights,
-    max_removal_pct = max_removal_pct
+    max_removal_pct = max_removal_pct,
+    analysis_profile = analysis_profile
   )
   robustness_interpretation <- score_label_from_calibration(
     robustness_score$overall_robustness, calibration
@@ -569,6 +650,7 @@ robustness_analysis <- function(group1, group2,
     robustness_metrics        = robustness_score,
     robustness_interpretation = robustness_interpretation,
     calibration               = calibration,
+    analysis_profile          = analysis_profile,
     weights                   = weights,
     alpha                     = alpha,
     max_removal_pct           = max_removal_pct,

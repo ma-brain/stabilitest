@@ -1,0 +1,7 @@
+label=smoke
+input=/private/tmp/stabilitest-lm-ancova-v3-smoke
+n_scenarios=1
+completed_total=18
+failed_total=0
+max_failure_rate=0.0000
+runtime_sec_total=3.5

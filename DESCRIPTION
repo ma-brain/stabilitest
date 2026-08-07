@@ -1,6 +1,6 @@
 Package: stabilitest
 Title: Robustness and Fragility Analysis of Statistical Test Conclusions
-Version: 0.5.1
+Version: 0.6.0
 Authors@R:
     person("Marius", "Ardelean", email = "marally@gmail.com",
            role = c("aut", "cre"))
@@ -38,4 +38,5 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0
+LazyData: true

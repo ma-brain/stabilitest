@@ -1,0 +1,207 @@
+---
+title: "Proportion Test Case Study: Binary Response in an Oncology Trial"
+author: "Marius Ally"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Proportion Test Case Study: Binary Response in an Oncology Trial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 96
+)
+```
+
+```{r setup}
+library(stabilitest)
+```
+
+## Scope of this vignette
+
+This vignette illustrates the two-group binary-proportion workflow
+(`robustness_analysis(test_type = "fisher")`) and what the active
+`fisher_exact` Gate B calibration licenses. Gate B emits a **two-band**
+Fragile / Not fragile label at cutoff `L = 58` (version `fisher-2026-1`).
+There is **no Robust tier** for Fisher. Labels require the explicit
+jackknife-light weights `fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`
+plus a significant canonical two-arm profile; default 0.4/0.4/0.2 scores stay
+numeric-only.
+
+Details live in `manuscript/calibration/studies/binary_proportion/`.
+
+## The frozen case-study dataset
+
+`onc_response_trial` is a prospectively frozen synthetic two-arm oncology
+responder trial (60 patients per arm, binary objective response). It was
+generated once from a committed generator with seed `20260809` before any
+p-value, score, or band was inspected, and it is **not** part of the
+calibration training or held-out evidence. We use it here exactly once, after
+the calibration was published, to illustrate the honest label state on a
+non-significant primary result.
+
+```{r data}
+active <- onc_response_trial$response[onc_response_trial$arm == "Active"]
+control <- onc_response_trial$response[onc_response_trial$arm == "Placebo"]
+
+# Group sizes and observed response rates
+c(active = sum(active), control = sum(control))
+c(active_rate = mean(active), control_rate = mean(control))
+```
+
+## Primary analysis
+
+We run the primary Fisher exact test. Following the frozen calibration design,
+the robustness analysis uses the jackknife-light weights
+(`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`), `n_boot = 1000`, and a
+documented seed.
+
+```{r analysis}
+set.seed(20260811)
+res <- robustness_analysis(
+  active, control,
+  test_type = "fisher",
+  weights = c(jackknife = 0, fragility = 0.5, bootstrap = 0.5),
+  n_boot = 1000, seed = 20260811
+)
+
+res$original_p
+res$original_significant
+res$original_mean_diff
+```
+
+The primary Fisher test is **not significant** (`p = `r signif(res$original_p, 3)`).
+The observed active minus control response-rate difference is
+`r round(res$original_mean_diff, 2)`.
+
+## Three components
+
+Even without a significant conclusion, `stabilitest` reports the three
+component views that summarise how easily the result moves:
+
+```{r components}
+m <- res$robustness_metrics
+c(
+  jackknife_stability = m$jackknife_conclusion_stability,
+  worstcase_fragility_component = m$worstcase_fragility_component,
+  worstcase_fragility_k = m$worstcase_fragility_k,
+  bootstrap_reproducibility = m$bootstrap_reproducibility,
+  overall_score = m$overall_robustness
+)
+```
+
+- **Jackknife leave-one-out** (`jackknife_stability`) records conclusion
+  stability under single-observation deletion.
+- **Worst-case removal fragility** (`worstcase_fragility_k`) is the size of the
+  greedy adversarial subset whose deletion moves the p-value furthest toward
+  overturning the conclusion; the rescaled component is
+  `worstcase_fragility_component`.
+- **Bootstrap reproducibility** (`bootstrap_reproducibility`) estimates the
+  probability a replicate sample reaches the same conclusion at the observed
+  effect.
+
+## Walsh event-flip fragility vs removal fragility
+
+A classic comparator for binary outcomes is the **Walsh event-flip fragility
+index**: the number of outcome flips (0 to 1 in the smaller-event arm) needed
+to change the Fisher conclusion. It is distinct from the removal-based
+fragility component that enters the score:
+
+```{r walsh}
+# Walsh FI: 0 here because the result is already non-significant (nothing to
+# overturn). For a significant result it counts flips toward p >= alpha.
+walsh_fi <- 0L
+c(walsh_event_flip_fi = walsh_fi, removal_fragility_k = m$worstcase_fragility_k)
+```
+
+For this non-significant result the Walsh index is `0` (there is no
+significance to overturn), while the removal-based index records how many
+greedy deletions move the p-value. The two answer different questions and are
+kept separate: the Walsh index is a literature comparator archived per
+replicate; only the removal-based component enters the composite score.
+
+## What Gate B licenses on this case
+
+Because this case study is non-significant, no band applies — even though Gate
+B is active in the registry:
+
+```{r label}
+res$calibration$status
+res$calibration$applicable
+res$calibration$cutoff_fragile
+res$calibration$cutoff_robust
+res$interpretation_label
+```
+
+This is the intended fail-closed behaviour: a non-significant conclusion is
+`bands_not_applicable`, the label stays `NA`, and numeric scores and component
+metrics remain fully available. Categorical labels are never manufactured for
+conclusions the calibration was not built to interpret. When a label *is*
+emitted for an eligible significant Fisher result, the vocabulary is only
+**Fragile** or **Not fragile** (cutoff `L = 58`); there is no Robust tier.
+
+## Active label on a significant canonical result
+
+A separate synthetic significant dataset (not `onc_response_trial`) under the
+same frozen configuration receives the two-band label:
+
+```{r significant-label}
+set.seed(20260807)
+sig <- list(
+  g1 = rbinom(100, 1, 0.45),
+  g2 = rbinom(100, 1, 0.20)
+)
+jackknife_light <- c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)
+sig_res <- robustness_analysis(
+  sig$g1, sig$g2,
+  test_type = "fisher",
+  weights = jackknife_light,
+  n_boot = 1000, seed = 20260807
+)
+c(
+  significant = sig_res$original_significant,
+  applicable = sig_res$calibration$applicable,
+  status = sig_res$calibration$status,
+  L = sig_res$calibration$cutoff_fragile,
+  robust_cutoff = sig_res$calibration$cutoff_robust,
+  label = sig_res$interpretation_label,
+  score = round(sig_res$robustness_metrics$overall_robustness, 1)
+)
+```
+
+## Honest suppression under default weights
+
+The same significant data with package-default weights keeps the label
+suppressed: Gate B attaches `L = 58` only to scores computed under the
+calibrated jackknife-light design.
+
+```{r suppression}
+default_res <- robustness_analysis(
+  sig$g1, sig$g2,
+  test_type = "fisher",
+  weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+  n_boot = 1000, seed = 20260807
+)
+c(
+  applicable = default_res$calibration$applicable,
+  status = default_res$calibration$status,
+  label = default_res$interpretation_label,
+  score = round(default_res$robustness_metrics$overall_robustness, 1)
+)
+```
+
+## Eligibility recap
+
+A `fisher_exact` result receives a Fragile / Not fragile band only when all of
+the following hold: two-arm individual-level binary input, complete cases, a
+significant conclusion, per-arm *n* within [25, 200], allocation ratio within
+[0.8, 1.25], an observed control-arm event rate within [0.08, 0.55] with at
+least 3 events and 3 non-events, and the frozen analysis configuration
+(`alpha = 0.05`, `n_boot = 1000`, `max_removal_pct = 0.30`, jackknife-light
+weights). Everything else is numeric-only.

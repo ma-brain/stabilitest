@@ -17,21 +17,50 @@ analyses into interpretable metrics:
 A data-dependent composite score from 0–100 summarises the components. The
 numeric score and its component metrics are returned for every supported
 method. Categorical interpretation labels are deliberately conservative: the
-current release assigns **Robust**, **Moderately Robust**, or **Fragile** only
-to an applicable, statistically significant `welch_unpaired` result using the
-documented default score definition and weights. Labels are `NA` for
-uncalibrated methods or conclusions, while scores and components remain
-available for descriptive review. The 55/70 thresholds are retained only as
-the narrow Welch calibration; the broader Task 15 simulation is historical
-evidence, not a runtime calibration claim.
+current release assigns **Robust**, **Moderately Robust**, or **Fragile** to an
+applicable, statistically significant `welch_unpaired` result using the
+documented default score definition and weights, and assigns **Fragile** or
+**Not fragile** to an applicable, statistically significant `fisher_exact`
+result under the explicit jackknife-light weights
+(`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`; cutoff `L = 58`,
+version `fisher-2026-1`, provenance `study:binary_proportion@cc3344931614`).
+There is no Robust tier for Fisher. Labels are `NA` for uncalibrated methods
+or conclusions, while scores and components remain available for descriptive
+review. The 55/70 thresholds are retained only as the narrow Welch
+calibration; the broader Task 15 simulation is historical evidence, not a
+runtime calibration claim.
 
 Calibration is keyed by the resolved method (`welch_unpaired`, `paired_t`,
 `wilcoxon_rank_sum`, `wilcoxon_signed_rank`, `brunner_munzel`,
 `fisher_exact`, `chi_square_2x2`, `two_sample_prop`, `lm_ancova`,
-`glm_binomial`, `glm_poisson`, `cox_ph`, and the three TOST endpoints). The
-public `robustness_analysis()` dispatcher and its existing `test_type` values
-are unchanged. `lm_ancova` is the next independent calibration target; until
-that work is complete, model labels remain suppressed.
+`lm_ancova_v2`, `glm_binomial`, `glm_poisson`, `cox_ph`, and the three TOST
+endpoints). The public `robustness_analysis()` dispatcher and its existing
+`test_type` values are unchanged. Gate B for the isolated `lm_ancova` v1 study
+closed fail-closed: the registry row remains `uncalibrated`
+(`no_feasible_thresholds`; held-out not opened; version `lm-ancova-2026-1`).
+Gate B for Track A `lm_ancova_v2` likewise closed fail-closed
+(`no_feasible_thresholds`; candidate hash `3dc2a1f840b3eb725bea629dc130f070`;
+held-out not opened; version `lm-ancova-v2-2026-1`), so model labels remain
+suppressed for both ANCOVA units. Welch 55/70 is a Welch comparator, not an
+ANCOVA fallback. Gate A froze the isolated ANCOVA study for eligible significant
+canonical 1-df treatment effects with 60%/90% power-defined truth strata.
+Multi-df labels remain suppressed and score weights remain frozen. The Track A
+`lm_ancova_v2` SAP froze a two-band (Fragile / Not fragile) jackknife-light
+protocol (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`); training found
+no feasible L, so labels stay suppressed. The prospectively frozen
+`pain_ancova_trial` dataset is an illustration only and never enters training
+or held-out evidence.
+
+A method-specific calibration study for `fisher_exact` (binary-proportion
+Phase 1) validated a two-band Fragile / Not fragile decision at cutoff
+`L = 58` on a fresh held-out grid; published artifacts live in
+`manuscript/calibration/studies/binary_proportion/`. Gate B is active: the
+package registry emits Fragile / Not fragile for eligible significant
+canonical two-arm Fisher results under the explicit jackknife-light weights
+above (`fisher-2026-1`; `study:binary_proportion@cc3344931614`). Default
+0.4/0.4/0.2 weights and non-canonical profiles keep labels suppressed while
+retaining numeric scores and component metrics. Phase 2 targets
+`chi_square_2x2`.
 
 ## Installation
 

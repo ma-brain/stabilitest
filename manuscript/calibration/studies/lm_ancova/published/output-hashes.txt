@@ -1,0 +1,9 @@
+16f5ce75bf39f6e0b244337076d9aae7  power-verification.csv
+1fdb52ec35cc260cdb208230503636fd  training-manifest.json
+2fbf6a3b593c6bd389fad2dd57de6835  registry.rds
+6ffb2dd74a6be838b0e244341ba3ffc1  training-failures.csv
+a9793fc3345ede2ac61d8168c3539746  candidate.rds
+e93cc7cd22b6e7c8746c5a38edf4b8a6  registry.csv
+f1f51920674f67a473c50d0654404d2b  training-occupancy.csv
+f46efe2843852c2c51c13aa4e4f0f579  training-manifest.rds
+f70994a5d88ec083403b5ae9a944240a  candidate-diagnostics.json

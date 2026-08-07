@@ -1,0 +1,4 @@
+"scenario_id","design_layer","truth_class","violation_type","sample_size","draws","seed","target","achieved","abs_error","tolerance","pass","gated","used_v3_generator","used_robustness_score"
+"lm_ancova_v3_clean_n160_r2_40_clear","core","clear",NA,160,10000,20260807,0.9,0.8996,0.000400000000000067,0.02,TRUE,TRUE,FALSE,FALSE
+"lm_ancova_v3_clean_n40_r2_40_clear","core","clear",NA,40,10000,20260808,0.9,0.8948,0.00519999999999998,0.02,TRUE,TRUE,FALSE,FALSE
+"lm_ancova_v3_clean_n80_r2_40_clear","core","clear",NA,80,10000,20260809,0.9,0.9011,0.00109999999999999,0.02,TRUE,TRUE,FALSE,FALSE

@@ -31,7 +31,7 @@ library(stabilitest)
 2. **Worst-case removal** — greedy adversarial deletion in the spirit of the maximum influence perturbation of Broderick, Giordano & Meager (2023). The resulting *removal fragility index* is the size of an identified subset whose removal flips the significance conclusion (an upper bound on the minimal such set).
 3. **Bootstrap reproducibility probability** (Goodman, 1992) — would a replicate sample drawn from the observed effect likely reach the same conclusion?
 
-A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. Categorical labels are suppressed for uncalibrated methods and conclusions; only an applicable significant `welch_unpaired` result receives the Robust / Moderately Robust / Fragile label. The public `robustness_analysis()` dispatcher is unchanged. `lm_ancova` is the next independent calibration target.
+A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. Categorical labels are suppressed for uncalibrated methods and conclusions; only an applicable significant `welch_unpaired` result receives the Robust / Moderately Robust / Fragile label. The public `robustness_analysis()` dispatcher is unchanged. `lm_ancova` and `lm_ancova_v2` remain uncalibrated after fail-closed Gate B decisions.
 
 > **Status.** Experimental (v0.5.1). API and calibration metadata may evolve. The current 55/70 bands apply only to the documented significant Welch configuration. The broader Task 15 simulation is historical evidence, not an active calibration for other methods.
 
@@ -226,7 +226,7 @@ archived under `manuscript/calibration/published/` as historical evidence only.
 - The greedy fragility index is an *upper bound* on the size of a minimal overturning subset; a smaller set may exist.
 - Binary significance framing inherits the usual knife-edge problem near α; always inspect the *p*-value trajectory, not only *k*_frag.
 - Adversarial removal asks “could the data support the opposite conclusion?” and should complement, not replace, assumption-based sensitivity analyses (missing data, model form).
-- Calibration is retained only for the narrowly documented Welch test under normality with directional contamination. ANCOVA, GLM, Cox, proportion, rank, and TOST/NI engines share the scoring logic but remain uncalibrated; `lm_ancova` is the next independent calibration project.
+- Calibration is retained only for the narrowly documented Welch test under normality with directional contamination. ANCOVA, GLM, Cox, proportion, rank, and TOST/NI engines share the scoring logic but remain uncalibrated; `lm_ancova` and `lm_ancova_v2` closed Gate B fail-closed.
 - Pre-specify weights, `max_removal_pct`, and bands in the SAP when used in confirmatory work.
 
 Further methodological detail, simulation tables, and reporting templates are in the accompanying manuscript / methodological notes (development source tree and related project materials). For model-based terms see `robustness_lm()`, `robustness_glm()`, and `robustness_surv()`.

@@ -1,0 +1,67 @@
+{
+  "study": "lm_ancova_v3",
+  "phase": "phase1_track_e",
+  "smoke": {
+    "output": "/tmp/stabilitest-lm-ancova-v3-smoke",
+    "n_scenarios": 1,
+    "status": "ok",
+    "occupancy": "artifacts/summaries/smoke-occupancy.csv"
+  },
+  "pilot": {
+    "output": "manuscript/calibration/studies/lm_ancova_v3/outputs/pilot",
+    "n_scenarios": 18,
+    "completed_total": 1800,
+    "failed_total": 0,
+    "max_failure_rate": 0,
+    "runtime_sec_sum": 1360.1,
+    "wall_sec_approx": 388,
+    "workers": 4,
+    "n_boot": 50,
+    "occupancy": "artifacts/summaries/pilot-occupancy.csv",
+    "score_distributions_inspected": false
+  },
+  "power": {
+    "calibration_unit": "lm_ancova_v3",
+    "clear_target_power": 0.9,
+    "draws": 10000,
+    "master_seed": 20260807,
+    "tol_power": 0.02,
+    "n_clean": 3,
+    "n_fail_clean": 0,
+    "any_robustness_score": false,
+    "output": "artifacts/summaries/power-verification.csv",
+    "violated_descriptive": "artifacts/summaries/power-verification-violated.csv",
+    "sha256": "d976d28c0852e33343723ae2a5312aa18c0f58673f61f26b8a4ff09654b655b0",
+    "clean_achieved": [0.8996, 0.8948, 0.9011]
+  },
+  "hashes": {
+    "all_scenarios": "ceda7971f3c4d6fec4a90cd6ee68e559",
+    "core_primary": "196b5c12aca30611272ca2a6193a4fad",
+    "diagnostic_stress": "9c58b6c175d51c31eb656fee3e0d6edf",
+    "clean_clear": "bc4ce01b89d54597726c3fbc53e3b6a6"
+  },
+  "production_plan": {
+    "n_boot": 1000,
+    "max_screen_draws": 10000,
+    "screening_target_n_primary": 100,
+    "screening_target_n_diagnostic": 50,
+    "workers": 4,
+    "primary_scenarios": 18,
+    "diagnostic_scenarios": 6,
+    "estimated_scored_replicates_primary": 1800,
+    "estimated_scored_replicates_diagnostic": 300,
+    "runtime_projection_sec": {
+      "method": "scale pilot wall by n_boot 50->1000; add diagnostic share",
+      "pilot_wall_sec": 388,
+      "projected_primary_sec": 7760,
+      "projected_diagnostic_sec": 1293.3333,
+      "projected_total_sec": 9053.3333,
+      "projected_total_hours": 2.51,
+      "plan_upper_bound": "roughly a day at 4 workers"
+    },
+    "output": "manuscript/calibration/studies/lm_ancova_v3/artifacts/raw/track-e",
+    "note": "STOP before production pending human approval; do not open Track D"
+  },
+  "code_commit": "4d30f74064981e7ce72bd1d42894903fa1abdd32",
+  "track_d_parked": true
+}

@@ -118,9 +118,13 @@ validate_calibration_registry <- function(registry) {
   }
 
   validated <- registry$status == "validated_method_specific"
-  ordered_cutoffs <- is.finite(registry$cutoff_fragile) &
-    is.finite(registry$cutoff_robust) &
-    registry$cutoff_fragile < registry$cutoff_robust
+  # Three-band: finite fragile < finite robust. Two-band: finite fragile with
+  # NA robust (Fragile / Not fragile). Keep the historical error substring.
+  ordered_cutoffs <- is.finite(registry$cutoff_fragile) & (
+    is.na(registry$cutoff_robust) |
+      (is.finite(registry$cutoff_robust) &
+         registry$cutoff_fragile < registry$cutoff_robust)
+  )
   if (any(validated & !ordered_cutoffs)) {
     stop("validated rows require finite ordered cutoffs", call. = FALSE)
   }
@@ -144,15 +148,15 @@ validate_calibration_registry <- function(registry) {
 .active_calibration_registry_contract <- data.frame(
   family = c(
     rep("continuous_parametric", 2), rep("rank_nonparametric", 3),
-    rep("binary_proportion", 3), "linear_model",
+    rep("binary_proportion", 3), rep("linear_model", 2),
     rep("generalized_linear_model", 2), "survival",
     rep("equivalence_noninferiority", 6)
   ),
   calibration_unit = c(
     "welch_unpaired", "paired_t", "wilcoxon_rank_sum",
     "wilcoxon_signed_rank", "brunner_munzel", "fisher_exact",
-    "chi_square_2x2", "two_sample_prop", "lm_ancova", "glm_binomial",
-    "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
+    "chi_square_2x2", "two_sample_prop", "lm_ancova", "lm_ancova_v2",
+    "glm_binomial", "glm_poisson", "cox_ph", "tost_mean", "tost_mean",
     "tost_risk_difference", "tost_risk_difference", "tost_odds_ratio",
     "tost_odds_ratio"
   ),
@@ -160,17 +164,25 @@ validate_calibration_registry <- function(registry) {
     "mean_difference", "mean_difference", "location_shift",
     "location_shift", "location_shift", "risk_difference",
     "risk_difference", "risk_difference", "coefficient", "coefficient",
-    "coefficient", "hazard_ratio", "mean_difference", "mean_difference",
-    "risk_difference", "risk_difference", "odds_ratio", "odds_ratio"
+    "coefficient", "coefficient", "hazard_ratio", "mean_difference",
+    "mean_difference", "risk_difference", "risk_difference", "odds_ratio",
+    "odds_ratio"
   ),
   conclusion_type = c(
-    rep("significant", 12), "equivalence", "noninferiority",
+    rep("significant", 13), "equivalence", "noninferiority",
     "equivalence", "noninferiority", "equivalence", "noninferiority"
   ),
-  status = c("validated_method_specific", rep("uncalibrated", 17)),
-  cutoff_fragile = c(55, rep(NA_real_, 17)),
-  cutoff_robust = c(70, rep(NA_real_, 17)),
-  version = c("welch-2026-1", rep("taxonomy-2026-1", 17)),
+  status = c(
+    "validated_method_specific", rep("uncalibrated", 4),
+    "validated_method_specific", rep("uncalibrated", 13)
+  ),
+  cutoff_fragile = c(55, rep(NA_real_, 4), 58, rep(NA_real_, 13)),
+  cutoff_robust = c(70, rep(NA_real_, 18)),
+  version = c(
+    "welch-2026-1", rep("taxonomy-2026-1", 4), "fisher-2026-1",
+    rep("taxonomy-2026-1", 2), "lm-ancova-2026-1", "lm-ancova-v2-2026-1",
+    rep("taxonomy-2026-1", 9)
+  ),
   stringsAsFactors = FALSE
 )
 
@@ -349,20 +361,106 @@ conclusion_type_for_tost <- tost_conclusion_type
   jackknife = 0.4, fragility = 0.4, bootstrap = 0.2
 )
 
-.is_default_calibration_design <- function(weights, max_removal_pct) {
-  weights_ok <- is.numeric(weights) && length(weights) == 3L &&
+# Track A jackknife-light weights for lm_ancova_v2 (not package defaults).
+.lm_ancova_v2_calibration_weights <- c(
+  jackknife = 0, fragility = 0.5, bootstrap = 0.5
+)
+
+# Phase 1 fisher_exact Gate B weights (SAP jackknife-light; not package defaults).
+.fisher_exact_calibration_weights <- c(
+  jackknife = 0, fragility = 0.5, bootstrap = 0.5
+)
+
+.is_named_weight_design <- function(weights, expected) {
+  is.numeric(weights) && length(weights) == 3L &&
     !is.null(names(weights)) && !anyNA(names(weights)) &&
     !anyDuplicated(names(weights)) &&
-    setequal(names(weights), names(.default_calibration_weights)) &&
+    setequal(names(weights), names(expected)) &&
     all(is.finite(weights)) &&
     isTRUE(all.equal(
-      unname(weights[names(.default_calibration_weights)]),
-      unname(.default_calibration_weights), tolerance = 1e-8
+      unname(weights[names(expected)]),
+      unname(expected), tolerance = 1e-8
     ))
+}
+
+.is_default_calibration_design <- function(weights, max_removal_pct) {
   removal_ok <- is.numeric(max_removal_pct) &&
     length(max_removal_pct) == 1L && is.finite(max_removal_pct) &&
     isTRUE(all.equal(as.numeric(max_removal_pct), 0.30, tolerance = 1e-8))
-  weights_ok && removal_ok
+  .is_named_weight_design(weights, .default_calibration_weights) && removal_ok
+}
+
+.is_lm_ancova_v2_calibration_design <- function(weights, max_removal_pct) {
+  removal_ok <- is.numeric(max_removal_pct) &&
+    length(max_removal_pct) == 1L && is.finite(max_removal_pct) &&
+    isTRUE(all.equal(as.numeric(max_removal_pct), 0.30, tolerance = 1e-8))
+  .is_named_weight_design(weights, .lm_ancova_v2_calibration_weights) &&
+    removal_ok
+}
+
+.is_fisher_exact_calibration_design <- function(weights, max_removal_pct) {
+  removal_ok <- is.numeric(max_removal_pct) &&
+    length(max_removal_pct) == 1L && is.finite(max_removal_pct) &&
+    isTRUE(all.equal(as.numeric(max_removal_pct), 0.30, tolerance = 1e-8))
+  .is_named_weight_design(weights, .fisher_exact_calibration_weights) &&
+    removal_ok
+}
+
+.is_canonical_lm_ancova_profile_shape <- function(profile) {
+  is.list(profile) && identical(profile$version, "lm-profile-1") &&
+    isTRUE(profile$canonical_ancova) &&
+    identical(profile$term_type, "single") && identical(profile$term_df, 1L) &&
+    identical(profile$treatment_levels, 2L) &&
+    identical(profile$baseline_count, 1L) &&
+    isTRUE(profile$response_numeric) && isTRUE(profile$baseline_numeric) &&
+    isTRUE(profile$additive_direct_terms) && !isTRUE(profile$omitted_rows) &&
+    is.numeric(profile$n) && length(profile$n) == 1L &&
+    !is.na(profile$n) && profile$n >= 40L && profile$n <= 240L &&
+    isTRUE(all.equal(profile$alpha, 0.05)) &&
+    identical(as.integer(profile$n_boot), 1000L)
+}
+
+.is_supported_lm_ancova_profile <- function(profile) {
+  .is_canonical_lm_ancova_profile_shape(profile) &&
+    .is_default_calibration_design(profile$weights, profile$max_removal_pct)
+}
+
+.is_supported_lm_ancova_v2_profile <- function(profile) {
+  .is_canonical_lm_ancova_profile_shape(profile) &&
+    .is_lm_ancova_v2_calibration_design(profile$weights, profile$max_removal_pct)
+}
+
+# Fail-closed eligibility predicate for a Phase 1 fisher_exact calibration.
+# Bounds mirror the frozen runtime profile in the proportions calibration
+# design: two-arm individual-level binary input, complete cases, per-arm n in
+# [25, 200], allocation ratio in [0.8, 1.25], observed control-arm (group2)
+# event rate in [0.08, 0.55] with >= 3 events and >= 3 non-events,
+# jackknife-light 0/0.5/0.5 weights, alpha 0.05, n_boot 1000,
+# max_removal_pct 0.30.
+.is_supported_fisher_exact_profile <- function(profile) {
+  is.list(profile) && identical(profile$version, "prop-profile-1") &&
+    identical(profile$calibration_unit, "fisher_exact") &&
+    isTRUE(profile$canonical_fisher) &&
+    isTRUE(profile$two_arm_individual_level) &&
+    isTRUE(profile$complete_cases) &&
+    is.numeric(profile$n1) && length(profile$n1) == 1L &&
+    !is.na(profile$n1) && profile$n1 >= 25L && profile$n1 <= 200L &&
+    is.numeric(profile$n2) && length(profile$n2) == 1L &&
+    !is.na(profile$n2) && profile$n2 >= 25L && profile$n2 <= 200L &&
+    is.numeric(profile$allocation_ratio) &&
+    length(profile$allocation_ratio) == 1L &&
+    !is.na(profile$allocation_ratio) &&
+    profile$allocation_ratio >= 0.8 && profile$allocation_ratio <= 1.25 &&
+    is.numeric(profile$rate2) && length(profile$rate2) == 1L &&
+    !is.na(profile$rate2) &&
+    profile$rate2 >= 0.08 && profile$rate2 <= 0.55 &&
+    is.numeric(profile$events2) && length(profile$events2) == 1L &&
+    !is.na(profile$events2) && profile$events2 >= 3L &&
+    is.numeric(profile$non_events2) && length(profile$non_events2) == 1L &&
+    !is.na(profile$non_events2) && profile$non_events2 >= 3L &&
+    isTRUE(all.equal(profile$alpha, 0.05)) &&
+    identical(as.integer(profile$n_boot), 1000L) &&
+    .is_fisher_exact_calibration_design(profile$weights, profile$max_removal_pct)
 }
 
 # Resolve a result to exactly one registry row.  Resolution is deliberately
@@ -371,7 +469,8 @@ conclusion_type_for_tost <- tost_conclusion_type
 resolve_result_calibration <- function(calibration_unit, endpoint,
                                        conclusion_type, weights,
                                        max_removal_pct,
-                                       registry = NULL) {
+                                       registry = NULL,
+                                       analysis_profile = NULL) {
   unit <- if (.is_scalar_character(calibration_unit)) {
     calibration_unit
   } else {
@@ -436,7 +535,14 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
     return(.registry_result(row, status = as.character(row$status),
                             applicable = FALSE))
   }
-  if (!.is_default_calibration_design(weights, max_removal_pct)) {
+  design_ok <- if (identical(unit, "lm_ancova_v2")) {
+    .is_lm_ancova_v2_calibration_design(weights, max_removal_pct)
+  } else if (identical(unit, "fisher_exact")) {
+    .is_fisher_exact_calibration_design(weights, max_removal_pct)
+  } else {
+    .is_default_calibration_design(weights, max_removal_pct)
+  }
+  if (!design_ok) {
     result <- .registry_result(
       row, status = "uncalibrated", applicable = FALSE,
       reason = "Observed score configuration is outside the validated design"
@@ -444,6 +550,32 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
     result$version <- "taxonomy-2026-1"
     result$source <- NA_character_
     return(result)
+  }
+
+  if (identical(unit, "lm_ancova") &&
+      !.is_supported_lm_ancova_profile(analysis_profile)) {
+    return(.registry_result(
+      row, status = "uncalibrated", applicable = FALSE,
+      reason = "Observed analysis profile is outside the validated lm_ancova design"
+    ))
+  }
+  if (identical(unit, "lm_ancova_v2") &&
+      !.is_supported_lm_ancova_v2_profile(analysis_profile)) {
+    return(.registry_result(
+      row, status = "uncalibrated", applicable = FALSE,
+      reason = "Observed analysis profile is outside the validated lm_ancova_v2 design"
+    ))
+  }
+  # The Phase 1 fisher_exact calibration applies only to results whose runtime
+  # analysis profile satisfies the frozen canonical bounds.  The active row is
+  # currently uncalibrated, so this branch is inert until Gate B; Welch and
+  # every other unit ignore the profile entirely.
+  if (identical(unit, "fisher_exact") &&
+      !.is_supported_fisher_exact_profile(analysis_profile)) {
+    return(.registry_result(
+      row, status = "uncalibrated", applicable = FALSE,
+      reason = "Observed analysis profile is outside the validated fisher_exact design"
+    ))
   }
 
   .registry_result(row, status = "validated_method_specific", applicable = TRUE)
@@ -460,8 +592,15 @@ score_label_from_calibration <- function(score, calibration) {
   cutoff_robust <- calibration$cutoff_robust
   if (!is.numeric(cutoff_fragile) || length(cutoff_fragile) != 1L ||
       !is.finite(cutoff_fragile) ||
-      !is.numeric(cutoff_robust) || length(cutoff_robust) != 1L ||
-      !is.finite(cutoff_robust) || cutoff_fragile >= cutoff_robust) {
+      !is.numeric(cutoff_robust) || length(cutoff_robust) != 1L) {
+    return(NA_character_)
+  }
+  # Two-band: NA robust → Fragile / Not fragile (never Robust).
+  if (is.na(cutoff_robust)) {
+    if (score > cutoff_fragile) return("Not fragile")
+    return("Fragile")
+  }
+  if (!is.finite(cutoff_robust) || cutoff_fragile >= cutoff_robust) {
     return(NA_character_)
   }
   if (score > cutoff_robust) return("Robust")
@@ -474,16 +613,21 @@ score_label_from_calibration <- function(score, calibration) {
 # engine deliberately does not infer categorical bands: model and TOST methods
 # are currently uncalibrated, while unsuccessful conclusions are inapplicable.
 attach_result_calibration <- function(out, calibration_unit, endpoint,
-                                      conclusion_type) {
+                                      conclusion_type,
+                                      analysis_profile = NULL) {
   if (!is.list(out)) {
     stop("result must be a list", call. = FALSE)
+  }
+  if (is.null(analysis_profile) && !is.null(out$analysis_profile)) {
+    analysis_profile <- out$analysis_profile
   }
   calibration <- resolve_result_calibration(
     calibration_unit = calibration_unit,
     endpoint = endpoint,
     conclusion_type = conclusion_type,
     weights = out$weights,
-    max_removal_pct = out$max_removal_pct
+    max_removal_pct = out$max_removal_pct,
+    analysis_profile = analysis_profile
   )
   out$calibration <- calibration
   out$interpretation_label <- score_label_from_calibration(

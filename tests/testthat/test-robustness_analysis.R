@@ -304,6 +304,107 @@ test_that("robustness_lm binary factor term label resolves to single coef", {
   expect_false(is.na(res$original_estimate))
 })
 
+test_that("canonical ANCOVA produces an eligible structural profile", {
+  set.seed(101)
+  dat <- data.frame(
+    outcome = rnorm(80),
+    treatment = factor(rep(c("A", "B"), each = 40)),
+    baseline = rnorm(80)
+  )
+  fit <- lm(outcome ~ treatment + baseline, dat)
+  term <- stabilitest:::resolve_model_term(fit, "treatmentB")
+
+  profile <- stabilitest:::lm_calibration_profile(
+    fit, term, original_n = nrow(dat), alpha = 0.05,
+    n_boot = 1000L,
+    weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+    max_removal_pct = 0.30
+  )
+
+  expect_true(profile$canonical_ancova)
+  expect_identical(profile$term_type, "single")
+  expect_identical(profile$term_df, 1L)
+  expect_identical(profile$treatment_levels, 2L)
+  expect_identical(profile$baseline_count, 1L)
+  expect_false(profile$omitted_rows)
+  expect_identical(profile$version, "lm-profile-1")
+  expect_identical(profile$n, 80L)
+  expect_identical(profile$n_boot, 1000L)
+
+  res <- robustness_lm(
+    outcome ~ treatment + baseline, dat, term = "treatmentB",
+    n_boot = 1000, seed = 101
+  )
+  expect_true(is.list(res$analysis_profile))
+  expect_true(res$analysis_profile$canonical_ancova)
+  expect_identical(res$n_boot, 1000L)
+})
+
+test_that("noncanonical LM profiles are marked ineligible", {
+  set.seed(102)
+  dat <- data.frame(
+    outcome = rnorm(80),
+    treatment = factor(rep(c("A", "B"), each = 40)),
+    baseline = rnorm(80),
+    extra = rnorm(80)
+  )
+  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+
+  profile_for <- function(formula, term, data = dat, original_n = nrow(data)) {
+    fit <- lm(formula, data)
+    term_spec <- stabilitest:::resolve_model_term(fit, term)
+    stabilitest:::lm_calibration_profile(
+      fit, term_spec, original_n = original_n, alpha = 0.05,
+      n_boot = 1000L, weights = weights, max_removal_pct = 0.30
+    )
+  }
+
+  expect_false(profile_for(outcome ~ treatment + baseline, "baseline")$canonical_ancova)
+  expect_false(
+    profile_for(
+      outcome ~ arm + baseline,
+      "armC",
+      data = transform(dat, arm = factor(rep(c("A", "B", "C"), length.out = 80)))
+    )$canonical_ancova
+  )
+  expect_false(
+    profile_for(outcome ~ treatment * baseline, "treatmentB")$canonical_ancova
+  )
+  expect_false(
+    profile_for(outcome ~ treatment + baseline + extra, "treatmentB")$canonical_ancova
+  )
+  expect_false(
+    profile_for(outcome ~ treatment + I(baseline^2), "treatmentB")$canonical_ancova
+  )
+
+  dat_na <- dat
+  dat_na$baseline[1] <- NA_real_
+  omitted <- profile_for(
+    outcome ~ treatment + baseline, "treatmentB",
+    data = dat_na, original_n = nrow(dat_na)
+  )
+  expect_true(omitted$omitted_rows)
+  expect_false(omitted$canonical_ancova)
+})
+
+test_that("active lm_ancova remains uncalibrated despite canonical profiles", {
+  set.seed(103)
+  dat <- data.frame(
+    outcome = rnorm(80, mean = rep(c(0, 1), each = 40)),
+    treatment = factor(rep(c("A", "B"), each = 40)),
+    baseline = rnorm(80)
+  )
+  res <- robustness_lm(
+    outcome ~ treatment + baseline, dat, term = "treatmentB",
+    n_boot = 1000, seed = 103
+  )
+  expect_true(res$analysis_profile$canonical_ancova)
+  expect_identical(res$calibration$calibration_unit, "lm_ancova")
+  expect_identical(res$calibration$status, "uncalibrated")
+  expect_false(res$calibration$applicable)
+  expect_true(is.na(res$interpretation_label))
+})
+
 test_that("robustness_surv works on a Cox term", {
   skip_if_not_installed("survival")
   set.seed(1)
@@ -715,4 +816,153 @@ test_that("proportion test interpretation names the test", {
                              n_boot = 30, interpret = TRUE, seed = 5)
   expect_match(res$interpretation$overall, "Fisher")
   expect_output(print(res), "p1 =")
+})
+
+# --- proportion analysis profile (Task 1) ------------------------------------
+
+.canonical_prop_data <- function(n1 = 100, n2 = 100, p1 = 0.45, p2 = 0.20) {
+  set.seed(20260806)
+  list(
+    g1 = rbinom(n1, 1, p1),
+    g2 = rbinom(n2, 1, p2)
+  )
+}
+
+test_that("canonical Fisher result carries an eligible analysis profile", {
+  dat <- .canonical_prop_data()
+  jackknife_light <- c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)
+  # Eligibility is a property of the input contract, not the bootstrap budget,
+  # so the canonical assertions come from the profile builder directly with the
+  # frozen n_boot = 1000 and jackknife-light weights.
+  profile <- stabilitest:::prop_calibration_profile(
+    test_type = "fisher", group1 = dat$g1, group2 = dat$g2, alpha = 0.05,
+    n_boot = 1000L, weights = jackknife_light,
+    max_removal_pct = 0.30, correct = TRUE
+  )
+  expect_identical(profile$version, "prop-profile-1")
+  expect_identical(profile$calibration_unit, "fisher_exact")
+  expect_true(profile$canonical_fisher)
+  expect_true(profile$two_arm_individual_level)
+  expect_true(profile$complete_cases)
+  expect_identical(profile$n1, 100L)
+  expect_identical(profile$n2, 100L)
+  expect_identical(profile$allocation_ratio, 1)
+  expect_identical(profile$events1, as.integer(sum(dat$g1)))
+  expect_identical(profile$non_events1, as.integer(length(dat$g1) - sum(dat$g1)))
+  expect_equal(profile$rate1, mean(dat$g1))
+  expect_identical(profile$events2, as.integer(sum(dat$g2)))
+  expect_identical(profile$non_events2, as.integer(length(dat$g2) - sum(dat$g2)))
+  expect_equal(profile$rate2, mean(dat$g2))
+  expect_equal(profile$alpha, 0.05)
+  expect_identical(profile$n_boot, 1000L)
+  expect_true(profile$correct)
+  expect_equal(profile$weights, jackknife_light)
+  expect_equal(profile$max_removal_pct, 0.30)
+})
+
+test_that("robustness_analysis records the analysis profile end-to-end", {
+  dat <- .canonical_prop_data()
+  res <- robustness_analysis(dat$g1, dat$g2, test_type = "fisher",
+                             n_boot = 40, seed = 7)
+  profile <- res$analysis_profile
+  expect_true(is.list(profile))
+  expect_identical(profile$version, "prop-profile-1")
+  expect_identical(profile$calibration_unit, "fisher_exact")
+  # A budget below the frozen n_boot = 1000 keeps the profile recorded but
+  # non-canonical: eligibility is intentionally not satisfied by a quick run.
+  expect_identical(profile$n_boot, 40L)
+  expect_false(profile$canonical_fisher)
+})
+
+test_that("noncanonical proportion profiles are marked ineligible", {
+  jackknife_light <- c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)
+  profile_for <- function(g1, g2, test_type = "fisher",
+                          weights = jackknife_light,
+                          max_removal_pct = 0.30, alpha = 0.05,
+                          n_boot = 1000, correct = TRUE) {
+    stabilitest:::prop_calibration_profile(
+      test_type = test_type, group1 = g1, group2 = g2, alpha = alpha,
+      n_boot = as.integer(n_boot), weights = weights,
+      max_removal_pct = max_removal_pct, correct = correct
+    )
+  }
+  big <- .canonical_prop_data(n1 = 60, n2 = 60, p1 = 0.5, p2 = 0.3)
+
+  # Wrong unit: chi_square / two_sample_prop are never canonical Fisher.
+  expect_false(profile_for(big$g1, big$g2, test_type = "chisq")$canonical_fisher)
+  expect_false(profile_for(big$g1, big$g2, test_type = "prop")$canonical_fisher)
+
+  # Per-arm n below 25: not eligible.
+  small <- list(g1 = rep(c(1, 0), c(8, 16)), g2 = rep(c(1, 0), c(4, 20)))
+  expect_false(profile_for(small$g1, small$g2)$canonical_fisher)
+
+  # Unbalanced 2:1 allocation.
+  unbal <- .canonical_prop_data(n1 = 60, n2 = 30)
+  expect_false(profile_for(unbal$g1, unbal$g2)$canonical_fisher)
+
+  # Control-arm event rate 0.02 (below the 0.08 transportability bound).
+  rare <- list(g1 = rep(c(1, 0), c(20, 80)),
+               g2 = rep(c(1, 0), c(2, 98)))
+  expect_false(profile_for(rare$g1, rare$g2)$canonical_fisher)
+
+  # Fewer than 3 control-arm events.
+  few_evt <- list(g1 = rep(c(1, 0), c(20, 80)),
+                  g2 = rep(c(1, 0), c(2, 98)))
+  expect_false(profile_for(few_evt$g1, few_evt$g2)$canonical_fisher)
+
+  # Non-calibrated alpha / n_boot / weights / budget.
+  expect_false(profile_for(big$g1, big$g2, alpha = 0.01)$canonical_fisher)
+  expect_false(profile_for(big$g1, big$g2, n_boot = 500)$canonical_fisher)
+  expect_false(profile_for(big$g1, big$g2,
+                           weights = c(jackknife = 0.4, fragility = 0.4,
+                                       bootstrap = 0.2))$canonical_fisher)
+  expect_false(profile_for(big$g1, big$g2, max_removal_pct = 0.20)$canonical_fisher)
+})
+
+test_that("Gate B fisher_exact emits Fragile/Not fragile under calibrated weights", {
+  skip_on_cran()
+  dat <- .canonical_prop_data()
+  jackknife_light <- c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)
+  res <- robustness_analysis(
+    dat$g1, dat$g2, test_type = "fisher", n_boot = 1000, seed = 20260807,
+    weights = jackknife_light
+  )
+  expect_true(res$original_significant)
+  expect_true(res$calibration$applicable)
+  expect_identical(res$calibration$status, "validated_method_specific")
+  expect_equal(res$calibration$cutoff_fragile, 58)
+  expect_true(is.na(res$calibration$cutoff_robust))
+  expect_true(res$robustness_interpretation %in% c("Fragile", "Not fragile"))
+})
+
+test_that("Gate B fisher_exact suppresses labels under default weights", {
+  dat <- .canonical_prop_data()
+  res <- robustness_analysis(
+    dat$g1, dat$g2, test_type = "fisher", n_boot = 40, seed = 8,
+    weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+  )
+  expect_false(res$calibration$applicable)
+  expect_true(is.na(res$robustness_interpretation))
+})
+
+test_that("analysis_profile is recorded on every two-sample test type", {
+  dat <- .canonical_prop_data(n1 = 60, n2 = 60, p1 = 0.5, p2 = 0.3)
+  for (tt in c("t.test", "wilcoxon", "fisher", "chisq", "prop")) {
+    res <- robustness_analysis(dat$g1, dat$g2, test_type = tt,
+                               n_boot = 20, seed = 9)
+    expect_true(is.list(res$analysis_profile), info = tt)
+    expect_identical(res$analysis_profile$version, "prop-profile-1", info = tt)
+    expect_identical(res$analysis_profile$calibration_unit,
+                     calibration_unit_for_test(tt), info = tt)
+  }
+})
+
+test_that("Welch robustness is unaffected by the proportion profile field", {
+  set.seed(11)
+  g1 <- rnorm(60, 6, 2)
+  g2 <- rnorm(60, 4, 2)
+  res <- robustness_analysis(g1, g2, test_type = "t.test", n_boot = 30, seed = 11)
+  expect_true(res$calibration$applicable)
+  expect_identical(res$calibration$status, "validated_method_specific")
+  expect_false(is.na(res$interpretation_label))
 })
