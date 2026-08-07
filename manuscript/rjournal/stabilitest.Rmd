@@ -307,14 +307,33 @@ knitr::kable(st, digits = 3, row.names = FALSE, booktabs = TRUE, escape = FALSE,
   caption = "Simulation evidence for the Welch calibration, conditional on statistical significance. 500 replications per scenario, B = 200, regenerated with stabilitest 0.6.0. Columns: effect size, per-group n, number of contaminating observations injected at +4 SD into the treated group, rejection rate, mean composite score among significant results, median worst-case and extreme-value fragility indices, and mean bootstrap reproducibility.")
 ```
 
-Two features of Table \@ref(tab:simtable) deserve emphasis. First,
-contamination inflates the rejection rate under the null (from 0.040 to 0.084
-at $n = 50$), and the fragility index correctly flags those findings as
-resting on one or two observations. Second, and more consequentially, the
-median extreme-value index is systematically larger than the worst-case index
-under a genuine effect --- 26 versus 12 at $d = 0.8$, $n = 50$. Judging
-stability by removing apparent outliers makes a result look roughly twice as
-sturdy as an adversarial reading shows it to be. The most damaging
+```{r simclaims}
+n0 <- sim_summary[sim_summary$d == 0, ]
+rej_clean <- n0$rejection_rate[n0$n_outliers == 0]
+rej_cont  <- n0$rejection_rate[n0$n_outliers == 2]
+c50 <- sim_summary[sim_summary$d == 0.8 & sim_summary$n_per_group == 50 &
+                     sim_summary$n_outliers == 0, ]
+mc_se <- sqrt(0.05 * 0.95 / 500)
+```
+
+Two features of Table \@ref(tab:simtable) deserve emphasis. First, under the
+null the rejection rate is at or near nominal in clean data
+(`r paste(sprintf("%.3f", rej_clean), collapse = " and ")` across the two
+sample sizes) and is higher under contamination
+(`r paste(sprintf("%.3f", rej_cont), collapse = " and ")`). The Monte Carlo
+standard error at 500 replications is about `r fmt(mc_se, 3)`, so individual
+cells should not be over-read --- the Welch test's type I error is of course
+nominal by construction. What matters for calibration is not the rejection
+rate but what the components say about the findings that *did* reach
+significance: their median worst-case fragility is one or two observations
+throughout the null rows, which is exactly the signature the bands are meant
+to catch.
+
+Second, and more consequentially, the median extreme-value index is
+systematically larger than the worst-case index under a genuine effect ---
+`r c50$k_ex_med_sig` versus `r c50$k_wc_med_sig` at $d = 0.8$, $n = 50$.
+Judging stability by removing apparent outliers makes a result look roughly
+twice as sturdy as an adversarial reading shows it to be. The most damaging
 observations are usually not the obvious ones.
 
 Figure \@ref(fig:simfig) shows the underlying score distributions.
