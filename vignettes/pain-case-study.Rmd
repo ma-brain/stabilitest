@@ -31,9 +31,9 @@ library(stabilitest)
 2. **Worst-case removal** — greedy adversarial deletion in the spirit of the maximum influence perturbation of Broderick, Giordano & Meager (2023). The resulting *removal fragility index* is the size of an identified subset whose removal flips the significance conclusion (an upper bound on the minimal such set).
 3. **Bootstrap reproducibility probability** (Goodman, 1992) — would a replicate sample drawn from the observed effect likely reach the same conclusion?
 
-A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. Categorical labels are suppressed for uncalibrated methods and conclusions; only an applicable significant `welch_unpaired` result receives the Robust / Moderately Robust / Fragile label. The public `robustness_analysis()` dispatcher is unchanged. `lm_ancova` and `lm_ancova_v2` remain uncalibrated after fail-closed Gate B decisions.
+A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. Categorical labels are suppressed for uncalibrated methods and conclusions; two configurations are currently calibrated: an applicable significant `welch_unpaired` result receives the Robust / Moderately Robust / Fragile label (this vignette), and an applicable significant `fisher_exact` result under explicit jackknife-light weights receives a two-band Fragile / Not fragile label (see `vignette("proportions-case-study")`). The public `robustness_analysis()` dispatcher is unchanged. `lm_ancova` and `lm_ancova_v2` remain uncalibrated after fail-closed Gate B decisions, and a follow-up `lm_ancova_v3` violation-detection re-aim was not confirmed (see `vignette("ancova-case-study")`).
 
-> **Status.** Experimental (v0.5.1). API and calibration metadata may evolve. The current 55/70 bands apply only to the documented significant Welch configuration. The broader Task 15 simulation is historical evidence, not an active calibration for other methods.
+> **Status.** v0.6.0. API and calibration metadata may evolve. The 55/70 bands apply only to the documented significant Welch configuration; a separate two-band mapping applies only to the documented significant Fisher configuration. The broader Task 15 simulation is historical evidence, not an active calibration for other methods.
 
 ## Pain trial case study
 
@@ -186,10 +186,10 @@ function's `Value` help section before writing downstream extraction code.
 ## Interpretation policy
 
 The numeric score and all component metrics remain available regardless of the
-test family, endpoint, or conclusion. The active runtime registry has one
-validated row: significant `welch_unpaired` with the default score definition,
-weights, and documented independent-groups conditions. Only that row uses the
-55/70 labels:
+test family, endpoint, or conclusion. The active runtime registry has two
+validated rows. Significant `welch_unpaired` with the default score
+definition, weights, and documented independent-groups conditions uses the
+55/70 labels below (this vignette's case study):
 
 | Overall score | Label | Typical simulation profile |
 |---------------|-------|----------------------------|
@@ -198,6 +198,16 @@ weights, and documented independent-groups conditions. Only that row uses the
 | ≤ 55 | **Fragile** | Narrow Welch calibration |
 
 Exact 70 is Moderately Robust; exact 55 is Fragile.
+
+Separately, significant `fisher_exact` under explicit jackknife-light weights
+(`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`) and a canonical
+two-arm profile uses a two-band mapping: score ≤ 58 is **Fragile**, score
+> 58 is **Not fragile**; there is no Robust tier for Fisher, and default
+0.4/0.4/0.2 weights keep the label suppressed. See
+`vignette("proportions-case-study")` for a worked example. Every other
+method-specific unit — including ANCOVA, GLM, Cox, rank, TOST, and
+non-canonical binary configurations — retains numeric scores and components
+with the label suppressed.
 
 In code:
 
@@ -215,18 +225,19 @@ Practical reading of the components alongside the label:
 - **Bootstrap reproducibility** reflects strength of evidence at the *observed* effect size, not robustness to contamination: a marginal *p*-value yields low reproducibility even in clean data. That is why its default weight is only 0.2.
 - **Extreme-value removal** can look much more reassuring than worst-case removal; the gap between the two indices is informative and should not be ignored.
 
-For every other method-specific unit (including paired t, rank tests, binary
-tests, model terms, Cox, and TOST) and for non-significant or otherwise
-inapplicable conclusions, `interpretation_label` is `NA`. Prefer the numeric
-score and component metrics directly. Task 15's broad-family 55/70 tables are
-archived under `manuscript/calibration/published/` as historical evidence only.
+For every method-specific unit other than the two calibrated rows above
+(including paired t, rank tests, non-canonical binary tests, model terms,
+Cox, and TOST), and for non-significant or otherwise inapplicable
+conclusions, `interpretation_label` is `NA`. Prefer the numeric score and
+component metrics directly. Task 15's broad-family 55/70 tables are archived
+under `manuscript/calibration/published/` as historical evidence only.
 
 ## Brief caveats
 
 - The greedy fragility index is an *upper bound* on the size of a minimal overturning subset; a smaller set may exist.
 - Binary significance framing inherits the usual knife-edge problem near α; always inspect the *p*-value trajectory, not only *k*_frag.
 - Adversarial removal asks “could the data support the opposite conclusion?” and should complement, not replace, assumption-based sensitivity analyses (missing data, model form).
-- Calibration is retained only for the narrowly documented Welch test under normality with directional contamination. ANCOVA, GLM, Cox, proportion, rank, and TOST/NI engines share the scoring logic but remain uncalibrated; `lm_ancova` and `lm_ancova_v2` closed Gate B fail-closed.
+- Calibration is retained only for two narrowly documented configurations: the Welch test under normality with directional contamination, and canonical two-arm `fisher_exact` under jackknife-light weights. ANCOVA, GLM, Cox, non-canonical proportion, rank, and TOST/NI engines share the scoring logic but remain uncalibrated; `lm_ancova`, `lm_ancova_v2`, and the `lm_ancova_v3` violation-detection re-aim all closed without a usable label.
 - Pre-specify weights, `max_removal_pct`, and bands in the SAP when used in confirmatory work.
 
 Further methodological detail, simulation tables, and reporting templates are in the accompanying manuscript / methodological notes (development source tree and related project materials). For model-based terms see `robustness_lm()`, `robustness_glm()`, and `robustness_surv()`.
