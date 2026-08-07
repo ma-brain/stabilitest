@@ -118,9 +118,13 @@ validate_calibration_registry <- function(registry) {
   }
 
   validated <- registry$status == "validated_method_specific"
-  ordered_cutoffs <- is.finite(registry$cutoff_fragile) &
-    is.finite(registry$cutoff_robust) &
-    registry$cutoff_fragile < registry$cutoff_robust
+  # Three-band: finite fragile < finite robust. Two-band: finite fragile with
+  # NA robust (Fragile / Not fragile). Keep the historical error substring.
+  ordered_cutoffs <- is.finite(registry$cutoff_fragile) & (
+    is.na(registry$cutoff_robust) |
+      (is.finite(registry$cutoff_robust) &
+         registry$cutoff_fragile < registry$cutoff_robust)
+  )
   if (any(validated & !ordered_cutoffs)) {
     stop("validated rows require finite ordered cutoffs", call. = FALSE)
   }
@@ -168,12 +172,16 @@ validate_calibration_registry <- function(registry) {
     rep("significant", 13), "equivalence", "noninferiority",
     "equivalence", "noninferiority", "equivalence", "noninferiority"
   ),
-  status = c("validated_method_specific", rep("uncalibrated", 18)),
-  cutoff_fragile = c(55, rep(NA_real_, 18)),
+  status = c(
+    "validated_method_specific", rep("uncalibrated", 4),
+    "validated_method_specific", rep("uncalibrated", 13)
+  ),
+  cutoff_fragile = c(55, rep(NA_real_, 4), 58, rep(NA_real_, 13)),
   cutoff_robust = c(70, rep(NA_real_, 18)),
   version = c(
-    "welch-2026-1", rep("taxonomy-2026-1", 7), "lm-ancova-2026-1",
-    "lm-ancova-v2-2026-1", rep("taxonomy-2026-1", 9)
+    "welch-2026-1", rep("taxonomy-2026-1", 4), "fisher-2026-1",
+    rep("taxonomy-2026-1", 2), "lm-ancova-2026-1", "lm-ancova-v2-2026-1",
+    rep("taxonomy-2026-1", 9)
   ),
   stringsAsFactors = FALSE
 )
@@ -358,6 +366,11 @@ conclusion_type_for_tost <- tost_conclusion_type
   jackknife = 0, fragility = 0.5, bootstrap = 0.5
 )
 
+# Phase 1 fisher_exact Gate B weights (SAP jackknife-light; not package defaults).
+.fisher_exact_calibration_weights <- c(
+  jackknife = 0, fragility = 0.5, bootstrap = 0.5
+)
+
 .is_named_weight_design <- function(weights, expected) {
   is.numeric(weights) && length(weights) == 3L &&
     !is.null(names(weights)) && !anyNA(names(weights)) &&
@@ -382,6 +395,14 @@ conclusion_type_for_tost <- tost_conclusion_type
     length(max_removal_pct) == 1L && is.finite(max_removal_pct) &&
     isTRUE(all.equal(as.numeric(max_removal_pct), 0.30, tolerance = 1e-8))
   .is_named_weight_design(weights, .lm_ancova_v2_calibration_weights) &&
+    removal_ok
+}
+
+.is_fisher_exact_calibration_design <- function(weights, max_removal_pct) {
+  removal_ok <- is.numeric(max_removal_pct) &&
+    length(max_removal_pct) == 1L && is.finite(max_removal_pct) &&
+    isTRUE(all.equal(as.numeric(max_removal_pct), 0.30, tolerance = 1e-8))
+  .is_named_weight_design(weights, .fisher_exact_calibration_weights) &&
     removal_ok
 }
 
@@ -413,8 +434,9 @@ conclusion_type_for_tost <- tost_conclusion_type
 # Bounds mirror the frozen runtime profile in the proportions calibration
 # design: two-arm individual-level binary input, complete cases, per-arm n in
 # [25, 200], allocation ratio in [0.8, 1.25], observed control-arm (group2)
-# event rate in [0.08, 0.55] with >= 3 events and >= 3 non-events, default
-# 0.4/0.4/0.2 weights, alpha 0.05, n_boot 1000, max_removal_pct 0.30.
+# event rate in [0.08, 0.55] with >= 3 events and >= 3 non-events,
+# jackknife-light 0/0.5/0.5 weights, alpha 0.05, n_boot 1000,
+# max_removal_pct 0.30.
 .is_supported_fisher_exact_profile <- function(profile) {
   is.list(profile) && identical(profile$version, "prop-profile-1") &&
     identical(profile$calibration_unit, "fisher_exact") &&
@@ -438,7 +460,7 @@ conclusion_type_for_tost <- tost_conclusion_type
     !is.na(profile$non_events2) && profile$non_events2 >= 3L &&
     isTRUE(all.equal(profile$alpha, 0.05)) &&
     identical(as.integer(profile$n_boot), 1000L) &&
-    .is_default_calibration_design(profile$weights, profile$max_removal_pct)
+    .is_fisher_exact_calibration_design(profile$weights, profile$max_removal_pct)
 }
 
 # Resolve a result to exactly one registry row.  Resolution is deliberately
@@ -515,6 +537,8 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
   }
   design_ok <- if (identical(unit, "lm_ancova_v2")) {
     .is_lm_ancova_v2_calibration_design(weights, max_removal_pct)
+  } else if (identical(unit, "fisher_exact")) {
+    .is_fisher_exact_calibration_design(weights, max_removal_pct)
   } else {
     .is_default_calibration_design(weights, max_removal_pct)
   }
@@ -568,8 +592,15 @@ score_label_from_calibration <- function(score, calibration) {
   cutoff_robust <- calibration$cutoff_robust
   if (!is.numeric(cutoff_fragile) || length(cutoff_fragile) != 1L ||
       !is.finite(cutoff_fragile) ||
-      !is.numeric(cutoff_robust) || length(cutoff_robust) != 1L ||
-      !is.finite(cutoff_robust) || cutoff_fragile >= cutoff_robust) {
+      !is.numeric(cutoff_robust) || length(cutoff_robust) != 1L) {
+    return(NA_character_)
+  }
+  # Two-band: NA robust → Fragile / Not fragile (never Robust).
+  if (is.na(cutoff_robust)) {
+    if (score > cutoff_fragile) return("Not fragile")
+    return("Fragile")
+  }
+  if (!is.finite(cutoff_robust) || cutoff_fragile >= cutoff_robust) {
     return(NA_character_)
   }
   if (score > cutoff_robust) return("Robust")

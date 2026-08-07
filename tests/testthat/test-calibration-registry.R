@@ -111,12 +111,16 @@ test_that("the installed registry exactly matches the active taxonomy", {
       rep("significant", 13), "equivalence", "noninferiority",
       "equivalence", "noninferiority", "equivalence", "noninferiority"
     ),
-    status = c("validated_method_specific", rep("uncalibrated", 18)),
-    cutoff_fragile = c(55, rep(NA_real_, 18)),
+    status = c(
+      "validated_method_specific", rep("uncalibrated", 4),
+      "validated_method_specific", rep("uncalibrated", 13)
+    ),
+    cutoff_fragile = c(55, rep(NA_real_, 4), 58, rep(NA_real_, 13)),
     cutoff_robust = c(70, rep(NA_real_, 18)),
     version = c(
-      "welch-2026-1", rep("taxonomy-2026-1", 7), "lm-ancova-2026-1",
-      "lm-ancova-v2-2026-1", rep("taxonomy-2026-1", 9)
+      "welch-2026-1", rep("taxonomy-2026-1", 4), "fisher-2026-1",
+      rep("taxonomy-2026-1", 2), "lm-ancova-2026-1", "lm-ancova-v2-2026-1",
+      rep("taxonomy-2026-1", 9)
     ),
     stringsAsFactors = FALSE
   )
@@ -340,6 +344,30 @@ test_that("active registry validation locks family and Welch calibration", {
   }
 })
 
+test_that("active registry validation locks fisher_exact Gate B calibration", {
+  registry <- load_calibration_registry()
+  fisher <- registry$calibration_unit == "fisher_exact"
+  mutations <- list(
+    status = "uncalibrated",
+    cutoff_fragile = 57,
+    cutoff_robust = 70,
+    version = "fisher-untracked"
+  )
+
+  for (field in names(mutations)) {
+    changed <- registry
+    changed[fisher, field] <- mutations[[field]]
+    if (identical(field, "status")) {
+      changed$cutoff_fragile[fisher] <- NA_real_
+      changed$cutoff_robust[fisher] <- NA_real_
+    }
+    expect_error(
+      validate_active_calibration_registry(changed),
+      "active calibration registry must exactly match"
+    )
+  }
+})
+
 test_that("registry validation requires finite ordered validated cutoffs", {
   registry <- .valid_calibration_registry()
   registry$cutoff_robust <- 55
@@ -348,6 +376,24 @@ test_that("registry validation requires finite ordered validated cutoffs", {
 
   registry <- .valid_calibration_registry()
   registry$cutoff_fragile <- Inf
+  expect_error(validate_calibration_registry(registry),
+               "finite ordered cutoffs")
+})
+
+test_that("registry validation accepts two-band NA robust cutoffs", {
+  registry <- .valid_calibration_registry()
+  registry$cutoff_robust <- NA_real_
+  expect_silent(validate_calibration_registry(registry))
+
+  registry <- .valid_calibration_registry()
+  registry$cutoff_fragile <- NA_real_
+  registry$cutoff_robust <- NA_real_
+  expect_error(validate_calibration_registry(registry),
+               "finite ordered cutoffs")
+
+  registry <- .valid_calibration_registry()
+  registry$cutoff_fragile <- Inf
+  registry$cutoff_robust <- NA_real_
   expect_error(validate_calibration_registry(registry),
                "finite ordered cutoffs")
 })
@@ -460,6 +506,30 @@ test_that("score labels require applicable calibration", {
   expect_true(is.na(score_label_from_calibration(80, uncalibrated)))
 })
 
+test_that("two-band calibration labels Fragile / Not fragile", {
+  two_band <- list(
+    applicable = TRUE,
+    status = "validated_method_specific",
+    cutoff_fragile = 58,
+    cutoff_robust = NA_real_
+  )
+  expect_identical(score_label_from_calibration(58, two_band), "Fragile")
+  expect_identical(score_label_from_calibration(58.5, two_band), "Not fragile")
+  expect_identical(score_label_from_calibration(100, two_band), "Not fragile")
+  expect_false(identical(
+    score_label_from_calibration(100, two_band), "Robust"
+  ))
+
+  # Inf robust is not two-band; labeler keys on is.na, not !is.finite.
+  inf_robust <- list(
+    applicable = TRUE,
+    status = "validated_method_specific",
+    cutoff_fragile = 58,
+    cutoff_robust = Inf
+  )
+  expect_true(is.na(score_label_from_calibration(80, inf_robust)))
+})
+
 test_that("caller-supplied malformed registries fail closed", {
   malformed <- .valid_calibration_registry()
   malformed$cutoff_fragile <- NA_real_
@@ -480,12 +550,13 @@ test_that("caller-supplied malformed registries fail closed", {
   )$applicable)
 })
 
-# --- proportion profile plumbing (Task 1) ------------------------------------
-# The runtime fail-closed profile for binary-proportion results.  At this stage
-# the active fisher_exact registry row is still uncalibrated, so the predicate
-# block below is pure plumbing: it never selects cutoffs until Gate B activates
-# the row.  These tests pin the plumbing against a synthetic validated registry
-# and confirm Welch remains unaffected by the new analysis_profile argument.
+# --- proportion profile plumbing + Gate B activation -------------------------
+# Phase 1 fisher_exact is calibrated under jackknife-light weights
+# (fragility=0.5, bootstrap=0.5, jackknife=0). Default 0.4/0.4/0.2 scores remain
+# numeric-only: labels require the explicit calibrated weight design.
+
+.fisher_exact_weights <- c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)
+.default_score_weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
 
 .canonical_prop_profile <- function(...) {
   utils::modifyList(list(
@@ -495,7 +566,7 @@ test_that("caller-supplied malformed registries fail closed", {
     events1 = 45L, non_events1 = 55L, rate1 = 0.45,
     events2 = 20L, non_events2 = 80L, rate2 = 0.20,
     alpha = 0.05, n_boot = 1000L, correct = TRUE,
-    weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2),
+    weights = .fisher_exact_weights,
     max_removal_pct = 0.30
   ), list(...))
 }
@@ -504,17 +575,18 @@ test_that("caller-supplied malformed registries fail closed", {
   registry <- load_calibration_registry()
   idx <- registry$calibration_unit == "fisher_exact"
   registry$status[idx] <- "validated_method_specific"
-  registry$cutoff_fragile[idx] <- 45
-  registry$cutoff_robust[idx] <- 65
-  registry$version[idx] <- "fisher-fixture-1"
-  registry$source[idx] <- "fixture:validated-fisher-exact"
-  registry$supported_conditions[idx] <- "canonical significant Fisher fixture"
+  registry$cutoff_fragile[idx] <- 58
+  registry$cutoff_robust[idx] <- NA_real_
+  registry$version[idx] <- "fisher-2026-1"
+  registry$source[idx] <- "study:binary_proportion@cc3344931614"
+  registry$supported_conditions[idx] <-
+    "canonical significant two-arm fisher_exact (binary_proportion Phase 1)"
   registry
 }
 
 test_that("validated fisher_exact applies only to a complete canonical profile", {
   registry <- .validated_fisher_exact_registry()
-  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+  weights <- .fisher_exact_weights
 
   eligible <- resolve_result_calibration(
     "fisher_exact", "risk_difference", "significant",
@@ -524,7 +596,9 @@ test_that("validated fisher_exact applies only to a complete canonical profile",
   )
   expect_true(eligible$applicable)
   expect_identical(eligible$status, "validated_method_specific")
-  expect_equal(c(eligible$cutoff_fragile, eligible$cutoff_robust), c(45, 65))
+  expect_equal(eligible$cutoff_fragile, 58)
+  expect_true(is.na(eligible$cutoff_robust))
+  expect_identical(eligible$version, "fisher-2026-1")
 
   inapplicable <- list(
     missing_profile = NULL,
@@ -549,8 +623,7 @@ test_that("validated fisher_exact applies only to a complete canonical profile",
       events2 = 2L, non_events2 = 98L, rate2 = 0.02),
     alpha = .canonical_prop_profile(alpha = 0.01),
     n_boot = .canonical_prop_profile(n_boot = 500L),
-    weights = .canonical_prop_profile(
-      weights = c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)),
+    weights = .canonical_prop_profile(weights = .default_score_weights),
     removal = .canonical_prop_profile(max_removal_pct = 0.20)
   )
 
@@ -569,7 +642,7 @@ test_that("validated fisher_exact applies only to a complete canonical profile",
 
 test_that("fisher_exact profile bounds use the frozen edges inclusively", {
   registry <- .validated_fisher_exact_registry()
-  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+  weights <- .fisher_exact_weights
   probe <- function(profile) {
     resolve_result_calibration(
       "fisher_exact", "risk_difference", "significant",
@@ -594,17 +667,42 @@ test_that("fisher_exact profile bounds use the frozen edges inclusively", {
     n1 = 80L, n2 = 100L, allocation_ratio = 0.8)))
 })
 
-test_that("active fisher_exact stays uncalibrated despite canonical profiles", {
-  # No synthetic registry: the installed row is uncalibrated, so a canonical
-  # profile must not manufacture cutoffs.
-  weights <- c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
-  result <- resolve_result_calibration(
+test_that("active fisher_exact Gate B applies only under jackknife-light weights", {
+  # Canonical profile + explicit calibrated weights → applicable two-band.
+  activated <- resolve_result_calibration(
     "fisher_exact", "risk_difference", "significant",
-    weights, 0.30, analysis_profile = .canonical_prop_profile()
+    .fisher_exact_weights, 0.30,
+    analysis_profile = .canonical_prop_profile()
   )
-  expect_false(result$applicable)
-  expect_identical(result$status, "uncalibrated")
-  expect_true(all(is.na(c(result$cutoff_fragile, result$cutoff_robust))))
+  expect_true(activated$applicable)
+  expect_identical(activated$status, "validated_method_specific")
+  expect_equal(activated$cutoff_fragile, 58)
+  expect_true(is.na(activated$cutoff_robust))
+  expect_identical(activated$version, "fisher-2026-1")
+  expect_identical(activated$source, "study:binary_proportion@cc3344931614")
+
+  # Default interactive weights remain suppressed even with a canonical profile.
+  default_weights <- resolve_result_calibration(
+    "fisher_exact", "risk_difference", "significant",
+    .default_score_weights, 0.30,
+    analysis_profile = .canonical_prop_profile(weights = .default_score_weights)
+  )
+  expect_false(default_weights$applicable)
+  expect_identical(default_weights$status, "uncalibrated")
+  expect_true(all(is.na(c(
+    default_weights$cutoff_fragile, default_weights$cutoff_robust
+  ))))
+
+  # Non-canonical profile suppresses even under calibrated weights.
+  noncanonical <- resolve_result_calibration(
+    "fisher_exact", "risk_difference", "significant",
+    .fisher_exact_weights, 0.30,
+    analysis_profile = .canonical_prop_profile(canonical_fisher = FALSE)
+  )
+  expect_false(noncanonical$applicable)
+  expect_true(all(is.na(c(
+    noncanonical$cutoff_fragile, noncanonical$cutoff_robust
+  ))))
 })
 
 test_that("Welch resolution ignores analysis_profile", {

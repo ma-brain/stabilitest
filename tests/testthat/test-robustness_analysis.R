@@ -830,13 +830,13 @@ test_that("proportion test interpretation names the test", {
 
 test_that("canonical Fisher result carries an eligible analysis profile", {
   dat <- .canonical_prop_data()
+  jackknife_light <- c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)
   # Eligibility is a property of the input contract, not the bootstrap budget,
   # so the canonical assertions come from the profile builder directly with the
-  # frozen n_boot = 1000.
+  # frozen n_boot = 1000 and jackknife-light weights.
   profile <- stabilitest:::prop_calibration_profile(
     test_type = "fisher", group1 = dat$g1, group2 = dat$g2, alpha = 0.05,
-    n_boot = 1000L, weights = c(jackknife = 0.4, fragility = 0.4,
-                                 bootstrap = 0.2),
+    n_boot = 1000L, weights = jackknife_light,
     max_removal_pct = 0.30, correct = TRUE
   )
   expect_identical(profile$version, "prop-profile-1")
@@ -856,8 +856,7 @@ test_that("canonical Fisher result carries an eligible analysis profile", {
   expect_equal(profile$alpha, 0.05)
   expect_identical(profile$n_boot, 1000L)
   expect_true(profile$correct)
-  expect_equal(profile$weights, c(jackknife = 0.4, fragility = 0.4,
-                                  bootstrap = 0.2))
+  expect_equal(profile$weights, jackknife_light)
   expect_equal(profile$max_removal_pct, 0.30)
 })
 
@@ -876,9 +875,9 @@ test_that("robustness_analysis records the analysis profile end-to-end", {
 })
 
 test_that("noncanonical proportion profiles are marked ineligible", {
+  jackknife_light <- c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)
   profile_for <- function(g1, g2, test_type = "fisher",
-                          weights = c(jackknife = 0.4, fragility = 0.4,
-                                      bootstrap = 0.2),
+                          weights = jackknife_light,
                           max_removal_pct = 0.30, alpha = 0.05,
                           n_boot = 1000, correct = TRUE) {
     stabilitest:::prop_calibration_profile(
@@ -911,13 +910,39 @@ test_that("noncanonical proportion profiles are marked ineligible", {
                   g2 = rep(c(1, 0), c(2, 98)))
   expect_false(profile_for(few_evt$g1, few_evt$g2)$canonical_fisher)
 
-  # Non-default alpha / n_boot / weights / budget.
+  # Non-calibrated alpha / n_boot / weights / budget.
   expect_false(profile_for(big$g1, big$g2, alpha = 0.01)$canonical_fisher)
   expect_false(profile_for(big$g1, big$g2, n_boot = 500)$canonical_fisher)
   expect_false(profile_for(big$g1, big$g2,
-                           weights = c(jackknife = 0, fragility = 0.5,
-                                       bootstrap = 0.5))$canonical_fisher)
+                           weights = c(jackknife = 0.4, fragility = 0.4,
+                                       bootstrap = 0.2))$canonical_fisher)
   expect_false(profile_for(big$g1, big$g2, max_removal_pct = 0.20)$canonical_fisher)
+})
+
+test_that("Gate B fisher_exact emits Fragile/Not fragile under calibrated weights", {
+  skip_on_cran()
+  dat <- .canonical_prop_data()
+  jackknife_light <- c(jackknife = 0, fragility = 0.5, bootstrap = 0.5)
+  res <- robustness_analysis(
+    dat$g1, dat$g2, test_type = "fisher", n_boot = 1000, seed = 20260807,
+    weights = jackknife_light
+  )
+  expect_true(res$original_significant)
+  expect_true(res$calibration$applicable)
+  expect_identical(res$calibration$status, "validated_method_specific")
+  expect_equal(res$calibration$cutoff_fragile, 58)
+  expect_true(is.na(res$calibration$cutoff_robust))
+  expect_true(res$robustness_interpretation %in% c("Fragile", "Not fragile"))
+})
+
+test_that("Gate B fisher_exact suppresses labels under default weights", {
+  dat <- .canonical_prop_data()
+  res <- robustness_analysis(
+    dat$g1, dat$g2, test_type = "fisher", n_boot = 40, seed = 8,
+    weights = c(jackknife = 0.4, fragility = 0.4, bootstrap = 0.2)
+  )
+  expect_false(res$calibration$applicable)
+  expect_true(is.na(res$robustness_interpretation))
 })
 
 test_that("analysis_profile is recorded on every two-sample test type", {

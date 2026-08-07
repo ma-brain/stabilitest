@@ -77,7 +77,7 @@ prop_calibration_profile <- function(test_type, group1, group2, alpha, n_boot,
     events2 >= 3L && non_events2 >= 3L &&
     isTRUE(all.equal(alpha, 0.05)) &&
     identical(as.integer(n_boot), 1000L) &&
-    .is_default_calibration_design(weights, max_removal_pct)
+    .is_fisher_exact_calibration_design(weights, max_removal_pct)
 
   list(
     version = "prop-profile-1",
