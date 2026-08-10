@@ -22,7 +22,7 @@ statistical conclusion could be overturned. It combines three complementary
 sensitivity views of one pre-specified analysis --- jackknife leave-one-out
 influence, greedy worst-case observation removal in the spirit of the maximum
 influence perturbation of Broderick, Giordano and Meager, and bootstrap
-reproducibility probability --- across two-sample location and proportion
+same-decision rates --- across two-sample location and proportion
 tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence
 and non-inferiority endpoints.
 
@@ -39,23 +39,23 @@ Second, the article takes an unusual position on interpretation thresholds. A
 categorical robustness verdict is treated as a claim requiring evidence: the
 package emits one only where an independent, pre-registered calibration study
 has validated thresholds for that exact analysis configuration, and otherwise
-suppresses the label while retaining all numeric output. We report one such
-study that succeeded and one that failed across three attempts, including the
-mechanism behind the failure (in clean parametric settings the composite score
-is close to a monotone re-expression of the *p*-value, so the required
-discrimination is information-theoretically unavailable). We consider the
-negative result a contribution rather than an omission, and we would welcome
-reviewer scrutiny of that framing in particular.
+suppresses the label while retaining all numeric output. We report a successful
+Fisher exact-test study, a prospective Welch study that found no feasible
+thresholds after 4,500 completed training analyses, and three negative ANCOVA
+studies. The latter establish empirical infeasibility under their frozen
+designs without claiming that all possible future designs must fail. We
+consider these negative results contributions rather than omissions, and we
+would welcome reviewer scrutiny of that framing in particular.
 
 All results in the article are computed from code or read from committed
 artifacts with committed generation scripts; nothing is transcribed. The
-article knits to HTML and PDF in under ten seconds, with heavy simulation
-evidence loaded from artifacts whose full regeneration takes about seventeen
-minutes and is documented in `REPRODUCE.md`.
+article knits to HTML and PDF well inside the journal's ten-minute budget,
+with heavy simulation evidence loaded from artifacts whose full regeneration
+is documented separately in `REPRODUCE.md`.
 
-The package is not yet on CRAN. `R CMD check --as-cran` reports 0 errors, 0
-warnings, and only the expected "New submission" note, and submission is
-planned to coincide with review of this article.
+The article targets the published package version 0.6.0 at
+<https://CRAN.R-project.org/package=stabilitest>. Final package and article
+checks are recorded in the accompanying reproduction report.
 
 \bigskip
 \bigskip

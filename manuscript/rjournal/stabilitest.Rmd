@@ -2,7 +2,7 @@
 title: "stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R"
 date: "2026-08-07"
 abstract: >
-  A p-value quantifies how surprising the observed data would be under the null hypothesis, but says nothing about how easily the resulting conclusion could be overturned. Regulatory guidance (ICH E9(R1)) asks sponsors to demonstrate that trial conclusions are robust to data limitations and analytic assumptions, without prescribing quantitative machinery. The stabilitest package addresses this gap by combining three complementary sensitivity views of a single pre-specified analysis: jackknife leave-one-out influence, greedy worst-case observation removal in the spirit of the maximum influence perturbation of Broderick, Giordano and Meager, and bootstrap reproducibility probability. Component metrics and a composite 0-100 score are returned for two-sample location and proportion tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence and non-inferiority endpoints. The package's distinguishing feature is its treatment of categorical interpretation as a claim requiring evidence: a Robust or Fragile label is emitted only where an independent, pre-registered calibration study has validated thresholds for that exact analysis configuration, and is otherwise suppressed while numeric output is retained. Two such studies are reported, one positive (a validated two-band mapping for Fisher's exact test) and one negative across three attempts (ANCOVA, where the composite score proves to be a near-monotone re-expression of the p-value and no feasible thresholds exist). The negative result is presented as evidence for the fail-closed design rather than omitted.
+  A p-value quantifies how surprising the observed data would be under the null hypothesis, but not how easily the resulting decision could be overturned. The stabilitest package combines three sensitivity views of one pre-specified analysis: jackknife leave-one-out influence, greedy worst-case observation removal, and the bootstrap same-decision rate. Component metrics and a composite 0-100 score are returned for two-sample location and proportion tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence and non-inferiority endpoints. Categorical interpretation is fail-closed: a label is emitted only where an independent pre-registered study validates thresholds for that exact configuration. A Fisher exact-test study validated a two-band mapping. A prospective Welch study completed 4,500 training analyses but found no feasible mapping, so held-out data remained unopened and Welch labels are suppressed. The article also reports negative ANCOVA calibration studies. These outcomes illustrate why numeric sensitivity diagnostics and categorical assurance claims require different evidentiary standards.
 draft: false
 author:
   - name: Marius Ardelean
@@ -37,6 +37,7 @@ case_study  <- readRDS(art("case-study", "welch-case-study.rds"))
 sim_summary <- readRDS(art("simulation", "simulation-summary.rds"))
 timing      <- readRDS(art("timing", "timing.rds"))
 test_counts <- readRDS(art("testing", "test-counts.rds"))
+welch_summary <- readRDS(art("welch-calibration", "welch-calibration-summary.rds"))
 
 fmt <- function(x, digits = 1) formatC(x, format = "f", digits = digits)
 cs_m <- case_study$robustness_metrics
@@ -64,15 +65,15 @@ stability of a test conclusion, and each needs a different tool:
 1. *Which individual observations drive the result?* (influence)
 2. *What is the smallest set of observations whose removal would overturn the
    conclusion?* (fragility)
-3. *Would a replicate sample likely reach the same conclusion?*
-   (reproducibility)
+3. *How often do bootstrap resamples preserve the observed decision?*
+   (same-decision rate)
 
 \CRANpkg{stabilitest} [@ally2026stabilitest] answers all three for one
 pre-specified primary analysis, returning component metrics plus a composite
 score. Its contributions are:
 
 - **An integrated framework.** Jackknife influence, adversarial worst-case
-  removal, and bootstrap reproducibility are computed together for a common
+  removal, and the bootstrap same-decision rate are computed together for a common
   catalogue of trial-relevant analyses --- two-sample location and proportion
   tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST
   equivalence and non-inferiority --- through a small, uniform API.
@@ -86,12 +87,14 @@ score. Its contributions are:
 - **A calibrated unit, earned.** An independent study for Fisher's exact test
   yielded a validated two-band mapping, reported here with its held-out
   confirmation bounds.
-- **A named negative result.** Three pre-registered attempts to calibrate
-  ANCOVA all closed without thresholds. The mechanism is informative rather
-  than merely disappointing: in clean parametric settings the composite score
-  is close to a monotone re-expression of the $p$-value, so no score built from
-  the same data can deliver the discrimination the acceptance gates require.
-  This is reported as a contribution, not omitted.
+- **Named negative results.** A prospective Welch study and three ANCOVA
+  studies closed without usable thresholds under their frozen designs. These
+  empirical failures are reported rather than converted into weaker claims.
+
+Deletion sensitivity is complementary to the estimand and sensitivity-analysis
+strategy required by ICH E9(R1). It identifies dependence on observed rows; it
+does not by itself address missing-data assumptions, intercurrent events, or
+alternative estimands.
 
 # Related R packages
 
@@ -112,8 +115,8 @@ Within that second family the differences are of scope and rigour rather than
 kind. \pkg{fragility} is restricted to flipping binary outcome labels, implementing
 the clinical fragility index of @walsh2014. \pkg{car} and \pkg{influence.ME}
 offer classical single-deletion diagnostics in the tradition of @cook1977,
-which the simulation in the Calibration section shows can overstate stability
-by a factor of two to five relative to adversarial removal. `zaminfluence`
+which answer a different, single-deletion question from the package's
+multi-observation adversarial search. `zaminfluence`
 approximates the adversarial leave-$k$-out answer efficiently via influence
 functions, but for Z-estimators in general rather than the two-sample and
 model-term designs of trial reporting.
@@ -158,31 +161,37 @@ labelling policy.
 # Methods
 
 Given two samples --- or a model term, see the API section --- and a
-significance level $\alpha$, four analyses are performed. Three enter the
-composite score; the fourth is retained as a deliberate contrast.
+significance level $\alpha$, four analyses are performed. For two independent
+groups, $n_1$ and $n_2$ denote per-group sizes and $N=n_1+n_2$ is the total
+number of observations. Three analyses enter the composite score; the fourth
+is retained as a deliberate contrast.
 
 **Jackknife (leave-one-out).** Each observation is deleted in turn and the
 test repeated, following the classical framework of @shaotu1995. Outputs are
 the conclusion stability $S_\mathrm{jack}$ (percentage of deletions preserving
-the conclusion), the set of influential observations (deletion flips the
-conclusion, or shifts $p$ by more than $\delta = 0.05$), and the leave-one-out
+the significance decision), the set of influential observations (deletion
+flips that decision, or shifts $p$ by more than $\delta = 0.05$), and the leave-one-out
 $p$-value range. Because single-deletion influence shrinks as $\sim 1/n$, high
 jackknife stability in a large sample is *weak* evidence of robustness. The
 component's chief value is identifying specific observations for data-quality
-review; the package's printed output says so explicitly.
+review; the package's printed output says so explicitly. Conclusion stability
+does not guarantee preservation of effect direction: direction reversals must
+be inspected separately from the significance decision.
 
 **Worst-case removal (primary fragility analysis).** A greedy algorithm
 deletes, at each step, the observation whose removal moves the $p$-value
 furthest toward overturning the conclusion, up to
 $k_{\max} = \lfloor 0.30\,n \rfloor$ deletions. The *removal fragility index*
-$k_\mathrm{frag}$ is the step at which the conclusion first flips. This
+$k_\mathrm{frag}$ is the step at which the conclusion first flips. If no flip
+occurs by $k_{\max}$, the stored value $k_{\max}+1$ is a right-censoring code
+and is reported as $>k_{\max}$, not as an observed flip. This
 follows the maximum influence perturbation of @broderick2023 (see also
 @giordano2026a and @giordano2026b), who showed that in prominent published
 analyses removing under 1% of observations can reverse the sign of an
-estimated effect. The greedy set is *sufficient* to overturn the conclusion, so
-$k_\mathrm{frag}$ is an upper bound on the size of the minimal overturning
-subset --- in practice a far tighter bound than any symmetric outlier-trimming
-rule provides. Because a flip from $p = 0.047$ to $p = 0.053$ is a knife-edge
+estimated effect. When a flip is found, the greedy set is *sufficient* to
+overturn the conclusion, so $k_\mathrm{frag}$ is an upper bound on the size of
+the minimal overturning subset; no universal optimality claim is made. Because
+a flip from $p = 0.047$ to $p = 0.053$ is a knife-edge
 event [@potter2020], the package returns and plots the full $p$-value
 trajectory rather than the index alone. Note the terminology: the *removal*
 fragility index counts deleted observations and so reduces $n$, which
@@ -195,21 +204,21 @@ outliers and the result held" procedure. It does *not* enter the composite
 score. It is retained because the gap between this index and the worst-case
 index measures how much protection the outlier narrative actually provides.
 
-**Bootstrap reproducibility.** $B$ resamples drawn with replacement within
-groups [@efron1993]; $S_\mathrm{boot}$ is the proportion reaching the original
-conclusion. Because resampling preserves the observed effect, this estimates
-the *reproducibility probability* [@goodman1992; @shao2002] --- approximately
-the power at the observed effect size. It reflects strength of evidence, not
-resistance to contamination: a marginal $p$-value yields $S_\mathrm{boot}$
-near 50--60% even in perfectly clean data. It is reported with that framing
-and weighted lightly.
+**Bootstrap same-decision rate.** $B$ resamples are drawn with replacement
+within groups [@efron1993]; $S_\mathrm{boot}$ is the empirical proportion that
+preserves the observed significance decision. It is a plug-in quantity under
+the empirical distribution, not an unconditional probability that a future
+study will replicate. It mostly reflects strength of evidence at the observed
+effect size, not resistance to contamination: a marginal $p$-value can yield
+$S_\mathrm{boot}$ near 50--60% in clean data. The API retains the historical
+field name `bootstrap_reproducibility` for compatibility.
 
 **Composite score.**
 $R = w_1 S_\mathrm{jack} + w_2 F + w_3 S_\mathrm{boot}$, where
 $F = 100 \cdot \min\!\left(k_\mathrm{frag} / (k_{\max}+1),\, 1\right)$
 rescales the fragility index to the full 0--100 range. Default weights are
 $w = (0.4, 0.4, 0.2)$: influence and fragility carry equal weight, the
-reproducibility term is down-weighted because it largely restates the
+same-decision term is down-weighted because it largely restates the
 $p$-value. The weights are a heuristic communication device, not a derived
 quantity. They are an explicit argument and should be fixed in the statistical
 analysis plan. Two results with the same score can be stable in different
@@ -277,24 +286,61 @@ resolved method has a `validated_method_specific` row **and** the observed
 conclusion type matches **and** the weight vector matches the calibrated one
 **and** the design profile falls inside the study's eligibility bounds. Any
 mismatch yields `NA` --- with a printed reason --- while the numeric score and
-all components are retained. There is no fallback to a "nearest" calibration:
-the Welch 55/70 thresholds are a Welch result and are never applied to ANCOVA.
+all components are retained. There is no fallback to a "nearest" calibration.
+The historical Welch 55/70 mapping is now an inactive comparator and is never
+applied to Welch, ANCOVA, or another runtime result.
 
 # Calibration policy and evidence
 
 ## The Welch unit
 
-The framework's original calibration targets the significant `welch_unpaired`
-configuration under default weights, with three bands: score $> 70$ is
-*Robust*, $(55, 70]$ is *Moderately Robust*, $\leq 55$ is *Fragile*.
+The original 55/70 mapping was based on differences between scenario-level
+average scores. A prospective replacement study tested whether those averages
+supported case-level categorical interpretation. The calibration unit was a
+significant independent-groups Welch test at $\alpha=0.05$, with default
+weights $(0.4,0.4,0.2)$, `n_boot = 1000`, and a 30% removal cap. The six core
+design archetypes crossed per-group sizes from 25 to 200, balanced and 40/60
+allocations, and variance ratios 1, 2, and 1/2. Within each archetype the null
+used zero mean difference, the borderline stratum targeted 60% power, and the
+clear stratum targeted 95% power.
 
-Table \@ref(tab:simtable) reports the supporting simulation, regenerated for
-this article with the released package (12 scenarios $\times$ 500
-replications, $B = 200$; see REPRODUCE.md). Conditional on significance, the
-separation is stark: null-data findings that reached significance by chance
-score around 50--55 and collapse after removing one or two observations, while
-genuine large effects ($d = 0.8$, $n = 50$) score 75--78 and withstand removal
-of 12--14 observations.
+All 18 training cells reached their quota of 250 completed significant
+analyses: 1,500 null, 1,500 borderline, and 1,500 clear analyses (4,500 total),
+with zero analysis failures. The frozen search considered integer three-band
+and two-band mappings. No candidate passed all safety, identification,
+ordinal-accuracy, occupancy, and ordering requirements, so the final result is
+`uncalibrated` with no cutoffs. Under the pre-specified protocol this training
+outcome was final: held-out validation remained unopened, no validation
+estimates exist, and no positive runtime eligibility profile was published.
+
+The historical 55/70 mapping was retained as a named training comparator. Its
+false-reassurance estimate was `r fmt(welch_summary$historical_false_reassurance, 3)`
+(Wilson upper `r fmt(welch_summary$historical_false_reassurance_wilson_upper, 3)`,
+scenario-cluster upper `r fmt(welch_summary$historical_false_reassurance_cluster_upper, 3)`,
+conservative upper `r fmt(welch_summary$historical_false_reassurance_conservative_upper, 3)`),
+against gates of 0.05 and 0.10. Clear-effect identification was
+`r fmt(welch_summary$historical_clear_identification, 3)`
+(Wilson lower `r fmt(welch_summary$historical_clear_identification_wilson_lower, 3)`,
+scenario-cluster lower `r fmt(welch_summary$historical_clear_identification_cluster_lower, 3)`,
+conservative lower `r fmt(welch_summary$historical_clear_identification_conservative_lower, 3)`),
+against gates of 0.70 and 0.60. Balanced ordinal accuracy was
+`r fmt(welch_summary$historical_balanced_ordinal_accuracy, 3)` (gate 0.70),
+and minimum band occupancy was
+`r fmt(welch_summary$historical_minimum_band_occupancy, 3)`. Pooled ordering
+was preserved and no material reversal was detected, but those secondary
+conditions could not rescue the failed primary gates.
+
+The frozen no-candidate SHA-256 is
+`9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d`;
+the compact supplementary artifact records this hash, source hashes, runtime,
+occupancy, and the unopened-validation flag. The active registry version is
+`welch-2026-2`: numeric scores and components remain available, while the
+categorical label is `NA`.
+
+Table \@ref(tab:simtable) retains the earlier 12-scenario experiment as a
+descriptive stress example, regenerated with the released package (12
+scenarios $\times$ 500 replications, $B=200$). It was not used to fit or
+confirm the prospective decision.
 
 ```{r simtable}
 st <- sim_summary[, c("d", "n_per_group", "n_outliers", "rejection_rate",
@@ -304,7 +350,7 @@ st$s_boot_sig <- round(st$s_boot_sig, 1)
 names(st) <- c("$d$", "$n$", "Cont.", "Rej. rate", "Score",
                 "$k_{\\mathrm{wc}}$", "$k_{\\mathrm{ex}}$", "Boot. \\%")
 knitr::kable(st, digits = 3, row.names = FALSE, booktabs = TRUE, escape = FALSE,
-  caption = "Simulation evidence for the Welch calibration, conditional on statistical significance. 500 replications per scenario, B = 200, regenerated with stabilitest 0.6.0. Columns: effect size, per-group n, number of contaminating observations injected at +4 SD into the treated group, rejection rate, mean composite score among significant results, median worst-case and extreme-value fragility indices, and mean bootstrap reproducibility.")
+  caption = "Descriptive historical Welch stress simulation, conditional on statistical significance; not training or confirmation evidence for the prospective calibration decision. There are 500 replications per scenario and B = 200. Columns report effect size, per-group n, injected contaminating observations, rejection rate, mean score among significant results, median worst-case and extreme-value fragility indices, and mean bootstrap same-decision rate.")
 ```
 
 ```{r simclaims}
@@ -322,15 +368,13 @@ null the rejection rate is at or near nominal in clean data
 sample sizes) and is higher under contamination
 (`r paste(sprintf("%.3f", rej_cont), collapse = " and ")`). The Monte Carlo
 standard error at 500 replications is about `r fmt(mc_se, 3)`, so individual
-cells should not be over-read --- the Welch test's type I error is of course
-nominal by construction. What matters for calibration is not the rejection
-rate but what the components say about the findings that *did* reach
-significance: their median worst-case fragility is one or two observations
-throughout the null rows, which is exactly the signature the bands are meant
-to catch.
+cells should not be over-read. Among findings that reached significance,
+median worst-case fragility is one or two observations throughout the null
+rows. This is a descriptive pattern, not evidence that a particular score
+threshold safely classifies an individual result.
 
 Second, and more consequentially, the median extreme-value index is
-systematically larger than the worst-case index under a genuine effect ---
+systematically larger than the worst-case index in the $d=0.8$ scenarios ---
 `r c50$k_ex_med_sig` versus `r c50$k_wc_med_sig` at $d = 0.8$, $n = 50$.
 Judging stability by removing apparent outliers makes a result look roughly
 twice as sturdy as an adversarial reading shows it to be. The most damaging
@@ -338,7 +382,7 @@ observations are usually not the obvious ones.
 
 Figure \@ref(fig:simfig) shows the underlying score distributions.
 
-```{r simfig, fig.cap="Composite score distributions for significant results under the null (d = 0, left) and a large effect (d = 0.8, right), n = 50 per group, uncontaminated. Dashed lines mark the calibrated Welch bands at 55 and 70. The separation is what licenses the bands; the overlap is why the bands are three-way rather than binary.", fig.height=3.4}
+```{r simfig, fig.cap="Descriptive score distributions for significant results under the null (d = 0, left) and the study's d = 0.8 scenario (right), n = 50 per group, uncontaminated. Dashed lines mark the inactive historical 55/70 mapping. The distributions overlap; this figure is not validating evidence for categorical bands.", fig.height=3.4}
 s_null  <- readRDS(art("simulation", "scenario-03.rds"))
 s_clear <- readRDS(art("simulation", "scenario-11.rds"))
 dd <- rbind(
@@ -357,7 +401,7 @@ ggplot(dd, aes(score)) +
 ## The Fisher unit: a calibration earned
 
 An independent study for Fisher's exact test on two-arm binary outcomes
-delivered the package's second active calibration. Its design was frozen
+delivered the package's sole active categorical calibration. Its design was frozen
 before execution: truth strata defined by *enumerated exact power* rather than
 by observed effect size (null exact; clear at exact power 0.95; a borderline
 stratum at 0.60 retained as diagnostic only and excluded from threshold
@@ -388,72 +432,61 @@ that profile, or under default weights, the label is suppressed.
 
 ## ANCOVA: a named negative result
 
-Covariate-adjusted analysis is the natural next calibration target --- most
-confirmatory trials adjust for baseline. Three pre-registered attempts were
-made. All three closed without a usable label, and the reason is structural.
+Covariate-adjusted analysis is an important calibration target because many
+confirmatory trials adjust for baseline. Three pre-registered studies were
+conducted; all closed without a usable label under their frozen designs.
 
-**v1** (three-band, default weights) closed fail-closed at Gate B with reason
-`no_feasible_thresholds`; held-out data was never opened. Follow-up analysis
-of the training data explained why: the composite score is very nearly a
-monotone re-expression of the $p$-value (the bootstrap component correlates
-with $-\log_{10} p$ at Spearman $\approx 0.99$), and in the canonical Gaussian
-ANCOVA design $|t|$ is sufficient. No resampling-based score can beat
-$p$-banding when it is a function of the same data. The acceptance gates
-implicitly demand an AUC of about 0.94; truth classes defined at 90% power
-deliver about 0.89. The infeasibility is information-theoretic, not a
-weighting problem.
+**ANCOVA Study 1** evaluated a three-band mapping with default weights. No
+threshold met the pre-specified training requirements, so held-out data was
+not opened. Within its canonical Gaussian scenarios the composite score was
+nearly monotone in the $p$-value (Spearman correlation between its bootstrap
+component and $-\log_{10}p$ was approximately 0.99). The result establishes
+empirical infeasibility under that design; it does not prove that every future
+ANCOVA score or scenario definition must fail.
 
-**v2** (two-band, jackknife-light weights, mirroring the design that later
-succeeded for Fisher) was executed before that analysis landed, and failed
-exactly as it predicted. Its sealed pilot returned a GO on location metrics
-($\Delta = 24.4$, overlap 0.034, AUC 0.892), but training found no feasible
-cutoff: the best identification rate at the false-reassurance-safe threshold
-was 0.554 against a gate of 0.70. The analytic projection had predicted 0.542.
-This makes the episode a *prediction followed by confirmation*: the pilot
-gate's location metrics are a false-GO indicator, and the
-projected-identification-at-safe-threshold metric that replaced them is now
-validated to about 0.01 accuracy.
+**ANCOVA Study 2** evaluated a two-band mapping with jackknife-light weights.
+Its sealed pilot showed score-location separation ($\Delta=24.4$, overlap
+0.034, AUC 0.892), but production training found no feasible cutoff: the best
+clear-effect identification at a false-reassurance-safe threshold was 0.554,
+below the pre-specified 0.70 requirement. This discrepancy shows why pilot
+location metrics alone are insufficient for deciding whether a categorical
+claim is feasible.
 
-**v3 Track E** re-aimed at a target where resampling should genuinely add
-information beyond $p$: detecting analyses whose assumptions have been
-violated --- the one job a $p$-value cannot do. The pre-registered gate
-required $\Delta\mathrm{AUC} = \mathrm{AUC}_\mathrm{score} -
-\mathrm{AUC}_p \geq 0.10$ with a bootstrap CI excluding zero. Quotas were met
-(2,100 replications completed, 0 failed). The result was **not confirmed**:
-pooled $\Delta\mathrm{AUC} = 0.0053$, cluster-bootstrap 95% CI
-$[-0.111, 0.129]$.
+The **assumption-violation study** then asked whether the score added
+discrimination beyond $p$ for violations represented in a frozen scenario
+suite. It completed 2,100 analyses with zero failures. The pooled difference
+$\mathrm{AUC}_\mathrm{score}-\mathrm{AUC}_p$ was 0.0053, with a
+scenario-cluster bootstrap 95% interval $[-0.111,0.129]$; the added
+discrimination was not confirmed.
 
-All three registry rows remain `uncalibrated` with auditable provenance, and
-ANCOVA labels stay suppressed. Welch 55/70 is a Welch comparator and is never
-an ANCOVA fallback. We report this in full because the alternative --- quietly
-loosening acceptance criteria until something validates --- is precisely the
-failure mode the fail-closed design exists to prevent. Two rigorously
-documented negative outcomes plus a confirmed methodological prediction are
-evidence that the package's positive claims were earned rather than assumed.
+The ANCOVA registry rows remain `uncalibrated`, and labels stay suppressed.
+Audit identifiers, hashes, and raw decision strings are retained in the
+study-specific `published/` directories rather than in reader-facing prose.
 
 # Examples
 
 ## Welch case study
 
 The package ships a synthetic phase II analgesic trial: 55 patients, change
-from baseline in pain score at week 12. This is the documented Welch
-configuration, so a label applies. Results below are loaded from a committed
-artifact computed with package defaults.
+from baseline in pain score at week 12. Results below are loaded from a
+committed artifact generated with the package-default `n_boot = 1000` and
+`seed = 123`. Welch is numeric-only after the prospective negative result.
 
 ```{r case-code, echo=TRUE, eval=FALSE}
 res <- robustness_analysis(pain_treatment, pain_placebo, test_type = "t.test",
-                           n_boot = 2000, seed = 123, interpret = TRUE)
+                           n_boot = 1000, seed = 123, interpret = TRUE)
 ```
 
 The Welch test gives a mean difference of `r fmt(case_study$original_mean_diff, 2)`
 points, $p = `r fmt(case_study$original_p, 4)`$. The robustness analysis
-returns a score of **`r fmt(cs_m$overall_robustness)`/100 (Robust)**, built
+returns a numeric score of **`r fmt(cs_m$overall_robustness)`/100** with no
+categorical label, built
 from: jackknife stability `r fmt(cs_m$jackknife_conclusion_stability)`% with
 `r cs_m$jackknife_n_influential` influential observations flagged; a
 worst-case fragility index of $k = `r cs_m$worstcase_fragility_k`$
 (`r fmt(cs_m$worstcase_fragility_pct)`% of the sample), with $p$ rising to
 `r fmt(cs_m$p_at_fragility, 4)` after the sixth deletion; and bootstrap
-reproducibility `r fmt(cs_m$bootstrap_reproducibility)`%.
+same-decision rate `r fmt(cs_m$bootstrap_reproducibility)`%.
 
 Figure \@ref(fig:casefig) shows the two diagnostic displays produced by
 `plot()`. The upper panel makes the contrast of the Methods section concrete:
@@ -466,8 +499,9 @@ invisible(plot(case_study))
 
 For a reader, the actionable output is not the score but the six named
 patients --- led by one extreme responder --- whose charts warrant source-data
-review, and the observation that $k = 6$ matches the validated signature of a
-genuine effect rather than the one-or-two signature of a chance finding.
+review. The observed component pattern resembles the study's clear-effect
+scenarios more than its null scenarios, but a sensitivity diagnostic does not
+establish which data-generating truth produced an individual dataset.
 
 ## Other engines
 
@@ -519,9 +553,13 @@ not merely the calibrated method.
 
 # Performance
 
-Cost is dominated by the greedy search, which performs $O(n \cdot k_{\max})$
-test evaluations --- about 3,400 tests at $n = 55$. Closed-form tests are
-therefore sub-second; model engines pay for repeated refits.
+Cost is dominated by the greedy search, which performs $O(N \cdot k_{\max})$
+test evaluations. For total $N=55$, $k_{\max}=16$ and the greedy candidate
+refits total $\sum_{j=40}^{55}j=760$. A full default run uses approximately
+$1+55+760+16+1000=1832$ test evaluations before overhead: the original test,
+jackknife, greedy search, descriptive extreme-value path, and bootstrap.
+Closed-form tests are therefore sub-second; model engines pay for repeated
+refits.
 
 ```{r timingtable}
 tt <- timing
@@ -549,12 +587,10 @@ That last one is unusual enough to describe. A source-tree audit
 (`tools/check-calibration-documentation.R`, run as part of the test suite)
 asserts that the README, NEWS, vignettes, manuscript, and every study SAP
 still state the policy invariants: that uncalibrated labels are suppressed,
-that Welch 55/70 is described as a Welch comparator and not an ANCOVA
-fallback, that the fail-closed reason string is the exact plural
-`no_feasible_thresholds` and is not softened with "or equivalent", and that
-each frozen acceptance gate still appears verbatim in its own SAP. The intent
-is to make it mechanically hard to quietly weaken a published calibration
-claim through documentation drift.
+that the historical Welch mapping is inactive, and that each frozen acceptance
+criterion remains present in its own statistical analysis plan. The intent is
+to make it mechanically hard to quietly weaken a published calibration claim
+through documentation drift.
 
 Each calibration study additionally publishes compact decision artifacts in
 its own `published/` directory: occupancy and failure tables, power
@@ -578,9 +614,9 @@ a scope condition, not a defect, but it bounds what the score can be used for.
 Its added value lies in (i) identifying the specific observations carrying the
 conclusion, (ii) the worst-case deletion bound, and (iii) behaviour under
 contamination, where the $p$-value alone is silent --- see the null-with-
-contamination rows of Table \@ref(tab:simtable). The v3 Track E study tested
-whether the score adds detection power for *assumption violations* and found
-it does not; that result is reported above rather than set aside.
+contamination rows of Table \@ref(tab:simtable). The assumption-violation study
+tested whether the score added discrimination beyond $p$ under its frozen
+violation suite and did not confirm such an improvement.
 
 **The weights are a convention.** They are explicit, pre-specifiable, and
 demonstrably not load-bearing for discrimination (the Fisher weight study
@@ -589,10 +625,9 @@ from theory. The score is a communication device; the components are the
 substance.
 
 **The greedy index is an upper bound.** Exact minimal overturning subsets are
-combinatorially hard. Greedy search is near-optimal for monotone
-single-deletion influence, and the reported trajectory lets a reader judge the
-margin, but certified minimal sets --- via integer-programming formulations
---- remain future work.
+combinatorially hard. The algorithm returns a sufficient overturning set when
+it finds one, not a certificate of minimality. Certified minimal sets --- via
+integer-programming formulations --- remain future work.
 
 **Binary significance framing.** Inherited from the fragility concept itself
 and criticised for good reason [@potter2020]; the package's response is to
@@ -603,10 +638,11 @@ section.
 **Independence is assumed.** Clustered and longitudinal designs are not
 supported; for those, `influence.ME` addresses the grouping-factor question.
 
-**Calibration coverage is deliberately narrow.** Two configurations carry
-labels. Everything else --- paired, rank, Brunner--Munzel, non-canonical
-binary, model-based, Cox, TOST --- returns numeric output with a suppressed
-label pending independent calibration. Users who want a verdict where none is
+**Calibration coverage is deliberately narrow.** Only the eligible Fisher
+exact-test configuration under jackknife-light weights carries a label.
+Welch, paired, rank, Brunner--Munzel, non-canonical binary, model-based, Cox,
+and TOST analyses return numeric output with a suppressed label pending an
+independent positive calibration. Users who want a verdict where none is
 licensed are, by design, not given one.
 
 # Summary
