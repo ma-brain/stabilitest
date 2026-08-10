@@ -1,0 +1,31 @@
+{
+  "study": "prospective Welch study 2026-2",
+  "mode": "production",
+  "layer": "training",
+  "candidate_hash": null,
+  "started_at_utc": "2026-08-10 15:54:24 UTC",
+  "finished_at_utc": "2026-08-10 17:00:19 UTC",
+  "runtime_seconds": 3955.2826,
+  "package_version": "0.6.0",
+  "r_version": "R version 4.6.1 (2026-06-24)",
+  "workers": 1,
+  "n_boot": 1000,
+  "scenario_ids": ["WTR-W01-borderline", "WTR-W01-clear", "WTR-W01-null", "WTR-W02-borderline", "WTR-W02-clear", "WTR-W02-null", "WTR-W03-borderline", "WTR-W03-clear", "WTR-W03-null", "WTR-W04-borderline", "WTR-W04-clear", "WTR-W04-null", "WTR-W05-borderline", "WTR-W05-clear", "WTR-W05-null", "WTR-W06-borderline", "WTR-W06-clear", "WTR-W06-null"],
+  "required_cells": 18,
+  "completed_cells": 18,
+  "occupancy_failures": 0,
+  "attempted": 34213,
+  "screened": 34213,
+  "screened_significant": 4500,
+  "completed": 4500,
+  "failed": 0,
+  "excluded": 29713,
+  "silent_drops": 0,
+  "output_dir": "/Users/Marius/.codex/worktrees/ee43/stabilitest/manuscript/calibration/studies/welch_unpaired/artifacts/training",
+  "output_sha256": {
+    "completed": "e813c893778444b478964d3276fa47fe23c990f03b7f4aba99ad770bfdbf3a9a",
+    "failures": "d1dc4cab1a29072c2f6243467c2260c8d8841a649e3899abab3384773f933710",
+    "screening_ledger": "7e4987821988b143601c3771ce8ea4fe4da27a7acdefa88e77e45d320e4c821f",
+    "occupancy": "cb5c9bce52ab42b27a036ca177197afe1a4543f458402e6a96adede3c2848e16"
+  }
+}

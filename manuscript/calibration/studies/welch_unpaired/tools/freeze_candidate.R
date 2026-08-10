@@ -93,22 +93,14 @@ saveRDS(frozen, file.path(summary_dir, "candidate.rds"), version = 3)
 writeLines(frozen$candidate_hash,
            file.path(summary_dir, "candidate-hash.txt"), useBytes = TRUE)
 
-compact_metrics <- function(metrics) {
-  if (is.null(metrics)) return(NULL)
-  metrics[setdiff(
-    names(metrics),
-    c("bands", "archetype_ordering", "false_reassurance_cluster_draws",
-      "clear_identification_cluster_draws")
-  )]
-}
 diagnostics <- list(
   status = frozen$status,
   reason = frozen$reason,
   mapping_type = frozen$mapping_type,
   cutoffs = frozen$cutoffs,
   candidate_hash = frozen$candidate_hash,
-  metrics = compact_metrics(frozen$metrics),
-  historical_55_70 = compact_metrics(frozen$historical_55_70),
+  metrics = env$compact_welch_metrics(frozen$metrics),
+  historical_55_70 = env$compact_welch_metrics(frozen$historical_55_70),
   fit_runtime_seconds = frozen$fit_runtime_seconds,
   training_n = frozen$training_n,
   training_truth_counts = frozen$training_truth_counts,

@@ -39,6 +39,15 @@ numeric-only output; gates are never weakened after results are seen.
 
 ## Current status
 
-Protocol frozen before any robustness score production. The active package
-registry remains `welch-2026-1` until this prospective study publishes its
-fail-closed decision.
+Production training is frozen with `status = "no_feasible_thresholds"` and
+candidate hash
+`9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d`.
+All 18 required training cells reached 250 completed significant analyses
+(4,500 total) with zero failures. The held-out validation directory was not
+created and must remain unopened. After human acknowledgement, the study
+proceeds directly to the fail outcome: Welch categorical labels are suppressed
+while numeric scores and component metrics remain available.
+
+The active package registry still remains `welch-2026-1` at this training-freeze
+checkpoint. Applying the fail-closed registry proposal belongs to the later
+verdict task and does not occur before acknowledgement of this decision.

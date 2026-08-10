@@ -36,6 +36,25 @@ recompute_welch_candidate_hash <- function(frozen) {
   digest::digest(frozen$hash_payload, algo = "sha256", serialize = TRUE)
 }
 
+compact_welch_metrics <- function(metrics) {
+  if (is.null(metrics)) return(NULL)
+  compact <- metrics[setdiff(
+    names(metrics),
+    c("bands", "archetype_ordering", "false_reassurance_cluster_draws",
+      "clear_identification_cluster_draws")
+  )]
+  json_safe <- function(value) {
+    if (inherits(value, "table")) {
+      return(stats::setNames(as.list(as.numeric(value)), names(value)))
+    }
+    if (is.list(value) && !is.data.frame(value)) {
+      return(lapply(value, json_safe))
+    }
+    value
+  }
+  lapply(compact, json_safe)
+}
+
 validate_frozen_welch_candidate <- function(frozen, validation,
                                             occupancy_pass = TRUE,
                                             cluster_B = 1000L,

@@ -76,3 +76,19 @@ testthat::test_that("no-candidate decisions freeze with held-out closed", {
     recompute_welch_candidate_hash(frozen)
   )
 })
+
+testthat::test_that("compact freeze diagnostics are JSON serializable", {
+  .load_welch_freeze_code()
+  metrics <- list(
+    false_reassurance = 0.1,
+    band_occupancy = table(c("fragile", "fragile", "robust")),
+    bands = rep("fragile", 3L)
+  )
+  compact <- compact_welch_metrics(metrics)
+
+  testthat::expect_false(inherits(compact$band_occupancy, "table"))
+  testthat::expect_false("bands" %in% names(compact))
+  testthat::expect_silent(
+    jsonlite::toJSON(compact, auto_unbox = TRUE, null = "null")
+  )
+})

@@ -1,0 +1,67 @@
+{
+  "status": "no_feasible_thresholds",
+  "reason": "no_feasible_thresholds",
+  "mapping_type": "none",
+  "cutoffs": ["NA", "NA"],
+  "candidate_hash": "9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d",
+  "metrics": null,
+  "historical_55_70": {
+    "mapping_type": "three_band",
+    "cutoffs": [55, 70],
+    "false_reassurance": 0.458,
+    "false_reassurance_count": 687,
+    "false_reassurance_n": 1500,
+    "false_reassurance_wilson_upper": 0.4792166162338876,
+    "clear_identification": 0.4993333333333334,
+    "clear_identification_count": 749,
+    "clear_identification_n": 1500,
+    "clear_identification_wilson_lower": 0.4781187082857363,
+    "class_accuracy": [0.542, 0.632, 0.4993333333333334],
+    "balanced_ordinal_accuracy": 0.5577777777777778,
+    "band_occupancy": {
+      "fragile": 0.2675555555555555,
+      "moderate": 0.5057777777777778,
+      "robust": 0.2266666666666667
+    },
+    "minimum_band_occupancy": 0.2266666666666667,
+    "pooled_medians": [54.480645161290319, 60.321290322580651, 69.969999999999999],
+    "pooled_ordering_ok": true,
+    "material_reversal": false,
+    "false_reassurance_cluster_upper": 0.5133333333333333,
+    "clear_identification_cluster_lower": 0.3480666666666667,
+    "false_reassurance_conservative_upper": 0.5133333333333333,
+    "clear_identification_conservative_lower": 0.3480666666666667
+  },
+  "fit_runtime_seconds": 31.693751811981201,
+  "training_n": 4500,
+  "training_truth_counts": {
+    "borderline": 1500,
+    "clear": 1500,
+    "null": 1500
+  },
+  "context": {
+    "study_version": "prospective Welch study 2026-2",
+    "gates": {
+      "false_reassurance_point_max": 0.05,
+      "false_reassurance_upper_max": 0.1,
+      "clear_identification_point_min": 0.7,
+      "clear_identification_lower_min": 0.6,
+      "balanced_ordinal_accuracy_min": 0.7,
+      "minimum_band_occupancy": 0.05,
+      "material_reversal_tolerance": 5,
+      "cluster_bootstrap_B": 1000,
+      "cluster_bootstrap_seed": 202640001
+    },
+    "scenario_manifest_hash": "bed0c56d9d6c72dc70975a8be1233994628f486deba67e9c7bd59b441f63b411",
+    "weights": [0.4, 0.4, 0.2],
+    "sap_hash": "39ee267c41527f4d5cbb3f5798a3066d1aacbb7b594de1c5bc94d8661e8b5de2",
+    "resolved_scenarios_hash": "d11e785760d70e29f28fbf875bb084a49a23f66c0a1a6638b2d55cd6bcd2cebc",
+    "generator_hash": "9e45814197e845a86856b0c7e252d2be7813eee025bb3c0fc984bb1ef1a56019",
+    "adapter_hash": "7e05f32d3b90d753cdfc7b366d942fed910be0b1bc83aa213da050bdbe882248",
+    "thresholds_hash": "1b663f88cb5adab3bd1283af622d418f5d1724d5dab54b1c6b64b1139fbdc062",
+    "training_data_hash": "a8487a20507a299f90519a89e74912304ce296b76110a3a9295993e9b09815a1",
+    "package_version": "0.6.0"
+  },
+  "held_out_opened": false,
+  "validation_refit": false
+}
