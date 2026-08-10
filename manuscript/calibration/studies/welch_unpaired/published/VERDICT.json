@@ -1,0 +1,45 @@
+{
+  "status": "uncalibrated",
+  "reason": "no_feasible_thresholds",
+  "study_version": "prospective Welch study 2026-2",
+  "registry_version": "welch-2026-2",
+  "mapping_type": "none",
+  "cutoffs": [null, null],
+  "candidate_hash": "9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d",
+  "training_n": 4500,
+  "training_truth_counts": {
+    "borderline": 1500,
+    "clear": 1500,
+    "null": 1500
+  },
+  "historical_55_70": {
+    "mapping_type": "three_band",
+    "cutoffs": [55, 70],
+    "false_reassurance": 0.458,
+    "false_reassurance_count": 687,
+    "false_reassurance_n": 1500,
+    "false_reassurance_wilson_upper": 0.4792166162338876,
+    "clear_identification": 0.4993333333333334,
+    "clear_identification_count": 749,
+    "clear_identification_n": 1500,
+    "clear_identification_wilson_lower": 0.4781187082857363,
+    "class_accuracy": [0.542, 0.632, 0.4993333333333334],
+    "balanced_ordinal_accuracy": 0.5577777777777778,
+    "band_occupancy": {
+      "fragile": 0.2675555555555555,
+      "moderate": 0.5057777777777778,
+      "robust": 0.2266666666666667
+    },
+    "minimum_band_occupancy": 0.2266666666666667,
+    "pooled_medians": [54.480645161290319, 60.321290322580651, 69.969999999999999],
+    "pooled_ordering_ok": true,
+    "material_reversal": false,
+    "false_reassurance_cluster_upper": 0.5133333333333333,
+    "clear_identification_cluster_lower": 0.3480666666666667,
+    "false_reassurance_conservative_upper": 0.5133333333333333,
+    "clear_identification_conservative_lower": 0.3480666666666667
+  },
+  "held_out_opened": false,
+  "validation_refit": false,
+  "training_freeze_commit": "50c85430868a3546210518584133772d91f0704c"
+}

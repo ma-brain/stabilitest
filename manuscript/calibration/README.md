@@ -12,15 +12,31 @@ containing generator and analysis settings.
 
 `inst/extdata/calibration-registry.csv` is the only active runtime registry.
 It is deliberately conservative: only the narrowly documented significant
-Welch configuration currently has categorical cutoffs.  Other methods retain
-numeric scores and component metrics while categorical labels remain
-suppressed until that exact method and conclusion have been calibrated.
+`fisher_exact` configuration currently has a categorical cutoff. Other methods,
+including Welch, retain numeric scores and component metrics while categorical
+labels remain suppressed until that exact method and conclusion has passed an
+independent calibration.
 
 The files under `published/` are the immutable Task 15 broad-family
 publication freeze.  They retain the historical `two_sample` row and are
 preserved for provenance, not runtime lookup.  The inspected Task 15
 validation rows cannot be reused as fresh held-out confirmation; any reanalysis
 of them is exploratory.
+
+## Prospective Welch study (executed fail-closed)
+
+`studies/welch_unpaired/` owns the prospective replacement for the historical
+55/70 interpretation. Production training completed all 18 required cells
+(4,500 significant analyses, zero failures), but neither the frozen three-band
+nor two-band search found feasible thresholds. The historical 55/70 comparator
+had false reassurance 0.458 (conservative upper bound 0.513), clear
+identification 0.499 (conservative lower bound 0.348), and balanced ordinal
+accuracy 0.558. The active `welch_unpaired` registry row is therefore
+`uncalibrated` with reason `no_feasible_thresholds` (version `welch-2026-2`;
+candidate hash
+`9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d`).
+Held-out validation was not opened. Compact fail-closed evidence and the
+registry proposal are under `studies/welch_unpaired/published/`.
 
 ## Independent ANCOVA study (Gate A / Gate B)
 

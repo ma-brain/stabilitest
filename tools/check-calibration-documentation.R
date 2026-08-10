@@ -20,6 +20,7 @@ policy_files <- file.path(root, c(
   "manuscript/robustness_analysis_manuscript.md",
   "manuscript/methodological_review.md",
   "manuscript/calibration/CALIBRATION_SAP.md",
+  "manuscript/calibration/studies/welch_unpaired/README.md",
   "manuscript/calibration/studies/binary_proportion/CALIBRATION_SAP.md"))
 existing_policy_files <- policy_files[file.exists(policy_files)]
 if (!length(existing_policy_files)) {
@@ -46,6 +47,21 @@ assert_match("public `?robustness_analysis[(][)]`? dispatcher",
              "active policy does not preserve the public dispatcher")
 assert_match("lm_ancova", "active policy does not name lm_ancova",
              ignore.case = FALSE)
+assert_match("welch-2026-2",
+             "active policy omits the prospective Welch study version",
+             ignore.case = FALSE)
+assert_match("no_feasible_thresholds",
+             "active policy omits the Welch no-candidate verdict",
+             ignore.case = FALSE)
+assert_match(
+  "9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d",
+  "active policy omits the frozen Welch candidate hash",
+  ignore.case = FALSE
+)
+assert_match("held-out (validation )?(was )?not opened|held.out not opened",
+             "active policy omits that Welch validation remained unopened")
+assert_match("Welch.{0,80}(labels are suppressed|categorical.{0,30}suppressed)|labels.{0,80}Welch.{0,30}suppressed",
+             "active policy does not suppress Welch categorical labels")
 
 # Gate A ANCOVA study policy (independent method-specific calibration).
 ancova_policy_files <- file.path(root, c(

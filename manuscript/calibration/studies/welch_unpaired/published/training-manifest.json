@@ -1,0 +1,32 @@
+{
+  "phase": "production_training_freeze",
+  "study_version": "prospective Welch study 2026-2",
+  "package_version": "0.6.0",
+  "code_commit_before_freeze": "77aae947f5ba33fe5e40dffe97bee86690e38625",
+  "candidate_status": "no_feasible_thresholds",
+  "reason": "no_feasible_thresholds",
+  "mapping_type": "none",
+  "cutoffs": ["NA", "NA"],
+  "candidate_hash": "9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d",
+  "training_completed": 4500,
+  "training_attempted": 34213,
+  "training_failures": 0,
+  "required_cells": 18,
+  "occupancy_pass": true,
+  "runner_runtime_seconds": 3955.2826,
+  "fit_runtime_seconds": 31.693751811981201,
+  "validation_accessed": false,
+  "held_out_opened": false,
+  "validation_refit": false,
+  "input_sha256": {
+    "sap": "39ee267c41527f4d5cbb3f5798a3066d1aacbb7b594de1c5bc94d8661e8b5de2",
+    "resolved_scenarios": "d11e785760d70e29f28fbf875bb084a49a23f66c0a1a6638b2d55cd6bcd2cebc",
+    "scenario_manifest": "bed0c56d9d6c72dc70975a8be1233994628f486deba67e9c7bd59b441f63b411",
+    "generator": "9e45814197e845a86856b0c7e252d2be7813eee025bb3c0fc984bb1ef1a56019",
+    "adapter": "7e05f32d3b90d753cdfc7b366d942fed910be0b1bc83aa213da050bdbe882248",
+    "thresholds": "1b663f88cb5adab3bd1283af622d418f5d1724d5dab54b1c6b64b1139fbdc062",
+    "training_completed": "e813c893778444b478964d3276fa47fe23c990f03b7f4aba99ad770bfdbf3a9a",
+    "training_ledger": "7e4987821988b143601c3771ce8ea4fe4da27a7acdefa88e77e45d320e4c821f",
+    "training_runner_manifest": "1c4efc52d68961d6ae336bd6ac99911d76d717b3c49fb7151a11b21b2e60ce33"
+  }
+}

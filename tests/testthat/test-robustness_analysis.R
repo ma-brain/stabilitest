@@ -33,7 +33,7 @@ test_that("all continuous test types run", {
   }
 })
 
-test_that("significant default Welch has narrow calibrated metadata", {
+test_that("significant default Welch is numeric-only after fail verdict", {
   set.seed(41)
   result <- robustness_analysis(
     rep(3, 12) + rnorm(12, 0, .1),
@@ -43,10 +43,10 @@ test_that("significant default Welch has narrow calibrated metadata", {
 
   expect_identical(result$calibration$calibration_unit, "welch_unpaired")
   expect_identical(result$calibration$endpoint, "mean_difference")
-  expect_true(result$calibration$applicable)
-  expect_identical(result$calibration$status, "validated_method_specific")
-  expect_match(result$robustness_interpretation,
-               "Robust|Moderately Robust|Fragile")
+  expect_false(result$calibration$applicable)
+  expect_identical(result$calibration$status, "uncalibrated")
+  expect_true(is.na(result$robustness_interpretation))
+  expect_true(is.finite(result$robustness_metrics$overall_robustness))
 })
 
 test_that("non-Welch two-vector methods keep scores but suppress labels", {
@@ -91,13 +91,15 @@ test_that("print and narrative output expose calibration status", {
   x <- c(2, 2.1, 1.9, 2.2, 2.0, 2.1, 1.8, 2.2, 2.1, 1.9)
   y <- c(0, 0.1, -0.1, 0.2, 0.0, 0.15, -0.2, 0.25, 0.1, -0.1)
 
-  calibrated <- robustness_analysis(x, y, test_type = "t.test",
-                                    n_boot = 10, seed = 42,
-                                    interpret = TRUE)
-  calibrated_text <- capture.output(print(calibrated))
-  expect_true(any(grepl("Welch calibration", calibrated_text)))
-  expect_true(any(grepl("Robust|Moderately Robust|Fragile",
-                         calibrated_text)))
+  welch <- robustness_analysis(x, y, test_type = "t.test",
+                               n_boot = 10, seed = 42,
+                               interpret = TRUE)
+  welch_text <- capture.output(print(welch))
+  expect_true(any(grepl("OVERALL ROBUSTNESS: [0-9.]+/100", welch_text)))
+  expect_true(any(grepl("categorical bands not calibrated for this method",
+                        welch_text)))
+  expect_false(any(grepl("\\((Robust|Moderately Robust|Fragile)\\)",
+                         welch_text)))
 
   uncalibrated <- robustness_analysis(x, y, test_type = "paired.t.test",
                                       n_boot = 10, seed = 42,
@@ -710,14 +712,15 @@ test_that("non-significant two-sample results are handled", {
   expect_identical(res$calibration$status, "bands_not_applicable")
 })
 
-test_that("borderline significant results can be fragile", {
+test_that("borderline significant Welch results retain numeric fragility", {
   set.seed(2)
   x <- rnorm(10, 0, 1)
   y <- rnorm(10, 1.1, 1)
   res <- robustness_analysis(x, y, n_boot = 40, seed = 2)
   expect_true(res$original_significant)
   expect_lte(res$worstcase$fragility_index, 2L)
-  expect_identical(res$robustness_interpretation, "Fragile")
+  expect_true(is.na(res$robustness_interpretation))
+  expect_identical(res$calibration$status, "uncalibrated")
 })
 
 # --- proportion / binary two-sample tests -------------------------------------
@@ -957,12 +960,13 @@ test_that("analysis_profile is recorded on every two-sample test type", {
   }
 })
 
-test_that("Welch robustness is unaffected by the proportion profile field", {
+test_that("Welch remains numeric-only with the proportion profile field", {
   set.seed(11)
   g1 <- rnorm(60, 6, 2)
   g2 <- rnorm(60, 4, 2)
   res <- robustness_analysis(g1, g2, test_type = "t.test", n_boot = 30, seed = 11)
-  expect_true(res$calibration$applicable)
-  expect_identical(res$calibration$status, "validated_method_specific")
-  expect_false(is.na(res$interpretation_label))
+  expect_false(res$calibration$applicable)
+  expect_identical(res$calibration$status, "uncalibrated")
+  expect_true(is.na(res$interpretation_label))
+  expect_true(is.finite(res$robustness_metrics$overall_robustness))
 })

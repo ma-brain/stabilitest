@@ -15,6 +15,41 @@ test_that("the active registry has no generic two_sample calibration key", {
   expect_true(any(registry$calibration_unit == "welch_unpaired"))
 })
 
+test_that("prospective Welch failure is published without opening validation", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  published <- file.path(
+    root, "manuscript", "calibration", "studies", "welch_unpaired", "published"
+  )
+
+  expect_true(dir.exists(published), info = "Welch published/ directory missing")
+  required <- c(
+    "VERDICT.json", "VERDICT.rds", "registry.csv", "registry.rds",
+    "output-hashes.txt"
+  )
+  for (name in required) {
+    expect_true(file.exists(file.path(published, name)), info = name)
+  }
+
+  verdict <- readRDS(file.path(published, "VERDICT.rds"))
+  expect_identical(verdict$status, "uncalibrated")
+  expect_identical(verdict$reason, "no_feasible_thresholds")
+  expect_identical(verdict$candidate_hash,
+                   "9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d")
+  expect_false(isTRUE(verdict$held_out_opened))
+  expect_false(isTRUE(verdict$validation_refit))
+  expect_true(all(is.na(verdict$cutoffs)))
+
+  registry <- utils::read.csv(
+    file.path(published, "registry.csv"),
+    stringsAsFactors = FALSE, na.strings = c("", "NA")
+  )
+  welch <- registry[registry$calibration_unit == "welch_unpaired", , drop = FALSE]
+  expect_identical(welch$status, "uncalibrated")
+  expect_identical(welch$version, "welch-2026-2")
+  expect_true(is.na(welch$cutoff_fragile))
+  expect_true(is.na(welch$cutoff_robust))
+})
+
 test_that("Gate A ANCOVA documentation audit passes in the source tree", {
   root <- normalizePath(testthat::test_path("..", ".."))
   audit <- file.path(root, "tools", "check-calibration-documentation.R")

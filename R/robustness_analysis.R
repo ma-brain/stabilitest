@@ -172,11 +172,11 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #' continuous API. Barnard's exact test is not implemented in this version.
 #'
 #' Numeric scores and all component metrics are returned for every supported
-#' test. Categorical interpretation labels use two calibrated vocabularies:
-#' `"Robust"` / `"Moderately Robust"` / `"Fragile"` for an applicable
-#' significant `welch_unpaired` result under the documented default score
-#' definition and weights, and `"Fragile"` / `"Not fragile"` for an applicable
-#' significant `fisher_exact` result under the explicit jackknife-light weights
+#' test. The prospective Welch study found no feasible threshold mapping, so
+#' `welch_unpaired` labels are suppressed while its numeric results remain
+#' available. The active categorical vocabulary is `"Fragile"` /
+#' `"Not fragile"` for an applicable significant `fisher_exact` result under
+#' the explicit jackknife-light weights
 #' (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`; cutoff `L = 58`,
 #' version `fisher-2026-1`). There is no Robust tier for Fisher. Labels are
 #' suppressed for uncalibrated methods and conclusions; the public dispatcher
@@ -245,9 +245,8 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'     stability, worst-case fragility, bootstrap reproducibility, overall
 #'     composite) and related diagnostics. Alias: `metrics` (same tibble).}
 #'   \item{robustness_interpretation}{A calibrated categorical label. For
-#'     applicable significant Welch results: `"Robust"`,
-#'     `"Moderately Robust"`, or `"Fragile"`. For applicable significant
-#'     `fisher_exact` results under explicit jackknife-light weights:
+#'     Applicable significant `fisher_exact` results under explicit
+#'     jackknife-light weights receive
 #'     `"Fragile"` or `"Not fragile"` (no Robust tier; `L = 58`,
 #'     `fisher-2026-1`). Otherwise `NA`. Numeric scores and component metrics
 #'     remain available when the label is suppressed. Alias:
@@ -554,8 +553,8 @@ robustness_analysis <- function(group1, group2,
   s_jack <- mean(jackknife$conclusion_match) * 100
   s_boot <- mean(bootstrap$conclusion_match[bootstrap_info$valid]) * 100
 
-  # Shared metrics constructor (bands calibrated by simulation; see manuscript
-  # Section 3). Boundaries: > 70 Robust; (55, 70] Moderately Robust; ≤ 55 Fragile.
+  # Shared numeric metrics constructor. Categorical interpretation is resolved
+  # separately from the active method-specific registry below.
   robustness_score <- build_robustness_metrics(
     s_jack = s_jack,
     jackknife = jackknife,
@@ -601,10 +600,10 @@ robustness_analysis <- function(group1, group2,
     info
   }
 
-  # Categorical robustness bands are only calibrated for the documented
-  # default Welch configuration.  Every two-vector result still carries the
-  # numeric score and component metrics, but the label is suppressed whenever
-  # the exact method/conclusion/design has no validated registry entry.
+  # Every two-vector result carries the numeric score and component metrics.
+  # A categorical label is emitted only when the exact method, conclusion, and
+  # design have a validated active registry entry. Welch is currently
+  # uncalibrated after the prospective no-candidate result.
   calibration_unit <- calibration_unit_for_test(test_type)
   calibration_endpoint <- switch(
     effect_type,
@@ -615,7 +614,7 @@ robustness_analysis <- function(group1, group2,
   )
   # Binary-proportion (and any two-sample) results carry a runtime analysis
   # profile so fisher_exact Gate B can fail closed on non-canonical inputs.
-  # Welch resolution deliberately ignores the profile.
+  # The current Welch fail verdict is profile-independent.
   correct_value <- if (is_prop) correct else TRUE
   analysis_profile <- prop_calibration_profile(
     test_type = test_type,

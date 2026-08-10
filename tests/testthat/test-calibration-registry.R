@@ -112,13 +112,13 @@ test_that("the installed registry exactly matches the active taxonomy", {
       "equivalence", "noninferiority", "equivalence", "noninferiority"
     ),
     status = c(
-      "validated_method_specific", rep("uncalibrated", 4),
+      rep("uncalibrated", 5),
       "validated_method_specific", rep("uncalibrated", 13)
     ),
-    cutoff_fragile = c(55, rep(NA_real_, 4), 58, rep(NA_real_, 13)),
-    cutoff_robust = c(70, rep(NA_real_, 18)),
+    cutoff_fragile = c(rep(NA_real_, 5), 58, rep(NA_real_, 13)),
+    cutoff_robust = rep(NA_real_, 19),
     version = c(
-      "welch-2026-1", rep("taxonomy-2026-1", 4), "fisher-2026-1",
+      "welch-2026-2", rep("taxonomy-2026-1", 4), "fisher-2026-1",
       rep("taxonomy-2026-1", 2), "lm-ancova-2026-1", "lm-ancova-v2-2026-1",
       rep("taxonomy-2026-1", 9)
     ),
@@ -224,18 +224,25 @@ test_that("active lm_ancova_v2 Gate B remains uncalibrated with auditable reason
   expect_identical(calibration_unit_for_model("lm"), "lm_ancova")
 })
 
-test_that("the Welch row cites durable tracked provenance", {
+test_that("the Welch row records the prospective fail-closed verdict", {
   registry <- load_calibration_registry()
   welch <- registry[registry$calibration_unit == "welch_unpaired", ]
 
+  expect_identical(welch$status, "uncalibrated")
+  expect_identical(welch$version, "welch-2026-2")
+  expect_true(is.na(welch$cutoff_fragile))
+  expect_true(is.na(welch$cutoff_robust))
   expect_identical(
     welch$source,
-    paste0(
-      "git:f26e559f098efa9ba0fe6b143f419d076ffb50fc:",
-      "manuscript/robustness_analysis_manuscript.md"
-    )
+    "manuscript/calibration/studies/welch_unpaired/published"
   )
-  expect_match(welch$supported_conditions, "Section 3", fixed = TRUE)
+  expect_match(welch$supported_conditions, "no_feasible_thresholds", fixed = TRUE)
+  expect_match(
+    welch$supported_conditions,
+    "9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d",
+    fixed = TRUE
+  )
+  expect_match(welch$supported_conditions, "held-out not opened", fixed = TRUE)
 })
 
 .valid_calibration_registry <- function() {
@@ -324,19 +331,25 @@ test_that("active registry validation rejects incomplete taxonomies", {
   )
 })
 
-test_that("active registry validation locks family and Welch calibration", {
+test_that("active registry validation locks the Welch fail-closed verdict", {
   registry <- load_calibration_registry()
   welch <- registry$calibration_unit == "welch_unpaired"
   mutations <- list(
     family = "two_sample",
-    cutoff_fragile = 54,
-    cutoff_robust = 71,
+    status = "validated_method_specific",
+    cutoff_fragile = 55,
+    cutoff_robust = 70,
     version = "welch-untracked"
   )
 
   for (field in names(mutations)) {
     changed <- registry
     changed[welch, field] <- mutations[[field]]
+    if (field %in% c("status", "cutoff_fragile", "cutoff_robust")) {
+      changed$status[welch] <- "validated_method_specific"
+      changed$cutoff_fragile[welch] <- 55
+      changed$cutoff_robust[welch] <- 70
+    }
     expect_error(
       validate_active_calibration_registry(changed),
       "active calibration registry must exactly match"
@@ -422,17 +435,19 @@ test_that("registry loading rejects malformed cutoff text before coercion", {
   }
 })
 
-test_that("only supported significant Welch results receive cutoffs", {
-  supported <- resolve_result_calibration(
+test_that("prospective Welch fail verdict suppresses all categorical cutoffs", {
+  significant <- resolve_result_calibration(
     calibration_unit = "welch_unpaired",
     endpoint = "mean_difference",
     conclusion_type = "significant",
     weights = c(jackknife = .4, fragility = .4, bootstrap = .2),
     max_removal_pct = .30
   )
-  expect_true(supported$applicable)
-  expect_identical(supported$status, "validated_method_specific")
-  expect_equal(c(supported$cutoff_fragile, supported$cutoff_robust), c(55, 70))
+  expect_false(significant$applicable)
+  expect_identical(significant$status, "uncalibrated")
+  expect_true(all(is.na(c(
+    significant$cutoff_fragile, significant$cutoff_robust
+  ))))
 
   nonsig <- resolve_result_calibration(
     "welch_unpaired", "mean_difference", "non_significant",
@@ -490,14 +505,13 @@ test_that("non-significant and unsuccessful conclusions are band-inapplicable", 
 })
 
 test_that("score labels require applicable calibration", {
-  calibrated <- resolve_result_calibration(
+  welch <- resolve_result_calibration(
     "welch_unpaired", "mean_difference", "significant",
     c(jackknife = .4, fragility = .4, bootstrap = .2), .30
   )
-  expect_identical(score_label_from_calibration(80, calibrated), "Robust")
-  expect_identical(score_label_from_calibration(60, calibrated),
-                   "Moderately Robust")
-  expect_identical(score_label_from_calibration(55, calibrated), "Fragile")
+  expect_true(is.na(score_label_from_calibration(80, welch)))
+  expect_true(is.na(score_label_from_calibration(60, welch)))
+  expect_true(is.na(score_label_from_calibration(55, welch)))
 
   uncalibrated <- resolve_result_calibration(
     "paired_t", "mean_difference", "significant",
@@ -705,8 +719,8 @@ test_that("active fisher_exact Gate B applies only under jackknife-light weights
   ))))
 })
 
-test_that("Welch resolution ignores analysis_profile", {
-  supported <- resolve_result_calibration(
+test_that("Welch resolution remains uncalibrated regardless of analysis_profile", {
+  result <- resolve_result_calibration(
     calibration_unit = "welch_unpaired",
     endpoint = "mean_difference",
     conclusion_type = "significant",
@@ -714,8 +728,8 @@ test_that("Welch resolution ignores analysis_profile", {
     max_removal_pct = .30,
     analysis_profile = .canonical_prop_profile()
   )
-  expect_true(supported$applicable)
-  expect_identical(supported$status, "validated_method_specific")
+  expect_false(result$applicable)
+  expect_identical(result$status, "uncalibrated")
 })
 
 test_that("malformed calibration metadata suppresses score labels", {
@@ -809,8 +823,8 @@ test_that("validated lm_ancova applies only to a complete canonical profile", {
   }
 })
 
-test_that("Welch resolution ignores analysis_profile", {
-  supported <- resolve_result_calibration(
+test_that("Welch fail verdict also ignores model analysis profiles", {
+  result <- resolve_result_calibration(
     calibration_unit = "welch_unpaired",
     endpoint = "mean_difference",
     conclusion_type = "significant",
@@ -818,6 +832,17 @@ test_that("Welch resolution ignores analysis_profile", {
     max_removal_pct = .30,
     analysis_profile = .canonical_profile_fixture()
   )
-  expect_true(supported$applicable)
-  expect_identical(supported$status, "validated_method_specific")
+  expect_false(result$applicable)
+  expect_identical(result$status, "uncalibrated")
+})
+
+test_that("significant Welch analyses retain numeric scores without a label", {
+  out <- robustness_analysis(
+    pain_treatment, pain_placebo,
+    test_type = "t.test", n_boot = 50, seed = 123, interpret = TRUE
+  )
+
+  expect_true(is.na(out$robustness_interpretation))
+  expect_identical(out$calibration$status, "uncalibrated")
+  expect_true(is.finite(out$robustness_metrics$overall_robustness))
 })

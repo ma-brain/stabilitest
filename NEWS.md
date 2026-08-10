@@ -1,5 +1,21 @@
 # stabilitest 0.6.0
 
+## Prospective Welch calibration closed fail-closed
+
+* Replaced the historical active Welch 55/70 mapping with the prospective
+  `welch-2026-2` result. Production training completed 4,500 significant
+  analyses across all 18 required cells with zero failures, but no frozen
+  three-band or two-band threshold candidate met every acceptance gate.
+* The historical 55/70 comparator produced false reassurance 0.458
+  (conservative upper bound 0.513), clear identification 0.499
+  (conservative lower bound 0.348), and balanced ordinal accuracy 0.558.
+  The final status is `uncalibrated` / `no_feasible_thresholds`, candidate hash
+  `9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d`.
+  Held-out validation was not opened.
+* `robustness_analysis(..., test_type = "t.test")` continues to return the
+  numeric score and all component metrics, but its Welch categorical label is
+  now `NA`. The public dispatcher and scoring calculation are unchanged.
+
 ## Gate B: active `fisher_exact` two-band calibration
 
 * Activated the published `fisher_exact` Gate B decision in the runtime
@@ -71,9 +87,10 @@
 
 ## Documentation
 
-* Updated README, manuscript, and roxygen to document active Welch three-band
-  and Fisher two-band vocabularies, plus the ANCOVA named negative-result
-  contribution. Next positive calibration target is `chi_square_2x2`.
+* Updated README, vignettes, and roxygen to document the prospective Welch
+  fail-closed result and active Fisher two-band vocabulary, plus the ANCOVA
+  named negative-result contribution. The next positive calibration target is
+  `chi_square_2x2`.
 
 # stabilitest 0.5.1
 

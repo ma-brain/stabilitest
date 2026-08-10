@@ -16,19 +16,18 @@ analyses into interpretable metrics:
 
 A data-dependent composite score from 0–100 summarises the components. The
 numeric score and its component metrics are returned for every supported
-method. Categorical interpretation labels are deliberately conservative: the
-current release assigns **Robust**, **Moderately Robust**, or **Fragile** to an
-applicable, statistically significant `welch_unpaired` result using the
-documented default score definition and weights, and assigns **Fragile** or
-**Not fragile** to an applicable, statistically significant `fisher_exact`
-result under the explicit jackknife-light weights
+method. Categorical interpretation labels are deliberately conservative. The
+prospective Welch study found no feasible threshold mapping, so
+`welch_unpaired` is `uncalibrated` and its labels are suppressed. The current
+release assigns **Fragile** or **Not fragile** only to an applicable,
+statistically significant `fisher_exact` result under the explicit
+jackknife-light weights
 (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`; cutoff `L = 58`,
 version `fisher-2026-1`, provenance `study:binary_proportion@cc3344931614`).
 There is no Robust tier for Fisher. Labels are `NA` for uncalibrated methods
 or conclusions, while scores and components remain available for descriptive
-review. The 55/70 thresholds are retained only as the narrow Welch
-calibration; the broader Task 15 simulation is historical evidence, not a
-runtime calibration claim.
+review. Historical Welch 55/70 results remain descriptive evidence only and
+are not an active runtime calibration.
 
 Calibration is keyed by the resolved method (`welch_unpaired`, `paired_t`,
 `wilcoxon_rank_sum`, `wilcoxon_signed_rank`, `brunner_munzel`,
@@ -41,8 +40,8 @@ closed fail-closed: the registry row remains `uncalibrated`
 Gate B for Track A `lm_ancova_v2` likewise closed fail-closed
 (`no_feasible_thresholds`; candidate hash `3dc2a1f840b3eb725bea629dc130f070`;
 held-out not opened; version `lm-ancova-v2-2026-1`), so model labels remain
-suppressed for both ANCOVA units. Welch 55/70 is a Welch comparator, not an
-ANCOVA fallback. Gate A froze the isolated ANCOVA study for eligible significant
+suppressed for both ANCOVA units. Historical Welch 55/70 is not an ANCOVA
+fallback. Gate A froze the isolated ANCOVA study for eligible significant
 canonical 1-df treatment effects with 60%/90% power-defined truth strata.
 Multi-df labels remain suppressed and score weights remain frozen. The Track A
 `lm_ancova_v2` SAP froze a two-band (Fragile / Not fragile) jackknife-light
@@ -61,6 +60,17 @@ above (`fisher-2026-1`; `study:binary_proportion@cc3344931614`). Default
 0.4/0.4/0.2 weights and non-canonical profiles keep labels suppressed while
 retaining numeric scores and component metrics. Phase 2 targets
 `chi_square_2x2`.
+
+The prospective Welch study (`welch-2026-2`) completed all 18 training cells
+with 4,500 significant analyses and zero failures. No frozen three-band or
+two-band candidate met the pre-specified training gates. The historical 55/70
+comparator had false reassurance 0.458 (conservative upper bound 0.513), clear
+identification 0.499 (conservative lower bound 0.348), and balanced ordinal
+accuracy 0.558. Its final status is `uncalibrated`
+(`no_feasible_thresholds`; candidate hash
+`9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d`).
+Held-out validation was not opened. Numeric Welch scores and components remain
+available, but categorical Welch labels are suppressed.
 
 ## Installation
 

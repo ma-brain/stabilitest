@@ -173,13 +173,13 @@ validate_calibration_registry <- function(registry) {
     "equivalence", "noninferiority", "equivalence", "noninferiority"
   ),
   status = c(
-    "validated_method_specific", rep("uncalibrated", 4),
+    rep("uncalibrated", 5),
     "validated_method_specific", rep("uncalibrated", 13)
   ),
-  cutoff_fragile = c(55, rep(NA_real_, 4), 58, rep(NA_real_, 13)),
-  cutoff_robust = c(70, rep(NA_real_, 18)),
+  cutoff_fragile = c(rep(NA_real_, 5), 58, rep(NA_real_, 13)),
+  cutoff_robust = rep(NA_real_, 19),
   version = c(
-    "welch-2026-1", rep("taxonomy-2026-1", 4), "fisher-2026-1",
+    "welch-2026-2", rep("taxonomy-2026-1", 4), "fisher-2026-1",
     rep("taxonomy-2026-1", 2), "lm-ancova-2026-1", "lm-ancova-v2-2026-1",
     rep("taxonomy-2026-1", 9)
   ),
@@ -567,9 +567,9 @@ resolve_result_calibration <- function(calibration_unit, endpoint,
     ))
   }
   # The Phase 1 fisher_exact calibration applies only to results whose runtime
-  # analysis profile satisfies the frozen canonical bounds.  The active row is
-  # currently uncalibrated, so this branch is inert until Gate B; Welch and
-  # every other unit ignore the profile entirely.
+  # analysis profile satisfies the frozen canonical bounds. Welch is
+  # uncalibrated independently of its runtime profile; other units ignore this
+  # Fisher-specific profile gate.
   if (identical(unit, "fisher_exact") &&
       !.is_supported_fisher_exact_profile(analysis_profile)) {
     return(.registry_result(

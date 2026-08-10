@@ -79,9 +79,8 @@ difference depending on \code{test_type}).}
 stability, worst-case fragility, bootstrap reproducibility, overall
 composite) and related diagnostics. Alias: \code{metrics} (same tibble).}
 \item{robustness_interpretation}{A calibrated categorical label. For
-applicable significant Welch results: \code{"Robust"},
-\code{"Moderately Robust"}, or \code{"Fragile"}. For applicable significant
-\code{fisher_exact} results under explicit jackknife-light weights:
+Applicable significant \code{fisher_exact} results under explicit
+jackknife-light weights receive
 \code{"Fragile"} or \code{"Not fragile"} (no Robust tier; \code{L = 58},
 \code{fisher-2026-1}). Otherwise \code{NA}. Numeric scores and component metrics
 remain available when the label is suppressed. Alias:
@@ -108,11 +107,11 @@ continuous API. Barnard's exact test is not implemented in this version.
 }
 \details{
 Numeric scores and all component metrics are returned for every supported
-test. Categorical interpretation labels use two calibrated vocabularies:
-\code{"Robust"} / \code{"Moderately Robust"} / \code{"Fragile"} for an applicable
-significant \code{welch_unpaired} result under the documented default score
-definition and weights, and \code{"Fragile"} / \code{"Not fragile"} for an applicable
-significant \code{fisher_exact} result under the explicit jackknife-light weights
+test. The prospective Welch study found no feasible threshold mapping, so
+\code{welch_unpaired} labels are suppressed while its numeric results remain
+available. The active categorical vocabulary is \code{"Fragile"} /
+\code{"Not fragile"} for an applicable significant \code{fisher_exact} result under
+the explicit jackknife-light weights
 (\code{fragility = 0.5}, \code{bootstrap = 0.5}, \code{jackknife = 0}; cutoff \code{L = 58},
 version \code{fisher-2026-1}). There is no Robust tier for Fisher. Labels are
 suppressed for uncalibrated methods and conclusions; the public dispatcher
