@@ -1,115 +1,134 @@
 # Reproducing the article
 
 Everything below assumes a clean clone of the repository and a working R
-installation. All commands are run **from the repository root** unless stated
-otherwise. Timings are wall-clock on an Apple aarch64 laptop (R 4.6.1) and are
-what the rehearsal described at the bottom of this file actually measured.
+installation. Run all commands from the repository root. The recorded rehearsal
+used R 4.6.1 on aarch64 macOS 26.6.1, pandoc 3.10.1, and TeX Live 2026. The
+committed `\pandocbounded` fallback also rendered successfully in this setup;
+no untested minimum TeX Live release is claimed.
 
 ## 0. Prerequisites
 
-R >= 4.2, pandoc (bundled with RStudio, or installed separately), and a LaTeX
-installation for the PDF output. If you use TinyTeX, note that the article
-requires **TeX Live 2026 or newer**: the LaTeX writer in current pandoc emits
-`\pandocbounded`, which needs an `l3backend` newer than the TeX Live 2025 tree
-ships. Upgrade with:
+Install R >= 4.2, pandoc (bundled with RStudio or installed separately), and a
+LaTeX distribution for PDF output. Then install every package needed to build
+the package, render the article, regenerate evidence, and run the optional
+checks. `_Rpackages.txt` is the authoritative list; `stabilitest` itself is
+installed from this checkout in the next step.
 
 ```r
-tinytex::reinstall_tinytex(repository = "https://mirror.ctan.org/systems/texlive/tlnet")
+packages <- setdiff(
+  trimws(readLines("manuscript/rjournal/_Rpackages.txt")),
+  c("", "stabilitest")
+)
+missing <- packages[!vapply(packages, requireNamespace, logical(1), quietly = TRUE)]
+if (length(missing)) install.packages(missing)
+stopifnot(all(vapply(packages, requireNamespace, logical(1), quietly = TRUE)))
 ```
 
-The article's YAML also defines a `\pandocbounded` fallback, so an older tree
-may still work; the upgrade is the reliable path.
-
-## 1. Install the package (~30 seconds)
+## 1. Install the package
 
 ```sh
 R CMD INSTALL --no-multiarch --with-keep.source .
 ```
 
-The article loads `stabilitest` with `library()` only. It never uses
-`pkgload::load_all()`, so what you knit is what the released package does.
+The article loads `stabilitest` with `library()`; it does not use
+`pkgload::load_all()`. Consequently, the render exercises the installed package
+in the same way as a reader's session.
 
-## 2. Install article dependencies (~1 minute)
-
-The packages the article itself needs are listed in `_Rpackages.txt`:
-
-```r
-install.packages(c("ggplot2", "knitr", "rmarkdown", "rjtools",
-                   "survival", "patchwork"))
-```
-
-## 3. Knit the article (~10 seconds each)
+## 2. Render the article
 
 ```sh
-cd manuscript/rjournal
-Rscript -e 'rmarkdown::render("stabilitest.Rmd", output_format = "rjtools::rjournal_pdf_article")'
-Rscript -e 'rmarkdown::render("stabilitest.Rmd", output_format = "rjtools::rjournal_web_article")'
+Rscript -e 'rmarkdown::render("manuscript/rjournal/stabilitest.Rmd", output_format = "rjtools::rjournal_pdf_article")'
+Rscript -e 'rmarkdown::render("manuscript/rjournal/stabilitest.Rmd", output_format = "rjtools::rjournal_web_article")'
 ```
 
-This is the full reproduction of the article as published. Heavy evidence
-loads from the committed artifacts under `artifacts/`; the only code that runs
-live is the short worked examples in the Examples section. Both formats
-complete in well under the journal's 10-minute budget.
+Outputs are `manuscript/rjournal/stabilitest.pdf` and
+`manuscript/rjournal/stabilitest.html`. Heavy calibration results are read from
+the committed frozen artifacts; the live chunks are short worked examples.
+The recorded clean-checkout reproduction of both formats completed well within
+the R Journal's ten-minute article budget.
 
-Outputs: `stabilitest.pdf` (10 pages) and `stabilitest.html`.
-
-## 4. Optional: regenerate the evidence artifacts from scratch
-
-The committed artifacts under `artifacts/` are what the article reads. They
-were produced by the scripts in `tools/`, each of which uses only the
-installed package and a fixed master seed, and each of which writes a manifest
-recording package version, R version, seeds, and runtime alongside its output.
-
-Regenerating them is **not** required to reproduce the article. Run these only
-if you want to verify the evidence itself.
-
-| Script | Produces | Runtime |
-| --- | --- | --- |
-| `tools/regenerate-simulation.R` | `artifacts/simulation/` — 12 scenarios x 500 replications, full replicate-level results + summary | **~17 minutes** |
-| `tools/regenerate-case-study.R` | `artifacts/case-study/` — Welch case study at package defaults, `n_boot = 2000` | ~10 seconds |
-| `tools/regenerate-timing.R` | `artifacts/timing/` — performance table | ~25 seconds |
-| `tools/regenerate-testcount.R` | `artifacts/testing/` — test-suite size for the QA section | ~50 seconds |
+## 3. Audit the artifact contracts
 
 ```sh
-# from the repository root
+Rscript manuscript/rjournal/tools/check-artifact-contracts.R
+Rscript manuscript/rjournal/tools/check-article-claims.R
+```
+
+These checks verify artifact schemas, hashes, provenance links, and the
+reader-facing consistency rules used by the manuscript.
+
+## 4. Optional calibration smoke test
+
+The article reads the committed artifacts under `manuscript/rjournal/artifacts/`.
+Regenerating the full evidence is not required to reproduce the article. To
+exercise the simulation pipeline end to end without modifying the published
+artifacts, run:
+
+```sh
+Rscript manuscript/rjournal/tools/regenerate-simulation.R --smoke
+```
+
+The smoke run uses 5 replications and 20 bootstrap iterations and writes to
+`manuscript/rjournal/artifacts/simulation-smoke/`, not to the frozen evidence
+directory.
+
+For a deliberate full regeneration, run the following scripts. Their manifests
+record package and R versions, seeds, runtime, script hashes, and source-study
+provenance.
+
+| Script | Output | Typical recorded runtime |
+| --- | --- | ---: |
+| `regenerate-simulation.R` | `artifacts/simulation/` | about 17 minutes |
+| `regenerate-case-study.R` | `artifacts/case-study/` | about 10 seconds |
+| `regenerate-timing.R` | `artifacts/timing/` | about 25 seconds |
+| `regenerate-testcount.R` | `artifacts/testing/` | about 50 seconds |
+| `regenerate-welch-calibration-summary.R` | `artifacts/welch-calibration/` | under 1 second |
+
+```sh
 Rscript manuscript/rjournal/tools/regenerate-simulation.R
 Rscript manuscript/rjournal/tools/regenerate-case-study.R
 Rscript manuscript/rjournal/tools/regenerate-timing.R
 Rscript manuscript/rjournal/tools/regenerate-testcount.R
+Rscript manuscript/rjournal/tools/regenerate-welch-calibration-summary.R
 ```
 
-The simulation script accepts `--smoke` (5 replications, `n_boot = 20`, ~7
-seconds) to verify the pipeline end to end without the full run, and
-`--nrep`/`--n-boot`/`--output-dir` to vary the design. A smoke run writes to a
-separate directory and will not overwrite the published artifacts.
+The full calibration is intentionally outside the journal's article-render
+budget. It is optional because the committed generation scripts and frozen
+artifacts are the reviewable evidence interface.
 
-Because every scenario seed is derived deterministically from the master seed
-recorded in `artifacts/simulation/manifest.json`, a full rerun on the same
-package version reproduces the committed numbers exactly.
-
-## 5. Optional: verify the package itself
+## 5. Verify the package
 
 ```sh
 Rscript -e 'devtools::test()'
 Rscript -e 'rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))'
 ```
 
-Expected: all tests pass; `R CMD check` reports 0 errors, 0 warnings, and a
-single "New submission" NOTE.
+Expected: all tests pass; `R CMD check` reports 0 errors and 0 warnings. On the
+recorded platform it reports only the benign `New submission` NOTE.
 
-**Locale note.** The test suite includes a source-tree audit that reads
-UTF-8 documentation containing mathematical symbols. Run it under a UTF-8
-locale; under `LC_ALL=C` the audit fails spuriously on encoding, not on
-content:
+The source-tree audit reads UTF-8 documentation containing mathematical
+symbols. Use a UTF-8 locale if the platform default is not UTF-8, for example:
 
 ```sh
 LC_ALL=en_US.UTF-8 Rscript -e 'devtools::test()'
 ```
 
-## Rehearsal record
+## 6. Record the environment and output hashes
 
-The steps above were rehearsed on 2026-08-07 against the branch as committed.
-Package install, dependency install, and both knits completed as described.
-The full simulation regeneration was run once end to end (17.3 minutes,
-recorded in `artifacts/simulation/manifest.json`) and its output is what the
-article reads.
+```sh
+Rscript -e 'sessionInfo()'
+Rscript -e 'p <- scan("manuscript/rjournal/_Rpackages.txt", what = "", quiet = TRUE); for (x in p) cat(x, as.character(packageVersion(x)), "\n")'
+shasum -a 256 manuscript/rjournal/stabilitest.pdf manuscript/rjournal/stabilitest.html
+```
+
+Exact artifact equality is expected in the recorded environment. On other
+supported platforms, the substantive tables, figures, statistical conclusions,
+and audit contracts should reproduce, while byte-level PDF/HTML hashes, timing,
+and graphics metadata may differ. Document such platform differences rather
+than treating them as statistical discrepancies. No lockfile or container is
+included because exact cross-platform byte equality is not a stated submission
+requirement.
+
+The complete 2026-08-10 clean-checkout rehearsal, including commands, versions,
+exit codes, wall times, hashes, and observed platform differences, is recorded
+in `manuscript/rjournal/audit/reproduction-report.md`.

@@ -21,6 +21,8 @@ test_that("prospective Welch failure is published without opening validation", {
     root, "manuscript", "calibration", "studies", "welch_unpaired", "published"
   )
 
+  skip_if_not(dir.exists(published),
+              "Welch published/ directory missing from package tarball")
   expect_true(dir.exists(published), info = "Welch published/ directory missing")
   required <- c(
     "VERDICT.json", "VERDICT.rds", "registry.csv", "registry.rds",
