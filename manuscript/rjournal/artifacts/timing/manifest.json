@@ -1,0 +1,17 @@
+{
+  "artifact_role": "performance_benchmark",
+  "generated_at": "2026-08-10T20:44:44+0300",
+  "runtime_seconds": 27.507247924804688,
+  "package_version": "0.6.0",
+  "git_commit": "5c135050c3e48d971d8e5d12c44b9f7107de2702",
+  "r_version": "R version 4.6.1 (2026-06-24)",
+  "script_path": "manuscript/rjournal/tools/regenerate-timing.R",
+  "script_sha256": "0646932cfb7cc03f3745f28efc894687864e8a291080baa924dad2f5ee1717fd",
+  "seed": "20260807/123",
+  "source_study_verdict_hash": "4218b8f39688a2673b8d8f062fedc2170fa510e358387318967c9ad109a6fc94",
+  "welch_calibration_status": "uncalibrated",
+  "welch_label_emitted": false,
+  "n_boot": 1000,
+  "sizes_per_arm": [50, 150],
+  "note": "robustness_surv benchmark uses synthetic simulated survival data (fixed seed in this script), timing only"
+}

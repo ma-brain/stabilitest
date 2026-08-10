@@ -63,6 +63,7 @@ make_surv_data <- function(n) {
   data.frame(arm = arm, time = time, event = event)
 }
 
+t_start <- Sys.time()
 results <- data.frame()
 
 for (n in SIZES) {
@@ -102,16 +103,47 @@ for (n in SIZES) {
 saveRDS(results, file.path(OUTPUT_DIR, "timing.rds"))
 utils::write.csv(results, file.path(OUTPUT_DIR, "timing.csv"), row.names = FALSE)
 
-manifest <- c(
-  sprintf("generated_at: %s", format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")),
-  sprintf("package_version: %s", as.character(utils::packageVersion("stabilitest"))),
-  sprintf("r_version: %s", R.version.string),
-  sprintf("n_boot: %d", 1000L),
-  sprintf("seed: %d", 123L),
-  sprintf("sizes_per_arm: %s", paste(SIZES, collapse = ", ")),
-  "note: robustness_surv benchmark uses synthetic simulated survival data (fixed seed in this script), timing only"
+.script_path <- normalizePath(
+  sub("^--file=", "", grep("^--file=", commandArgs(trailingOnly = FALSE),
+                             value = TRUE)[[1L]]),
+  mustWork = TRUE
 )
-writeLines(manifest, file.path(OUTPUT_DIR, "manifest.txt"))
+.project_root <- normalizePath(file.path(dirname(.script_path), "..", "..", ".."),
+                               mustWork = TRUE)
+.verdict_path <- file.path(
+  .project_root, "manuscript", "calibration", "studies", "welch_unpaired",
+  "published", "VERDICT.json"
+)
+.registry <- stabilitest:::load_calibration_registry()
+.welch <- .registry[.registry$calibration_unit == "welch_unpaired", , drop = FALSE]
+.runtime_seconds <- as.numeric(difftime(Sys.time(), t_start, units = "secs"))
+manifest <- list(
+  artifact_role = "performance_benchmark",
+  generated_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
+  runtime_seconds = .runtime_seconds,
+  package_version = as.character(utils::packageVersion("stabilitest")),
+  git_commit = system2("git", c("-C", .project_root, "rev-parse", "HEAD"),
+                       stdout = TRUE),
+  r_version = R.version.string,
+  script_path = file.path("manuscript", "rjournal", "tools",
+                          basename(.script_path)),
+  script_sha256 = digest::digest(file = .script_path, algo = "sha256"),
+  seed = paste(SEED, 123L, sep = "/"),
+  source_study_verdict_hash = digest::digest(file = .verdict_path,
+                                             algo = "sha256"),
+  welch_calibration_status = .welch$status,
+  welch_label_emitted = identical(.welch$status, "validated_method_specific"),
+  n_boot = 1000L,
+  sizes_per_arm = SIZES,
+  note = paste(
+    "robustness_surv benchmark uses synthetic simulated survival data",
+    "(fixed seed in this script), timing only"
+  )
+)
+jsonlite::write_json(
+  manifest, file.path(OUTPUT_DIR, "manifest.json"),
+  auto_unbox = TRUE, pretty = TRUE, null = "null", digits = 15
+)
 
 print(results, row.names = FALSE)
 message("Timing artifact written to ", OUTPUT_DIR)

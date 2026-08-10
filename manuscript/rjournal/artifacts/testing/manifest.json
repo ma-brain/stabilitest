@@ -1,0 +1,19 @@
+{
+  "artifact_role": "package_test_summary",
+  "generated_at": "2026-08-10T20:45:47+0300",
+  "runtime_seconds": 58.272028207778931,
+  "package_version": "0.6.0",
+  "git_commit": "5c135050c3e48d971d8e5d12c44b9f7107de2702",
+  "r_version": "R version 4.6.1 (2026-06-24)",
+  "script_path": "manuscript/rjournal/tools/regenerate-testcount.R",
+  "script_sha256": "e50522763d7c27d1cac8ca261bc5cd00ad838ab643869c3a194041fc1808f6c7",
+  "seed": "test-suite-managed",
+  "source_study_verdict_hash": "4218b8f39688a2673b8d8f062fedc2170fa510e358387318967c9ad109a6fc94",
+  "welch_calibration_status": "uncalibrated",
+  "welch_label_emitted": false,
+  "pass": 1011,
+  "fail": 0,
+  "warn": 0,
+  "skip": 0,
+  "files": 7
+}

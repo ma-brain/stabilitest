@@ -206,22 +206,36 @@ run <- function(opts) {
                     row.names = FALSE)
 
   script_path <- .script_path()
+  project_root <- normalizePath(file.path(dirname(script_path), "..", "..", ".."),
+                                mustWork = TRUE)
+  verdict_path <- file.path(
+    project_root, "manuscript", "calibration", "studies", "welch_unpaired",
+    "published", "VERDICT.json"
+  )
+  registry <- stabilitest:::load_calibration_registry()
+  welch <- registry[registry$calibration_unit == "welch_unpaired", , drop = FALSE]
   manifest <- list(
+    artifact_role      = "descriptive_historical_welch_stress",
     generated_at_start = format(t_start, "%Y-%m-%dT%H:%M:%S%z"),
     generated_at_end   = format(t_end, "%Y-%m-%dT%H:%M:%S%z"),
     runtime_seconds    = as.numeric(difftime(t_end, t_start, units = "secs")),
     package_version    = as.character(utils::packageVersion("stabilitest")),
+    git_commit         = system2("git", c("-C", project_root, "rev-parse", "HEAD"),
+                                 stdout = TRUE),
     r_version          = R.version.string,
     platform           = R.version$platform,
+    script_path        = file.path("manuscript", "rjournal", "tools",
+                                   basename(script_path)),
+    script_sha256      = digest::digest(file = script_path, algo = "sha256"),
+    seed               = MASTER_SEED,
+    source_study_verdict_hash = digest::digest(file = verdict_path, algo = "sha256"),
+    welch_calibration_status = welch$status,
+    welch_label_emitted = identical(welch$status, "validated_method_specific"),
     master_seed        = MASTER_SEED,
     nrep_per_scenario  = opts$nrep,
     n_boot             = opts$n_boot,
     scenario_count     = scenario_count,
     scenario_seeds     = as.list(setNames(scenario_seeds, sprintf("scenario_%02d", scenarios$scenario))),
-    script_path        = script_path,
-    script_md5         = if (!is.na(script_path)) {
-      tryCatch(as.character(tools::md5sum(script_path)), error = function(e) NA_character_)
-    } else NA_character_,
     smoke              = opts$smoke
   )
   manifest_json <- .to_json(manifest)

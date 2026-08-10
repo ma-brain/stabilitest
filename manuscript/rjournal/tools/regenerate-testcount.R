@@ -8,7 +8,9 @@
 OUTPUT_DIR <- file.path("manuscript", "rjournal", "artifacts", "testing")
 dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
+t_start <- Sys.time()
 res <- as.data.frame(devtools::test())
+t_end <- Sys.time()
 
 counts <- list(
   pass = sum(res$passed),
@@ -19,16 +21,46 @@ counts <- list(
 )
 
 saveRDS(counts, file.path(OUTPUT_DIR, "test-counts.rds"))
-writeLines(c(
-  sprintf("generated_at: %s", format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")),
-  sprintf("package_version: %s", as.character(utils::packageVersion("stabilitest"))),
-  sprintf("r_version: %s", R.version.string),
-  sprintf("pass: %d", counts$pass),
-  sprintf("fail: %d", counts$fail),
-  sprintf("warn: %d", counts$warn),
-  sprintf("skip: %d", counts$skip),
-  sprintf("files: %d", counts$files)
-), file.path(OUTPUT_DIR, "manifest.txt"))
+
+.script_path <- normalizePath(
+  sub("^--file=", "", grep("^--file=", commandArgs(trailingOnly = FALSE),
+                             value = TRUE)[[1L]]),
+  mustWork = TRUE
+)
+.project_root <- normalizePath(file.path(dirname(.script_path), "..", "..", ".."),
+                               mustWork = TRUE)
+.verdict_path <- file.path(
+  .project_root, "manuscript", "calibration", "studies", "welch_unpaired",
+  "published", "VERDICT.json"
+)
+.registry <- stabilitest:::load_calibration_registry()
+.welch <- .registry[.registry$calibration_unit == "welch_unpaired", , drop = FALSE]
+manifest <- list(
+  artifact_role = "package_test_summary",
+  generated_at = format(t_end, "%Y-%m-%dT%H:%M:%S%z"),
+  runtime_seconds = as.numeric(difftime(t_end, t_start, units = "secs")),
+  package_version = as.character(utils::packageVersion("stabilitest")),
+  git_commit = system2("git", c("-C", .project_root, "rev-parse", "HEAD"),
+                       stdout = TRUE),
+  r_version = R.version.string,
+  script_path = file.path("manuscript", "rjournal", "tools",
+                          basename(.script_path)),
+  script_sha256 = digest::digest(file = .script_path, algo = "sha256"),
+  seed = "test-suite-managed",
+  source_study_verdict_hash = digest::digest(file = .verdict_path,
+                                             algo = "sha256"),
+  welch_calibration_status = .welch$status,
+  welch_label_emitted = identical(.welch$status, "validated_method_specific"),
+  pass = counts$pass,
+  fail = counts$fail,
+  warn = counts$warn,
+  skip = counts$skip,
+  files = counts$files
+)
+jsonlite::write_json(
+  manifest, file.path(OUTPUT_DIR, "manifest.json"),
+  auto_unbox = TRUE, pretty = TRUE, null = "null", digits = 15
+)
 
 str(counts)
 message("Test-count artifact written to ", OUTPUT_DIR)

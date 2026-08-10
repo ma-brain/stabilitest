@@ -1,10 +1,18 @@
 {
-  "generated_at_start": "2026-08-07T12:29:17+0300",
-  "generated_at_end": "2026-08-07T12:46:33+0300",
-  "runtime_seconds": 1036.471,
+  "artifact_role": "descriptive_historical_welch_stress",
+  "generated_at_start": "2026-08-10T20:25:10+0300",
+  "generated_at_end": "2026-08-10T20:43:53+0300",
+  "runtime_seconds": 1123.388,
   "package_version": "0.6.0",
+  "git_commit": "5c135050c3e48d971d8e5d12c44b9f7107de2702",
   "r_version": "R version 4.6.1 (2026-06-24)",
   "platform": "aarch64-apple-darwin23",
+  "script_path": "manuscript/rjournal/tools/regenerate-simulation.R",
+  "script_sha256": "525231c20e1e288ee1f2d8c9963ac1a0f7b31944bf78bc888965b1dd950e4746",
+  "seed": 20260807,
+  "source_study_verdict_hash": "4218b8f39688a2673b8d8f062fedc2170fa510e358387318967c9ad109a6fc94",
+  "welch_calibration_status": "uncalibrated",
+  "welch_label_emitted": false,
   "master_seed": 20260807,
   "nrep_per_scenario": 500,
   "n_boot": 200,
@@ -23,7 +31,5 @@
     "scenario_11": 20260818,
     "scenario_12": 20260819
   },
-  "script_path": "/Users/Marius/Github/stabilitest/manuscript/rjournal/tools/regenerate-simulation.R",
-  "script_md5": "8f45764e80cd1391250aa4fa4ad7efe2",
   "smoke": false
 }

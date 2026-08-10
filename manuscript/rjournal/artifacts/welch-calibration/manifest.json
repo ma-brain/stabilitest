@@ -1,0 +1,17 @@
+{
+  "artifact_role": "prospective_welch_calibration_summary",
+  "generated_at": "2026-08-10T20:44:08+0300",
+  "runtime_seconds": 0.006263017654418945,
+  "package_version": "0.6.0",
+  "git_commit": "5c135050c3e48d971d8e5d12c44b9f7107de2702",
+  "r_version": "R version 4.6.1 (2026-06-24)",
+  "script_path": "manuscript/rjournal/tools/regenerate-welch-calibration-summary.R",
+  "script_sha256": "2edc6ba12d0eeefc3e4c5acfd6191f51e08c74ba843ecd8b65d41ff65e5c0c80",
+  "seed": "not-applicable-frozen-summary",
+  "source_study_verdict_hash": "4218b8f39688a2673b8d8f062fedc2170fa510e358387318967c9ad109a6fc94",
+  "welch_calibration_status": "uncalibrated",
+  "welch_label_emitted": false,
+  "candidate_hash": "9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d",
+  "held_out_opened": false,
+  "validation_refit": false
+}
