@@ -101,19 +101,24 @@ alternative estimands.
 Every package in Table \@ref(tab:related) answers a version of "how much would
 have to change for this conclusion to flip?", but they fall into two families.
 
-\CRANpkg{sensemakr} [@cinelli2020], \CRANpkg{konfound} and \CRANpkg{EValue}
+\CRANpkg{sensemakr} [@cinelli2020; @cinelli2024sensemakr],
+\CRANpkg{konfound} [@rosenberg2025konfound] and \CRANpkg{EValue}
+[@vanderweele2017evalue]
 ask the question about *unmeasured* threats --- a confounder, a selection
 mechanism, or unobserved cases the analyst never had. Their answers are
 analytic bounds computed from the reported estimate and its uncertainty; none
-of them touches the rows of the analysis dataset. \CRANpkg{fragility},
-\CRANpkg{influence.ME}, \CRANpkg{car}, `zaminfluence` (GitHub only, from the
-authors of @broderick2023) and \pkg{stabilitest} instead ask about the
+of them touches the rows of the analysis dataset. \CRANpkg{boot}
+[@canty2025boot] is a general resampling engine rather than a conclusion-level
+robustness framework. \CRANpkg{fragility}
+[@lin2025fragility], \CRANpkg{influence.ME} [@nieuwenhuis2012influenceme],
+\CRANpkg{car} [@fox2019car], `zaminfluence` (GitHub only; @giordano2026zaminfluence,
+with the associated paper @broderick2023) and \CRANpkg{stabilitest} instead ask about the
 *observed* sample: which specific patients, if perturbed or removed, would
 change the conclusion?
 
 Within that second family the differences are of scope and rigour rather than
-kind. \pkg{fragility} is restricted to flipping binary outcome labels, implementing
-the clinical fragility index of @walsh2014. \pkg{car} and \pkg{influence.ME}
+kind. \CRANpkg{fragility} is restricted to flipping binary outcome labels, implementing
+the clinical fragility index of @walsh2014. \CRANpkg{car} and \CRANpkg{influence.ME}
 offer classical single-deletion diagnostics in the tradition of @cook1977,
 which answer a different, single-deletion question from the package's
 multi-observation adversarial search. `zaminfluence`
@@ -123,9 +128,10 @@ model-term designs of trial reporting.
 
 ```{r related}
 related <- data.frame(
-  Package = c("fragility", "sensemakr", "konfound", "EValue", "boot",
+  Package = c("stabilitest", "fragility", "sensemakr", "konfound", "EValue", "boot",
               "influence.ME", "car", "zaminfluence"),
   `Question answered` = c(
+    "Deletion, jackknife and bootstrap sensitivity of a conclusion",
     "Minimal outcome-status flips reversing significance",
     "Strength an omitted confounder needs to explain away a coefficient",
     "Bias or share of cases needed to invalidate an inference",
@@ -135,6 +141,7 @@ related <- data.frame(
     "Outliers, leverage and single-deletion influence on lm/glm",
     "Approximate minimal removal fraction for a Z-estimator"),
   `Endpoint scope` = c(
+    "Two-sample tests, model terms, Cox and TOST endpoints",
     "Binary only; studies and meta-analyses",
     "Linear regression coefficients",
     "General regression-style inferences",
@@ -145,10 +152,10 @@ related <- data.frame(
     "Z-estimators (econometric applications)"),
   check.names = FALSE
 )
-knitr::kable(related, caption = "R packages addressing related sensitivity questions. All entries verified against live CRAN pages or repository documentation on 2026-08-07; fragilityindex was checked and found archived on CRAN since 2020-07-08 and is therefore excluded.", booktabs = TRUE)
+knitr::kable(related, caption = "R packages addressing related sensitivity questions. Entries were checked against CRAN or repository documentation on 2026-08-10; fragilityindex is excluded because it has been archived on CRAN since 2020-07-08.", booktabs = TRUE)
 ```
 
-\pkg{stabilitest}'s distinguishing choices relative to all of these are: it
+\CRANpkg{stabilitest}'s distinguishing choices relative to all of these are: it
 evaluates deletion, jackknife and bootstrap sensitivity together as three
 views of one conclusion rather than offering a single diagnostic; its
 worst-case removal is an actual adversarial refit search rather than a
@@ -602,8 +609,10 @@ the sequencing of any decision is auditable after the fact.
 
 The framework separates three questions usually blurred together, and its
 sharpest practical lesson is the gap between adversarial and symmetric
-removal: a robustness claim resting on "we removed the outliers and the result
-held" can overstate stability several-fold.
+removal: in the descriptive stress simulation, adversarial deletion and
+cumulative grand-mean extreme-value deletion produced materially different
+fragility summaries. That comparison does not benchmark Cook's distance,
+DFBETAs, \CRANpkg{car}, or \CRANpkg{influence.ME}.
 
 Several limitations deserve statement rather than burial.
 
@@ -647,7 +656,7 @@ licensed are, by design, not given one.
 
 # Summary
 
-\pkg{stabilitest} asks how much of the data a conclusion actually rests on,
+\CRANpkg{stabilitest} asks how much of the data a conclusion actually rests on,
 and answers with component metrics that name the observations responsible. Its
 methodological position is that a categorical robustness verdict is a claim
 requiring validation for the specific analysis at hand, and that the honest
