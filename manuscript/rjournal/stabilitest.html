@@ -1,0 +1,2647 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1"/>
+  <meta name="generator" content="distill" />
+
+  <style type="text/css">
+  /* Hide doc at startup (prevent jankiness while JS renders/transforms) */
+  body {
+    visibility: hidden;
+  }
+  </style>
+
+ <!--radix_placeholder_import_source-->
+ <!--/radix_placeholder_import_source-->
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  { color: #00769e; background-color: #f1f3f5; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span { color: #00769e; } /* Normal */
+code span.al { color: #ad0000; } /* Alert */
+code span.an { color: #5e5e5e; } /* Annotation */
+code span.at { color: #657422; } /* Attribute */
+code span.bn { color: #ad0000; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #00769e; } /* ControlFlow */
+code span.ch { color: #20794d; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #5e5e5e; } /* Comment */
+code span.cv { color: #5e5e5e; font-style: italic; } /* CommentVar */
+code span.do { color: #5e5e5e; font-style: italic; } /* Documentation */
+code span.dt { color: #ad0000; } /* DataType */
+code span.dv { color: #ad0000; } /* DecVal */
+code span.er { color: #ad0000; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #ad0000; } /* Float */
+code span.fu { color: #4758ab; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #5e5e5e; } /* Information */
+code span.kw { color: #00769e; } /* Keyword */
+code span.op { color: #5e5e5e; } /* Operator */
+code span.ot { color: #00769e; } /* Other */
+code span.pp { color: #ad0000; } /* Preprocessor */
+code span.sc { color: #5e5e5e; } /* SpecialChar */
+code span.ss { color: #20794d; } /* SpecialString */
+code span.st { color: #20794d; } /* String */
+code span.va { color: #111111; } /* Variable */
+code span.vs { color: #20794d; } /* VerbatimString */
+code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
+</style>
+
+<style>
+  div.csl-bib-body { }
+  div.csl-entry {
+    clear: both;
+      margin-bottom: 0em;
+    }
+  .hanging div.csl-entry {
+    margin-left:2em;
+    text-indent:-2em;
+  }
+  div.csl-left-margin {
+    min-width:2em;
+    float:left;
+  }
+  div.csl-right-inline {
+    margin-left:2em;
+    padding-left:1em;
+  }
+  div.csl-indent {
+    margin-left: 2em;
+  }
+</style>
+
+  <!--radix_placeholder_meta_tags-->
+  <title>Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R</title>
+
+  <meta property="description" itemprop="description" content="A p-value quantifies how surprising the observed data would be under the null hypothesis, but not how easily the resulting decision could be overturned. The stabilitest package combines three sensitivity views of one pre-specified analysis: jackknife leave-one-out influence, greedy worst-case observation removal, and the bootstrap same-decision rate. Component metrics and a composite 0-100 score are returned for two-sample location and proportion tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence and non-inferiority endpoints. Categorical interpretation is fail-closed: a label is emitted only where an independent pre-registered study validates thresholds for that exact configuration. A Fisher exact-test study validated a two-band mapping. A prospective Welch study completed 4,500 training analyses but found no feasible mapping, so held-out data remained unopened and Welch labels are suppressed. The article also reports negative ANCOVA calibration studies. These outcomes illustrate why numeric sensitivity diagnostics and categorical assurance claims require different evidentiary standards."/>
+
+  <link rel="license" href="https://creativecommons.org/licenses/by/4.0/"/>
+
+  <!--  https://schema.org/Article -->
+  <meta property="article:published" itemprop="datePublished" content="2026-08-10"/>
+  <meta property="article:created" itemprop="dateCreated" content="2026-08-10"/>
+  <meta name="article:author" content="Marius Ardelean"/>
+
+  <!--  https://developers.facebook.com/docs/sharing/webmasters#markup -->
+  <meta property="og:title" content="Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R"/>
+  <meta property="og:type" content="article"/>
+  <meta property="og:description" content="A p-value quantifies how surprising the observed data would be under the null hypothesis, but not how easily the resulting decision could be overturned. The stabilitest package combines three sensitivity views of one pre-specified analysis: jackknife leave-one-out influence, greedy worst-case observation removal, and the bootstrap same-decision rate. Component metrics and a composite 0-100 score are returned for two-sample location and proportion tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence and non-inferiority endpoints. Categorical interpretation is fail-closed: a label is emitted only where an independent pre-registered study validates thresholds for that exact configuration. A Fisher exact-test study validated a two-band mapping. A prospective Welch study completed 4,500 training analyses but found no feasible mapping, so held-out data remained unopened and Welch labels are suppressed. The article also reports negative ANCOVA calibration studies. These outcomes illustrate why numeric sensitivity diagnostics and categorical assurance claims require different evidentiary standards."/>
+  <meta property="og:locale" content="en_US"/>
+
+  <!--  https://dev.twitter.com/cards/types/summary -->
+  <meta property="twitter:card" content="summary"/>
+  <meta property="twitter:title" content="Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R"/>
+  <meta property="twitter:description" content="A p-value quantifies how surprising the observed data would be under the null hypothesis, but not how easily the resulting decision could be overturned. The stabilitest package combines three sensitivity views of one pre-specified analysis: jackknife leave-one-out influence, greedy worst-case observation removal, and the bootstrap same-decision rate. Component metrics and a composite 0-100 score are returned for two-sample location and proportion tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence and non-inferiority endpoints. Categorical interpretation is fail-closed: a label is emitted only where an independent pre-registered study validates thresholds for that exact configuration. A Fisher exact-test study validated a two-band mapping. A prospective Welch study completed 4,500 training analyses but found no feasible mapping, so held-out data remained unopened and Welch labels are suppressed. The article also reports negative ANCOVA calibration studies. These outcomes illustrate why numeric sensitivity diagnostics and categorical assurance claims require different evidentiary standards."/>
+
+  <!--  https://scholar.google.com/intl/en/scholar/inclusion.html#indexing -->
+  <meta name="citation_title" content="Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R"/>
+  <meta name="citation_pdf_url" content="stabilitest.pdf"/>
+  <meta name="citation_journal_title" content="The R Journal"/>
+  <meta name="citation_issn" content="2073-4859"/>
+  <meta name="citation_firstpage" content="1"/>
+  <meta name="citation_fulltext_world_readable" content=""/>
+  <meta name="citation_online_date" content="2026/08/10"/>
+  <meta name="citation_publication_date" content="2026/08/10"/>
+  <meta name="citation_author" content="Marius Ardelean"/>
+  <meta name="citation_author_institution" content="Independent researcher"/>
+  <!--/radix_placeholder_meta_tags-->
+  
+  <meta name="citation_reference" content="citation_title=An automatic finite-sample robustness metric: When can dropping a little data make a big difference?;citation_doi=10.48550/arXiv.2011.14999;citation_author=Tamara Broderick;citation_author=Ryan Giordano;citation_author=Rachael Meager"/>
+  <meta name="citation_reference" content="citation_title=An automatic finite-sample robustness metric: When can dropping a little data make a big difference? Part I;citation_volume=384;citation_doi=10.1098/rsta.2025.0001;citation_author=Ryan Giordano;citation_author=Rachael Meager;citation_author=Tamara Broderick"/>
+  <meta name="citation_reference" content="citation_title=An automatic finite-sample robustness metric: When can dropping a little data make a big difference? Part II;citation_volume=384;citation_doi=10.1098/rsta.2024.0614;citation_author=Ryan Giordano;citation_author=Rachael Meager;citation_author=Tamara Broderick"/>
+  <meta name="citation_reference" content="citation_title=An introduction to the bootstrap;citation_publisher=Chapman &amp; Hall/CRC;citation_doi=10.1201/9780429246593;citation_author=Bradley Efron;citation_author=Robert J. Tibshirani"/>
+  <meta name="citation_reference" content="citation_title=Dismantling the fragility index: A demonstration of statistical reasoning;citation_volume=39;citation_doi=10.1002/sim.8689;citation_author=Greg E. Potter"/>
+  <meta name="citation_reference" content="citation_title=The jackknife and bootstrap;citation_publisher=Springer;citation_doi=10.1007/978-1-4612-0795-5;citation_author=Jun Shao;citation_author=Dongsheng Tu"/>
+  <meta name="citation_reference" content="citation_title=The statistical significance of randomized controlled trial results is frequently fragile: A case for a fragility index;citation_volume=67;citation_doi=10.1016/j.jclinepi.2013.10.019;citation_author=Michael Walsh;citation_author=Sadeesh K. Srinathan;citation_author=Daniel F. McAuley;citation_author=The statistical significance of randomized controlled trial results is frequently fragile: A case for a fragility index"/>
+  <!--radix_placeholder_rmarkdown_metadata-->
+
+  <script type="text/json" id="radix-rmarkdown-metadata">
+  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","date","description","draft","author","type","output","bibliography","header-includes","journal","slug","pdf_url","creative_commons","packages","CTV","csl"]}},"value":[{"type":"character","attributes":{},"value":["Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R"]},{"type":"character","attributes":{},"value":["2026-08-10"]},{"type":"character","attributes":{},"value":["A p-value quantifies how surprising the observed data would be under the null hypothesis, but not how easily the resulting decision could be overturned. The stabilitest package combines three sensitivity views of one pre-specified analysis: jackknife leave-one-out influence, greedy worst-case observation removal, and the bootstrap same-decision rate. Component metrics and a composite 0-100 score are returned for two-sample location and proportion tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence and non-inferiority endpoints. Categorical interpretation is fail-closed: a label is emitted only where an independent pre-registered study validates thresholds for that exact configuration. A Fisher exact-test study validated a two-band mapping. A prospective Welch study completed 4,500 training analyses but found no feasible mapping, so held-out data remained unopened and Welch labels are suppressed. The article also reports negative ANCOVA calibration studies. These outcomes illustrate why numeric sensitivity diagnostics and categorical assurance claims require different evidentiary standards.\n"]},{"type":"logical","attributes":{},"value":[false]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","affiliation","email","url"]}},"value":[{"type":"character","attributes":{},"value":["Marius Ardelean"]},{"type":"character","attributes":{},"value":["Independent researcher"]},{"type":"character","attributes":{},"value":["marally@gmail.com"]},{"type":"character","attributes":{},"value":["https://github.com/ma-brain/stabilitest"]}]}]},{"type":"character","attributes":{},"value":["package"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["self_contained","toc"]}},"value":[{"type":"logical","attributes":{},"value":[true]},{"type":"logical","attributes":{},"value":[false]}]}]},{"type":"character","attributes":{},"value":["RJreferences.bib"]},{"type":"character","attributes":{},"value":["\\providecommand{\\pandocbounded}[1]{#1}","\\titleformat{\\chapter}{\\normalfont\\LARGE\\bfseries}{}{0em}{}","\\let\\originaltitle\\title\\renewcommand{\\title}[1]{\\originaltitle{Stabilitest: Robustness and \\linebreak Fragility Analysis of Statistical \\linebreak Test Conclusions in R}}"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","issn","firstpage","lastpage"]}},"value":[{"type":"character","attributes":{},"value":["The R Journal"]},{"type":"character","attributes":{},"value":["2073-4859"]},{"type":"double","attributes":{},"value":[1]},{"type":"NULL"}]},{"type":"character","attributes":{},"value":["stabilitest"]},{"type":"character","attributes":{},"value":["stabilitest.pdf"]},{"type":"character","attributes":{},"value":["CC BY"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["cran","bioc"]}},"value":[{"type":"character","attributes":{},"value":["stabilitest","sensemakr","konfound","EValue","boot","fragility","influence.ME","car"]},{"type":"list","attributes":{},"value":[]}]},{"type":"character","attributes":{},"value":["CausalInference","Econometrics","Finance","MetaAnalysis","MixedModels","Optimization","Survival","TeachingStatistics","TimeSeries"]},{"type":"character","attributes":{},"value":["/Library/Frameworks/R.framework/Versions/4.6/Resources/library/rjtools/rjournal.csl"]}]}
+  </script>
+  <!--/radix_placeholder_rmarkdown_metadata-->
+  
+  <script type="text/json" id="radix-resource-manifest">
+  {"type":"character","attributes":{},"value":["artifacts/case-study/manifest.json","artifacts/case-study/welch-case-study.rds","artifacts/simulation/manifest.json","artifacts/simulation/scenario-01.rds","artifacts/simulation/scenario-02.rds","artifacts/simulation/scenario-03.rds","artifacts/simulation/scenario-04.rds","artifacts/simulation/scenario-05.rds","artifacts/simulation/scenario-06.rds","artifacts/simulation/scenario-07.rds","artifacts/simulation/scenario-08.rds","artifacts/simulation/scenario-09.rds","artifacts/simulation/scenario-10.rds","artifacts/simulation/scenario-11.rds","artifacts/simulation/scenario-12.rds","artifacts/simulation/simulation-summary.csv","artifacts/simulation/simulation-summary.rds","artifacts/testing/manifest.json","artifacts/testing/test-counts.rds","artifacts/timing/manifest.json","artifacts/timing/timing.csv","artifacts/timing/timing.rds","artifacts/welch-calibration/manifest.json","artifacts/welch-calibration/welch-calibration-summary.csv","artifacts/welch-calibration/welch-calibration-summary.rds","audit/baseline.txt","motivation-letter/motivation-letter.md","RJournal.sty","RJreferences.bib","RJwrapper.log","RJwrapper.tex","stabilitest_files/anchor-4.2.2/anchor.min.js","stabilitest_files/bowser-1.9.3/bowser.min.js","stabilitest_files/distill-2.2.21/template.v2.js","stabilitest_files/figure-html5/casefig-1.png","stabilitest_files/figure-html5/simfig-1.png","stabilitest_files/header-attrs-2.31/header-attrs.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.map","stabilitest_files/popper-2.6.0/popper.min.js","stabilitest_files/tippy-6.2.7/tippy-bundle.umd.min.js","stabilitest_files/tippy-6.2.7/tippy-light-border.css","stabilitest_files/tippy-6.2.7/tippy.css","stabilitest_files/tippy-6.2.7/tippy.umd.min.js","stabilitest_files/webcomponents-2.0.0/webcomponents.js","stabilitest.log","stabilitest.pdf","stabilitest.tex","tools/check-article-claims.R","tools/check-artifact-contracts.R","tools/regenerate-case-study.R","tools/regenerate-simulation.R","tools/regenerate-testcount.R","tools/regenerate-timing.R","tools/regenerate-welch-calibration-summary.R"]}
+  </script>
+  <!--radix_placeholder_navigation_in_header-->
+  <!--/radix_placeholder_navigation_in_header-->
+  <!--radix_placeholder_distill-->
+
+  <style type="text/css">
+
+  body {
+    background-color: white;
+  }
+
+  .pandoc-table {
+    width: 100%;
+  }
+
+  .pandoc-table>caption {
+    margin-bottom: 10px;
+  }
+
+  .pandoc-table th:not([align]) {
+    text-align: left;
+  }
+
+  .pagedtable-footer {
+    font-size: 15px;
+  }
+
+  d-byline .byline {
+    grid-template-columns: 2fr 2fr;
+  }
+
+  d-byline .byline h3 {
+    margin-block-start: 1.5em;
+  }
+
+  d-byline .byline .authors-affiliations h3 {
+    margin-block-start: 0.5em;
+  }
+
+  .authors-affiliations .orcid-id {
+    width: 16px;
+    height:16px;
+    margin-left: 4px;
+    margin-right: 4px;
+    vertical-align: middle;
+    padding-bottom: 2px;
+  }
+
+  d-title .dt-tags {
+    margin-top: 1em;
+    grid-column: text;
+  }
+
+  .dt-tags .dt-tag {
+    text-decoration: none;
+    display: inline-block;
+    color: rgba(0,0,0,0.6);
+    padding: 0em 0.4em;
+    margin-right: 0.5em;
+    margin-bottom: 0.4em;
+    font-size: 70%;
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  d-article table.gt_table td,
+  d-article table.gt_table th {
+    border-bottom: none;
+    font-size: 100%;
+  }
+
+  .html-widget {
+    margin-bottom: 2.0em;
+  }
+
+  .l-screen-inset {
+    padding-right: 16px;
+  }
+
+  .l-screen .caption {
+    margin-left: 10px;
+  }
+
+  .shaded {
+    background: rgb(247, 247, 247);
+    padding-top: 20px;
+    padding-bottom: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .shaded .html-widget {
+    margin-bottom: 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .shaded .shaded-content {
+    background: white;
+  }
+
+  .text-output {
+    margin-top: 0;
+    line-height: 1.5em;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  hr.section-separator {
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    margin: 0px;
+  }
+
+
+  d-byline {
+    border-top: none;
+  }
+
+  d-article {
+    padding-top: 2.5rem;
+    padding-bottom: 30px;
+    border-top: none;
+  }
+
+  d-appendix {
+    padding-top: 30px;
+  }
+
+  d-article>p>img {
+    width: 100%;
+  }
+
+  d-article h2 {
+    margin: 1rem 0 1.5rem 0;
+  }
+
+  d-article h3 {
+    margin-top: 1.5rem;
+  }
+
+  d-article iframe {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    margin-bottom: 2.0em;
+    width: 100%;
+  }
+
+  /* Tweak code blocks */
+
+  d-article div.sourceCode code,
+  d-article pre code {
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  }
+
+  d-article pre,
+  d-article div.sourceCode,
+  d-article div.sourceCode pre {
+    overflow: auto;
+  }
+
+  d-article div.sourceCode {
+    background-color: white;
+  }
+
+  d-article div.sourceCode pre {
+    padding-left: 10px;
+    font-size: 12px;
+    border-left: 2px solid rgba(0,0,0,0.1);
+  }
+
+  d-article pre {
+    font-size: 12px;
+    color: black;
+    background: none;
+    margin-top: 0;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.5;
+
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
+  }
+
+  d-article pre a {
+    border-bottom: none;
+  }
+
+  d-article pre a:hover {
+    border-bottom: none;
+    text-decoration: underline;
+  }
+
+  d-article details {
+    grid-column: text;
+    margin-bottom: 0.8em;
+  }
+
+  @media(min-width: 768px) {
+
+  d-article pre,
+  d-article div.sourceCode,
+  d-article div.sourceCode pre {
+    overflow: visible !important;
+  }
+
+  d-article div.sourceCode pre {
+    padding-left: 18px;
+    font-size: 14px;
+  }
+
+  /* tweak for Pandoc numbered line within distill */
+  d-article pre.numberSource code > span {
+      left: -2em;
+  }
+
+  d-article pre {
+    font-size: 14px;
+  }
+
+  }
+
+  figure img.external {
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.1);
+    padding: 18px;
+    box-sizing: border-box;
+  }
+
+  /* CSS for d-contents */
+
+  .d-contents {
+    grid-column: text;
+    color: rgba(0,0,0,0.8);
+    font-size: 0.9em;
+    padding-bottom: 1em;
+    margin-bottom: 1em;
+    padding-bottom: 0.5em;
+    margin-bottom: 1em;
+    padding-left: 0.25em;
+    justify-self: start;
+  }
+
+  @media(min-width: 1000px) {
+    .d-contents.d-contents-float {
+      height: 0;
+      grid-column-start: 1;
+      grid-column-end: 4;
+      justify-self: center;
+      padding-right: 3em;
+      padding-left: 2em;
+    }
+  }
+
+  .d-contents nav h3 {
+    font-size: 18px;
+    margin-top: 0;
+    margin-bottom: 1em;
+  }
+
+  .d-contents li {
+    list-style-type: none
+  }
+
+  .d-contents nav > ul {
+    padding-left: 0;
+  }
+
+  .d-contents ul {
+    padding-left: 1em
+  }
+
+  .d-contents nav ul li {
+    margin-top: 0.6em;
+    margin-bottom: 0.2em;
+  }
+
+  .d-contents nav a {
+    font-size: 13px;
+    border-bottom: none;
+    text-decoration: none
+    color: rgba(0, 0, 0, 0.8);
+  }
+
+  .d-contents nav a:hover {
+    text-decoration: underline solid rgba(0, 0, 0, 0.6)
+  }
+
+  .d-contents nav > ul > li > a {
+    font-weight: 600;
+  }
+
+  .d-contents nav > ul > li > ul {
+    font-weight: inherit;
+  }
+
+  .d-contents nav > ul > li > ul > li {
+    margin-top: 0.2em;
+  }
+
+
+  .d-contents nav ul {
+    margin-top: 0;
+    margin-bottom: 0.25em;
+  }
+
+  .d-article-with-toc h2:nth-child(2) {
+    margin-top: 0;
+  }
+
+
+  /* Figure */
+
+  .figure {
+    position: relative;
+    margin-bottom: 2.5em;
+    margin-top: 1.5em;
+  }
+
+  .figure .caption {
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 12px;
+    line-height: 1.5em;
+  }
+
+  .figure img.external {
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.1);
+    padding: 18px;
+    box-sizing: border-box;
+  }
+
+  .figure .caption a {
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .figure .caption b,
+  .figure .caption strong, {
+    font-weight: 600;
+    color: rgba(0, 0, 0, 1.0);
+  }
+
+  /* Citations */
+
+  d-article .citation {
+    color: inherit;
+    cursor: inherit;
+  }
+
+  div.hanging-indent{
+    margin-left: 1em; text-indent: -1em;
+  }
+
+  /* Citation hover box */
+
+  .tippy-box[data-theme~=light-border] {
+    background-color: rgba(250, 250, 250, 0.95);
+  }
+
+  .tippy-content > p {
+    margin-bottom: 0;
+    padding: 2px;
+  }
+
+
+  /* Tweak 1000px media break to show more text */
+
+  @media(min-width: 1000px) {
+    .base-grid,
+    distill-header,
+    d-title,
+    d-abstract,
+    d-article,
+    d-appendix,
+    distill-appendix,
+    d-byline,
+    d-footnote-list,
+    d-citation-list,
+    distill-footer {
+      grid-template-columns: [screen-start] 1fr [page-start kicker-start] 80px [middle-start] 50px [text-start kicker-end] 65px 65px 65px 65px 65px 65px 65px 65px [text-end gutter-start] 65px [middle-end] 65px [page-end gutter-end] 1fr [screen-end];
+      grid-column-gap: 16px;
+    }
+
+    .grid {
+      grid-column-gap: 16px;
+    }
+
+    d-article {
+      font-size: 1.06rem;
+      line-height: 1.7em;
+    }
+    figure .caption, .figure .caption, figure figcaption {
+      font-size: 13px;
+    }
+  }
+
+  @media(min-width: 1180px) {
+    .base-grid,
+    distill-header,
+    d-title,
+    d-abstract,
+    d-article,
+    d-appendix,
+    distill-appendix,
+    d-byline,
+    d-footnote-list,
+    d-citation-list,
+    distill-footer {
+      grid-template-columns: [screen-start] 1fr [page-start kicker-start] 60px [middle-start] 60px [text-start kicker-end] 60px 60px 60px 60px 60px 60px 60px 60px [text-end gutter-start] 60px [middle-end] 60px [page-end gutter-end] 1fr [screen-end];
+      grid-column-gap: 32px;
+    }
+
+    .grid {
+      grid-column-gap: 32px;
+    }
+  }
+
+
+  /* Get the citation styles for the appendix (not auto-injected on render since
+     we do our own rendering of the citation appendix) */
+
+  d-appendix .citation-appendix,
+  .d-appendix .citation-appendix {
+    font-size: 11px;
+    line-height: 15px;
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
+    padding-left: 18px;
+    border: 1px solid rgba(0,0,0,0.1);
+    background: rgba(0, 0, 0, 0.02);
+    padding: 10px 18px;
+    border-radius: 3px;
+    color: rgba(150, 150, 150, 1);
+    overflow: hidden;
+    margin-top: -12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  /* Include appendix styles here so they can be overridden */
+
+  d-appendix {
+    contain: layout style;
+    font-size: 0.8em;
+    line-height: 1.7em;
+    margin-top: 60px;
+    margin-bottom: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    color: rgba(0,0,0,0.5);
+    padding-top: 60px;
+    padding-bottom: 48px;
+  }
+
+  d-appendix h3 {
+    grid-column: page-start / text-start;
+    font-size: 15px;
+    font-weight: 500;
+    margin-top: 1em;
+    margin-bottom: 0;
+    color: rgba(0,0,0,0.65);
+  }
+
+  d-appendix h3 + * {
+    margin-top: 1em;
+  }
+
+  d-appendix ol {
+    padding: 0 0 0 15px;
+  }
+
+  @media (min-width: 768px) {
+    d-appendix ol {
+      padding: 0 0 0 30px;
+      margin-left: -30px;
+    }
+  }
+
+  d-appendix li {
+    margin-bottom: 1em;
+  }
+
+  d-appendix a {
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  d-appendix > * {
+    grid-column: text;
+  }
+
+  d-appendix > d-footnote-list,
+  d-appendix > d-citation-list,
+  d-appendix > distill-appendix {
+    grid-column: screen;
+  }
+
+  /* Include footnote styles here so they can be overridden */
+
+  d-footnote-list {
+    contain: layout style;
+  }
+
+  d-footnote-list > * {
+    grid-column: text;
+  }
+
+  d-footnote-list a.footnote-backlink {
+    color: rgba(0,0,0,0.3);
+    padding-left: 0.5em;
+  }
+
+
+
+  /* Anchor.js */
+
+  .anchorjs-link {
+    /*transition: all .25s linear; */
+    text-decoration: none;
+    border-bottom: none;
+  }
+  *:hover > .anchorjs-link {
+    margin-left: -1.125em !important;
+    text-decoration: none;
+    border-bottom: none;
+  }
+
+  /* Social footer */
+
+  .social_footer {
+    margin-top: 30px;
+    margin-bottom: 0;
+    color: rgba(0,0,0,0.67);
+  }
+
+  .disqus-comments {
+    margin-right: 30px;
+  }
+
+  .disqus-comment-count {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+  }
+
+  #disqus_thread {
+    margin-top: 30px;
+  }
+
+  .article-sharing a {
+    border-bottom: none;
+    margin-right: 8px;
+  }
+
+  .article-sharing a:hover {
+    border-bottom: none;
+  }
+
+  .sidebar-section.subscribe {
+    font-size: 12px;
+    line-height: 1.6em;
+  }
+
+  .subscribe p {
+    margin-bottom: 0.5em;
+  }
+
+
+  .article-footer .subscribe {
+    font-size: 15px;
+    margin-top: 45px;
+  }
+
+
+  .sidebar-section.custom {
+    font-size: 12px;
+    line-height: 1.6em;
+  }
+
+  .custom p {
+    margin-bottom: 0.5em;
+  }
+
+  /* Styles for listing layout (hide title) */
+  .layout-listing d-title, .layout-listing .d-title {
+    display: none;
+  }
+
+  /* Styles for posts lists (not auto-injected) */
+
+
+  .posts-with-sidebar {
+    padding-left: 45px;
+    padding-right: 45px;
+  }
+
+  .posts-list .description h2,
+  .posts-list .description p {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .posts-list .description h2 {
+    font-weight: 700;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .posts-list h2.post-tag {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    padding-bottom: 12px;
+  }
+  .posts-list {
+    margin-top: 60px;
+    margin-bottom: 24px;
+  }
+
+  .posts-list .post-preview {
+    text-decoration: none;
+    overflow: hidden;
+    display: block;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 24px 0;
+  }
+
+  .post-preview-last {
+    border-bottom: none !important;
+  }
+
+  .posts-list .posts-list-caption {
+    grid-column: screen;
+    font-weight: 400;
+  }
+
+  .posts-list .post-preview h2 {
+    margin: 0 0 6px 0;
+    line-height: 1.2em;
+    font-style: normal;
+    font-size: 24px;
+  }
+
+  .posts-list .post-preview p {
+    margin: 0 0 12px 0;
+    line-height: 1.4em;
+    font-size: 16px;
+  }
+
+  .posts-list .post-preview .thumbnail {
+    box-sizing: border-box;
+    margin-bottom: 24px;
+    position: relative;
+    max-width: 500px;
+  }
+  .posts-list .post-preview img {
+    width: 100%;
+    display: block;
+  }
+
+  .posts-list .metadata {
+    font-size: 12px;
+    line-height: 1.4em;
+    margin-bottom: 18px;
+  }
+
+  .posts-list .metadata > * {
+    display: inline-block;
+  }
+
+  .posts-list .metadata .publishedDate {
+    margin-right: 2em;
+  }
+
+  .posts-list .metadata .dt-authors {
+    display: block;
+    margin-top: 0.3em;
+    margin-right: 2em;
+  }
+
+  .posts-list .dt-tags {
+    display: block;
+    line-height: 1em;
+  }
+
+  .posts-list .dt-tags .dt-tag {
+    display: inline-block;
+    color: rgba(0,0,0,0.6);
+    padding: 0.3em 0.4em;
+    margin-right: 0.2em;
+    margin-bottom: 0.4em;
+    font-size: 60%;
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .posts-list img {
+    opacity: 1;
+  }
+
+  .posts-list img[data-src] {
+    opacity: 0;
+  }
+
+  .posts-more {
+    clear: both;
+  }
+
+
+  .posts-sidebar {
+    font-size: 16px;
+  }
+
+  .posts-sidebar h3 {
+    font-size: 16px;
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    font-weight: 400;
+    text-transform: uppercase;
+  }
+
+  .sidebar-section {
+    margin-bottom: 30px;
+  }
+
+  .categories ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .categories li {
+    color: rgba(0, 0, 0, 0.8);
+    margin-bottom: 0;
+  }
+
+  .categories li>a {
+    border-bottom: none;
+  }
+
+  .categories li>a:hover {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+  }
+
+  .categories .active {
+    font-weight: 600;
+  }
+
+  .categories .category-count {
+    color: rgba(0, 0, 0, 0.4);
+  }
+
+
+  @media(min-width: 768px) {
+    .posts-list .post-preview h2 {
+      font-size: 26px;
+    }
+    .posts-list .post-preview .thumbnail {
+      float: right;
+      width: 30%;
+      margin-bottom: 0;
+    }
+    .posts-list .post-preview .description {
+      float: left;
+      width: 45%;
+    }
+    .posts-list .post-preview .metadata {
+      float: left;
+      width: 20%;
+      margin-top: 8px;
+    }
+    .posts-list .post-preview p {
+      margin: 0 0 12px 0;
+      line-height: 1.5em;
+      font-size: 16px;
+    }
+    .posts-with-sidebar .posts-list {
+      float: left;
+      width: 75%;
+    }
+    .posts-with-sidebar .posts-sidebar {
+      float: right;
+      width: 20%;
+      margin-top: 60px;
+      padding-top: 24px;
+      padding-bottom: 24px;
+    }
+  }
+
+
+  /* Improve display for browsers without grid (IE/Edge <= 15) */
+
+  .downlevel {
+    line-height: 1.6em;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+  }
+
+  .downlevel .d-title {
+    padding-top: 6rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .downlevel .d-title h1 {
+    font-size: 50px;
+    font-weight: 700;
+    line-height: 1.1em;
+    margin: 0 0 0.5rem;
+  }
+
+  .downlevel .d-title p {
+    font-weight: 300;
+    font-size: 1.2rem;
+    line-height: 1.55em;
+    margin-top: 0;
+  }
+
+  .downlevel .d-byline {
+    padding-top: 0.8em;
+    padding-bottom: 0.8em;
+    font-size: 0.8rem;
+    line-height: 1.8em;
+  }
+
+  .downlevel .section-separator {
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .downlevel .d-article {
+    font-size: 1.06rem;
+    line-height: 1.7em;
+    padding-top: 1rem;
+    padding-bottom: 2rem;
+  }
+
+
+  .downlevel .d-appendix {
+    padding-left: 0;
+    padding-right: 0;
+    max-width: none;
+    font-size: 0.8em;
+    line-height: 1.7em;
+    margin-bottom: 0;
+    color: rgba(0,0,0,0.5);
+    padding-top: 40px;
+    padding-bottom: 48px;
+  }
+
+  .downlevel .footnotes ol {
+    padding-left: 13px;
+  }
+
+  .downlevel .base-grid,
+  .downlevel .distill-header,
+  .downlevel .d-title,
+  .downlevel .d-abstract,
+  .downlevel .d-article,
+  .downlevel .d-appendix,
+  .downlevel .distill-appendix,
+  .downlevel .d-byline,
+  .downlevel .d-footnote-list,
+  .downlevel .d-citation-list,
+  .downlevel .distill-footer,
+  .downlevel .appendix-bottom,
+  .downlevel .posts-container {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+  @media(min-width: 768px) {
+    .downlevel .base-grid,
+    .downlevel .distill-header,
+    .downlevel .d-title,
+    .downlevel .d-abstract,
+    .downlevel .d-article,
+    .downlevel .d-appendix,
+    .downlevel .distill-appendix,
+    .downlevel .d-byline,
+    .downlevel .d-footnote-list,
+    .downlevel .d-citation-list,
+    .downlevel .distill-footer,
+    .downlevel .appendix-bottom,
+    .downlevel .posts-container {
+    padding-left: 150px;
+    padding-right: 150px;
+    max-width: 900px;
+  }
+  }
+
+  .downlevel pre code {
+    display: block;
+    border-left: 2px solid rgba(0, 0, 0, .1);
+    padding: 0 0 0 20px;
+    font-size: 14px;
+  }
+
+  .downlevel code, .downlevel pre {
+    color: black;
+    background: none;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.5;
+
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
+  }
+
+  .downlevel .posts-list .post-preview {
+    color: inherit;
+  }
+
+
+
+  </style>
+
+  <script type="application/javascript">
+
+  function is_downlevel_browser() {
+    if (bowser.isUnsupportedBrowser({ msie: "12", msedge: "16"},
+                                   window.navigator.userAgent)) {
+      return true;
+    } else {
+      return window.load_distill_framework === undefined;
+    }
+  }
+
+  // show body when load is complete
+  function on_load_complete() {
+
+    // add anchors
+    if (window.anchors) {
+      window.anchors.options.placement = 'left';
+      window.anchors.add('d-article > h2, d-article > h3, d-article > h4, d-article > h5');
+    }
+
+
+    // set body to visible
+    document.body.style.visibility = 'visible';
+
+    // force redraw for leaflet widgets
+    if (window.HTMLWidgets) {
+      var maps = window.HTMLWidgets.findAll(".leaflet");
+      $.each(maps, function(i, el) {
+        var map = this.getMap();
+        map.invalidateSize();
+        map.eachLayer(function(layer) {
+          if (layer instanceof L.TileLayer)
+            layer.redraw();
+        });
+      });
+    }
+
+    // trigger 'shown' so htmlwidgets resize
+    $('d-article').trigger('shown');
+  }
+
+  function init_distill() {
+
+    init_common();
+
+    // create front matter
+    var front_matter = $('<d-front-matter></d-front-matter>');
+    $('#distill-front-matter').wrap(front_matter);
+
+    // create d-title
+    $('.d-title').changeElementType('d-title');
+
+    // separator
+    var separator = '<hr class="section-separator" style="clear: both"/>';
+    // prepend separator above appendix
+    $('.d-byline').before(separator);
+    $('.d-article').before(separator);
+
+    // create d-byline
+    var byline = $('<d-byline></d-byline>');
+    $('.d-byline').replaceWith(byline);
+
+    // create d-article
+    var article = $('<d-article></d-article>');
+    $('.d-article').wrap(article).children().unwrap();
+
+    // move posts container into article
+    $('.posts-container').appendTo($('d-article'));
+
+    // create d-appendix
+    $('.d-appendix').changeElementType('d-appendix');
+
+    // flag indicating that we have appendix items
+    var appendix = $('.appendix-bottom').children('h3').length > 0;
+
+    // replace footnotes with <d-footnote>
+    $('.footnote-ref').each(function(i, val) {
+      appendix = true;
+      var href = $(this).attr('href');
+      var id = href.replace('#', '');
+      var fn = $('#' + id);
+      var fn_p = $('#' + id + '>p');
+      fn_p.find('.footnote-back').remove();
+      var text = fn_p.html();
+      var dtfn = $('<d-footnote></d-footnote>');
+      dtfn.html(text);
+      $(this).replaceWith(dtfn);
+    });
+    // remove footnotes
+    $('.footnotes').remove();
+
+    // move refs into #references-listing
+    $('#references-listing').replaceWith($('#refs'));
+
+    $('h1.appendix, h2.appendix').each(function(i, val) {
+      $(this).changeElementType('h3');
+    });
+    $('h3.appendix').each(function(i, val) {
+      var id = $(this).attr('id');
+      $('.d-contents a[href="#' + id + '"]').parent().remove();
+      appendix = true;
+      $(this).nextUntil($('h1, h2, h3')).addBack().appendTo($('d-appendix'));
+    });
+
+    // show d-appendix if we have appendix content
+    $("d-appendix").css('display', appendix ? 'grid' : 'none');
+
+    // localize layout chunks to just output
+    $('.layout-chunk').each(function(i, val) {
+
+      // capture layout
+      var layout = $(this).attr('data-layout');
+
+      // apply layout to markdown level block elements
+      var elements = $(this).children().not('details, div.sourceCode, pre, script');
+      elements.each(function(i, el) {
+        var layout_div = $('<div class="' + layout + '"></div>');
+        if (layout_div.hasClass('shaded')) {
+          var shaded_content = $('<div class="shaded-content"></div>');
+          $(this).wrap(shaded_content);
+          $(this).parent().wrap(layout_div);
+        } else {
+          $(this).wrap(layout_div);
+        }
+      });
+
+
+      // unwrap the layout-chunk div
+      $(this).children().unwrap();
+    });
+
+    // remove code block used to force  highlighting css
+    $('.distill-force-highlighting-css').parent().remove();
+
+    // remove empty line numbers inserted by pandoc when using a
+    // custom syntax highlighting theme, except when numbering line
+    // in code chunk
+    $('pre:not(.numberLines) code.sourceCode a:empty').remove();
+
+    // load distill framework
+    load_distill_framework();
+
+    // wait for window.distillRunlevel == 4 to do post processing
+    function distill_post_process() {
+
+      if (!window.distillRunlevel || window.distillRunlevel < 4)
+        return;
+
+      // hide author/affiliations entirely if we have no authors
+      var front_matter = JSON.parse($("#distill-front-matter").html());
+      var have_authors = front_matter.authors && front_matter.authors.length > 0;
+      if (!have_authors)
+        $('d-byline').addClass('hidden');
+
+      // article with toc class
+      $('.d-contents').parent().addClass('d-article-with-toc');
+
+      // strip links that point to #
+      $('.authors-affiliations').find('a[href="#"]').removeAttr('href');
+
+      // add orcid ids
+      $('.authors-affiliations').find('.author').each(function(i, el) {
+        var orcid_id = front_matter.authors[i].orcidID;
+        var author_name = front_matter.authors[i].author
+        if (orcid_id) {
+          var a = $('<a></a>');
+          a.attr('href', 'https://orcid.org/' + orcid_id);
+          var img = $('<img></img>');
+          img.addClass('orcid-id');
+          img.attr('alt', author_name ? 'ORCID ID for ' + author_name : 'ORCID ID');
+          img.attr('src','data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg==');
+          a.append(img);
+          $(this).append(a);
+        }
+      });
+
+      // hide elements of author/affiliations grid that have no value
+      function hide_byline_column(caption) {
+        $('d-byline').find('h3:contains("' + caption + '")').parent().css('visibility', 'hidden');
+      }
+
+      // affiliations
+      var have_affiliations = false;
+      for (var i = 0; i<front_matter.authors.length; ++i) {
+        var author = front_matter.authors[i];
+        if (author.affiliation !== "&nbsp;") {
+          have_affiliations = true;
+          break;
+        }
+      }
+      if (!have_affiliations)
+        $('d-byline').find('h3:contains("Affiliations")').css('visibility', 'hidden');
+
+      // published date
+      if (!front_matter.publishedDate)
+        hide_byline_column("Published");
+
+      // document object identifier
+      var doi = $('d-byline').find('h3:contains("DOI")');
+      var doi_p = doi.next().empty();
+      if (!front_matter.doi) {
+        // if we have a citation and valid citationText then link to that
+        if ($('#citation').length > 0 && front_matter.citationText) {
+          doi.html('Citation');
+          $('<a href="#citation"></a>')
+            .text(front_matter.citationText)
+            .appendTo(doi_p);
+        } else {
+          hide_byline_column("DOI");
+        }
+      } else {
+        $('<a></a>')
+           .attr('href', "https://doi.org/" + front_matter.doi)
+           .html(front_matter.doi)
+           .appendTo(doi_p);
+      }
+
+       // change plural form of authors/affiliations
+      if (front_matter.authors.length === 1) {
+        var grid = $('.authors-affiliations');
+        grid.children('h3:contains("Authors")').text('Author');
+        grid.children('h3:contains("Affiliations")').text('Affiliation');
+      }
+
+      // remove d-appendix and d-footnote-list local styles
+      $('d-appendix > style:first-child').remove();
+      $('d-footnote-list > style:first-child').remove();
+
+      // move appendix-bottom entries to the bottom
+      $('.appendix-bottom').appendTo('d-appendix').children().unwrap();
+      $('.appendix-bottom').remove();
+
+      // hoverable references
+      $('span.citation[data-cites]').each(function() {
+        const citeChild = $(this).children()[0]
+        // Do not process if @xyz has been used without escaping and without bibliography activated
+        // https://github.com/rstudio/distill/issues/466
+        if (citeChild === undefined) return true
+
+        if (citeChild.nodeName == "D-FOOTNOTE") {
+          var fn = citeChild
+          $(this).html(fn.shadowRoot.querySelector("sup"))
+          $(this).id = fn.id
+          fn.remove()
+        }
+        var refs = $(this).attr('data-cites').split(" ");
+        var refHtml = refs.map(function(ref) {
+          // Could use CSS.escape too here, we insure backward compatibility in navigator
+          return "<p>" + $('div[id="ref-' + ref + '"]').html() + "</p>";
+        }).join("\n");
+        window.tippy(this, {
+          allowHTML: true,
+          content: refHtml,
+          maxWidth: 500,
+          interactive: true,
+          interactiveBorder: 10,
+          theme: 'light-border',
+          placement: 'bottom-start'
+        });
+      });
+
+      // fix footnotes in tables (#411)
+      // replacing broken distill.pub feature
+      $('table d-footnote').each(function() {
+        // we replace internal showAtNode methode which is triggered when hovering a footnote
+        this.hoverBox.showAtNode = function(node) {
+          // ported from https://github.com/distillpub/template/pull/105/files
+          calcOffset = function(elem) {
+              let x = elem.offsetLeft;
+              let y = elem.offsetTop;
+              // Traverse upwards until an `absolute` element is found or `elem`
+              // becomes null.
+              while (elem = elem.offsetParent && elem.style.position != 'absolute') {
+                  x += elem.offsetLeft;
+                  y += elem.offsetTop;
+              }
+
+              return { left: x, top: y };
+          }
+          // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/offsetTop
+          const bbox = node.getBoundingClientRect();
+          const offset = calcOffset(node);
+          this.show([offset.left + bbox.width, offset.top + bbox.height]);
+        }
+      })
+
+      // clear polling timer
+      clearInterval(tid);
+
+      // show body now that everything is ready
+      on_load_complete();
+    }
+
+    var tid = setInterval(distill_post_process, 50);
+    distill_post_process();
+
+  }
+
+  function init_downlevel() {
+
+    init_common();
+
+     // insert hr after d-title
+    $('.d-title').after($('<hr class="section-separator"/>'));
+
+    // check if we have authors
+    var front_matter = JSON.parse($("#distill-front-matter").html());
+    var have_authors = front_matter.authors && front_matter.authors.length > 0;
+
+    // manage byline/border
+    if (!have_authors)
+      $('.d-byline').remove();
+    $('.d-byline').after($('<hr class="section-separator"/>'));
+    $('.d-byline a').remove();
+
+    // remove toc
+    $('.d-contents').remove();
+
+    // move appendix elements
+    $('h1.appendix, h2.appendix').each(function(i, val) {
+      $(this).changeElementType('h3');
+    });
+    $('h3.appendix').each(function(i, val) {
+      $(this).nextUntil($('h1, h2, h3')).addBack().appendTo($('.d-appendix'));
+    });
+
+
+    // inject headers into references and footnotes
+    var refs_header = $('<h3></h3>');
+    refs_header.text('References');
+    $('#refs').prepend(refs_header);
+
+    var footnotes_header = $('<h3></h3');
+    footnotes_header.text('Footnotes');
+    $('.footnotes').children('hr').first().replaceWith(footnotes_header);
+
+    // move appendix-bottom entries to the bottom
+    $('.appendix-bottom').appendTo('.d-appendix').children().unwrap();
+    $('.appendix-bottom').remove();
+
+    // remove appendix if it's empty
+    if ($('.d-appendix').children().length === 0)
+      $('.d-appendix').remove();
+
+    // prepend separator above appendix
+    $('.d-appendix').before($('<hr class="section-separator" style="clear: both"/>'));
+
+    // trim code
+    $('pre>code').each(function(i, val) {
+      $(this).html($.trim($(this).html()));
+    });
+
+    // move posts-container right before article
+    $('.posts-container').insertBefore($('.d-article'));
+
+    $('body').addClass('downlevel');
+
+    on_load_complete();
+  }
+
+
+  function init_common() {
+
+    // jquery plugin to change element types
+    (function($) {
+      $.fn.changeElementType = function(newType) {
+        var attrs = {};
+
+        $.each(this[0].attributes, function(idx, attr) {
+          attrs[attr.nodeName] = attr.nodeValue;
+        });
+
+        this.replaceWith(function() {
+          return $("<" + newType + "/>", attrs).append($(this).contents());
+        });
+      };
+    })(jQuery);
+
+    // prevent underline for linked images
+    $('a > img').parent().css({'border-bottom' : 'none'});
+
+    // mark non-body figures created by knitr chunks as 100% width
+    $('.layout-chunk').each(function(i, val) {
+      var figures = $(this).find('img, .html-widget');
+      // ignore leaflet img layers (#106)
+      figures = figures.filter(':not(img[class*="leaflet"])')
+      if ($(this).attr('data-layout') !== "l-body") {
+        figures.css('width', '100%');
+      } else {
+        figures.css('max-width', '100%');
+        figures.filter("[width]").each(function(i, val) {
+          var fig = $(this);
+          fig.css('width', fig.attr('width') + 'px');
+        });
+
+      }
+    });
+
+    // auto-append index.html to post-preview links in file: protocol
+    // and in rstudio ide preview
+    $('.post-preview').each(function(i, val) {
+      if (window.location.protocol === "file:")
+        $(this).attr('href', $(this).attr('href') + "index.html");
+    });
+
+    // get rid of index.html references in header
+    if (window.location.protocol !== "file:") {
+      $('.distill-site-header a[href]').each(function(i,val) {
+        $(this).attr('href', $(this).attr('href').replace(/^index[.]html/, "./"));
+      });
+    }
+
+    // add class to pandoc style tables
+    $('tr.header').parent('thead').parent('table').addClass('pandoc-table');
+    $('.kable-table').children('table').addClass('pandoc-table');
+
+    // add figcaption style to table captions
+    $('caption').parent('table').addClass("figcaption");
+
+    // initialize posts list
+    if (window.init_posts_list)
+      window.init_posts_list();
+
+    // implmement disqus comment link
+    $('.disqus-comment-count').click(function() {
+      window.headroom_prevent_pin = true;
+      $('#disqus_thread').toggleClass('hidden');
+      if (!$('#disqus_thread').hasClass('hidden')) {
+        var offset = $(this).offset();
+        $(window).resize();
+        $('html, body').animate({
+          scrollTop: offset.top - 35
+        });
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    if (is_downlevel_browser())
+      init_downlevel();
+    else
+      window.addEventListener('WebComponentsReady', init_distill);
+  });
+
+  </script>
+
+  <!--/radix_placeholder_distill-->
+  <script src="stabilitest_files/header-attrs-2.31/header-attrs.js"></script>
+  <script src="stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+  <script src="stabilitest_files/popper-2.6.0/popper.min.js"></script>
+  <link href="stabilitest_files/tippy-6.2.7/tippy.css" rel="stylesheet" />
+  <link href="stabilitest_files/tippy-6.2.7/tippy-light-border.css" rel="stylesheet" />
+  <script src="stabilitest_files/tippy-6.2.7/tippy.umd.min.js"></script>
+  <script src="stabilitest_files/anchor-4.2.2/anchor.min.js"></script>
+  <script src="stabilitest_files/bowser-1.9.3/bowser.min.js"></script>
+  <script src="stabilitest_files/webcomponents-2.0.0/webcomponents.js"></script>
+  <script src="stabilitest_files/distill-2.2.21/template.v2.js"></script>
+  <!--radix_placeholder_site_in_header-->
+  <!--/radix_placeholder_site_in_header-->
+  <script>
+    $(function() {
+      console.log("Starting...")
+
+      // Mathjax config (add automatic linebreaks when supported)
+      // MathJax = {
+      //    tex: {
+      //        inlineMath: [['$', '$'], ['\\(', '\\)']],
+      //        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+      //        tags: 'ams',
+      //        multline: true,
+      //    },
+      //    options: {
+      //        linebreaks: { automatic: true },
+      //    },
+      // };
+
+      // Always show Published - distill hides it if not set
+      function show_byline_column(caption) {
+        $('d-byline').find('h3:contains("' + caption + '")').parent().css('visibility', 'visible');
+      }
+
+      show_byline_column('Published')
+
+      // tweak function
+      var rmd_meta = JSON.parse($("#radix-rmarkdown-metadata").html());
+      function get_meta(name, meta) {
+        var ind = meta.attributes.names.value.findIndex((e) => e == name)
+        var val = meta.value[ind]
+        if (val.type != 'list') {
+          return val.value.toString()
+        }
+        return val
+      }
+
+      // tweak description
+      // Add clickable tags
+      const slug = get_meta('slug', rmd_meta)
+      const cite_url = get_meta('citation_url', rmd_meta)
+
+      var title = $("d-title").text
+
+      const buttons = $('<div class="dt-tags" style="grid-column: page;">')
+      buttons.append('<a href="#citation" class="dt-tag"><i class="fas fa-quote-left"></i> Cite</a>')
+      buttons.append('<a href="' + slug + '.pdf" class="dt-tag"><i class="fas fa-file-pdf"></i> PDF</a>')
+      buttons.append('<a href="' + slug + '.zip" class="dt-tag"><i class="fas fa-file-zipper"></i> Supplement</a>')
+
+      // adds Abstract: in front of the first <p> in the title section --
+      // unless it happens to be the subtitle (FIXME: this is a bad hack - can't distill do this?)
+      var tpar = $("d-title p:not(:empty)").filter(function() {
+        return !$(this).hasClass("subtitle");
+      }).first();
+      if (tpar) {
+        const abstract = $('<d-abstract>')
+        abstract.append('<b>Abstract:</b><br>')
+        abstract.append(tpar) // Move description to d-abstract
+        $("d-title p:empty").remove() // Remove empty paragraphs after title
+        abstract.append(buttons)
+        abstract.insertAfter($('d-title')) // Add abstract section after title */
+      }
+
+      // tweak by-line
+      var byline = $("d-byline div.byline")
+      ind = rmd_meta.attributes.names.value.findIndex((e) => e == "journal")
+      const journal = get_meta('journal', rmd_meta)
+      const volume = get_meta('volume', rmd_meta)
+      const issue = get_meta('issue', rmd_meta)
+      const jrtitle = get_meta('title', journal)
+      const year = ((jrtitle == "R News") ? 2000 : 2008) + parseInt(volume)
+      const firstpage = get_meta('firstpage', journal)
+      const lastpage = get_meta('lastpage', journal)
+      byline.append('<div class="rjournal grid">')
+      $('div.rjournal').append('<h3>Volume</h3>')
+      $('div.rjournal').append('<h3>Pages</h3>')
+      $('div.rjournal').append('<a class="volume" href="../../issues/'+year+'-'+issue+'">'+volume+'/'+issue+'</a>')
+      $('div.rjournal').append('<p class="pages">'+firstpage+' - '+lastpage+'</p>')
+
+      const received_date = new Date(get_meta('date_received', rmd_meta))
+      byline.find('h3:contains("Published")').parent().append('<h3>Received</h3><p>'+received_date.toLocaleDateString('en-US', {month: 'short'})+' '+received_date.getDate()+', '+received_date.getFullYear()+'</p>')
+
+    })
+  </script>
+
+  <style>
+      /*
+    .nav-dropdown-content .nav-dropdown-header {
+      text-transform: lowercase;
+    }
+    */
+
+    d-byline .byline {
+      grid-template-columns: 2fr 2fr 2fr 2fr;
+    }
+
+    d-byline .rjournal {
+      grid-column-end: span 2;
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 0;
+    }
+
+    d-title h1, d-title p, d-title figure,
+    d-abstract p, d-abstract b {
+      grid-column: page;
+    }
+
+    d-title .dt-tags {
+      grid-column: page;
+    }
+
+    .dt-tags .dt-tag {
+      text-transform: lowercase;
+    }
+
+    d-article h1 {
+      line-height: 1.1em;
+    }
+
+    d-abstract p, d-article p {
+      text-align: justify;
+    }
+
+    @media(min-width: 1000px) {
+      .d-contents.d-contents-float {
+        justify-self: end;
+      }
+
+      nav.toc {
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
+        border-right-width: 1px;
+        border-right-style: solid;
+        border-right-color: rgba(0, 0, 0, 0.1);
+      }
+    }
+
+    .posts-list .dt-tags .dt-tag {
+      text-transform: lowercase;
+    }
+
+    @keyframes highlight-target {
+      0% {
+        background-color: #ffa;
+      }
+      66% {
+        background-color: #ffa;
+      }
+      100% {
+        background-color: none;
+      }
+    }
+
+    d-article :target, d-appendix :target {
+       animation: highlight-target 3s;
+    }
+
+    .header-section-number {
+      margin-right: 0.5em;
+    }
+    
+    d-appendix .citation-appendix,
+    .d-appendix .citation-appendix {
+      color: rgb(60, 60, 60);
+    }
+
+    d-article h2 {
+      border-bottom: 0px solid rgba(0, 0, 0, 0.1);
+      padding-bottom: 0rem;
+    }
+    d-article h3 {
+      font-size: 20px;
+    }
+    d-article h4 {
+      font-size: 18px;
+      text-transform: none;
+    }
+
+    @media (min-width: 1024px) {
+      d-article h2 {
+        font-size: 32px;
+      }
+      d-article h3 {
+        font-size: 24px;
+      }
+      d-article h4 {
+        font-size: 20px;
+      }
+    }
+  </style>
+
+
+</head>
+
+<body>
+
+<!--radix_placeholder_front_matter-->
+
+<script id="distill-front-matter" type="text/json">
+{"title":"Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R","description":"A p-value quantifies how surprising the observed data would be under the null hypothesis, but not how easily the resulting decision could be overturned. The stabilitest package combines three sensitivity views of one pre-specified analysis: jackknife leave-one-out influence, greedy worst-case observation removal, and the bootstrap same-decision rate. Component metrics and a composite 0-100 score are returned for two-sample location and proportion tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence and non-inferiority endpoints. Categorical interpretation is fail-closed: a label is emitted only where an independent pre-registered study validates thresholds for that exact configuration. A Fisher exact-test study validated a two-band mapping. A prospective Welch study completed 4,500 training analyses but found no feasible mapping, so held-out data remained unopened and Welch labels are suppressed. The article also reports negative ANCOVA calibration studies. These outcomes illustrate why numeric sensitivity diagnostics and categorical assurance claims require different evidentiary standards.","authors":[{"author":"Marius Ardelean","authorURL":"https://github.com/ma-brain/stabilitest","affiliation":"Independent researcher","affiliationURL":"#","orcidID":""}],"publishedDate":"2026-08-10T00:00:00.000+03:00","citationText":"Ardelean, 2026"}
+</script>
+
+<!--/radix_placeholder_front_matter-->
+<!--radix_placeholder_navigation_before_body-->
+<!--/radix_placeholder_navigation_before_body-->
+<!--radix_placeholder_site_before_body-->
+<!--/radix_placeholder_site_before_body-->
+
+<div class="d-title">
+<h1>Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R</h1>
+
+<!--radix_placeholder_categories-->
+<!--/radix_placeholder_categories-->
+<p><p>A p-value quantifies how surprising the observed data would be under the null hypothesis, but not how easily the resulting decision could be overturned. The stabilitest package combines three sensitivity views of one pre-specified analysis: jackknife leave-one-out influence, greedy worst-case observation removal, and the bootstrap same-decision rate. Component metrics and a composite 0-100 score are returned for two-sample location and proportion tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence and non-inferiority endpoints. Categorical interpretation is fail-closed: a label is emitted only where an independent pre-registered study validates thresholds for that exact configuration. A Fisher exact-test study validated a two-band mapping. A prospective Welch study completed 4,500 training analyses but found no feasible mapping, so held-out data remained unopened and Welch labels are suppressed. The article also reports negative ANCOVA calibration studies. These outcomes illustrate why numeric sensitivity diagnostics and categorical assurance claims require different evidentiary standards.</p></p>
+</div>
+
+<div class="d-byline">
+  Marius Ardelean <a href="https://github.com/ma-brain/stabilitest" class="uri">https://github.com/ma-brain/stabilitest</a> (Independent researcher)
+  
+<br/>2026-08-10
+</div>
+
+<div class="d-article">
+<h2 data-number="1" id="introduction"><span class="header-section-number">1</span> Introduction</h2>
+<p>Statistical reporting in clinical trials typically compresses the evidence into
+a binary decision at <span class="math inline">\(p &lt; \alpha\)</span>. That compression discards something a
+reader needs. Consider two trials that both report <span class="math inline">\(p = 0.048\)</span>. In the first,
+the conclusion survives essentially any plausible perturbation of the data. In
+the second, it rests entirely on one extreme responder: delete that single
+patient and significance evaporates. Standard reporting treats these as
+identical findings.</p>
+<p>This is not a hypothetical concern: sensitivity of conclusions to individual
+patients is a recurring theme in the trial-reporting literature
+<span class="citation" data-cites="senn2007 pocock2015">(<a href="#ref-senn2007" role="doc-biblioref">Senn 2007</a>; <a href="#ref-pocock2015" role="doc-biblioref">Pocock et al. 2015</a>)</span>. The ICH E9 guideline and its E9(R1) addendum
+<span class="citation" data-cites="ich1998e9 ich2019e9r1">(<a href="#ref-ich1998e9" role="doc-biblioref">International Council for Harmonisation 1998</a>, <a href="#ref-ich2019e9r1" role="doc-biblioref">2019</a>)</span> make it explicit, asking that inferences be robust
+to data limitations and to deviations from the assumptions of the main
+estimator, assessed through pre-specified sensitivity analyses. What the
+guidance does not supply is quantitative machinery. Three distinct questions jointly characterise the
+stability of a test conclusion, and each needs a different tool:</p>
+<ol type="1">
+<li><em>Which individual observations drive the result?</em> (influence)</li>
+<li><em>What is the smallest set of observations whose removal would overturn the
+conclusion?</em> (fragility)</li>
+<li><em>How often do bootstrap resamples preserve the observed decision?</em>
+(same-decision rate)</li>
+</ol>
+<p><a href="https://cran.r-project.org/package=stabilitest">stabilitest</a> <span class="citation" data-cites="ally2026stabilitest">(<a href="#ref-ally2026stabilitest" role="doc-biblioref">Ardelean 2026</a>)</span> answers all three for one
+pre-specified primary analysis, returning component metrics plus a composite
+score. Its contributions are:</p>
+<ul>
+<li><strong>An integrated framework.</strong> Jackknife influence, adversarial worst-case
+removal, and the bootstrap same-decision rate are computed together for a common
+catalogue of trial-relevant analyses — two-sample location and proportion
+tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST
+equivalence and non-inferiority — through a small, uniform API.</li>
+<li><strong>A fail-closed calibration registry.</strong> Categorical labels
+(<em>Robust</em> / <em>Fragile</em>) are treated as claims that require evidence. The
+package emits a label only where an independent, pre-registered calibration
+study has validated thresholds for that exact method, endpoint, conclusion
+type, weight vector, and design profile. Everywhere else the label is <code>NA</code>
+while numeric output is retained. Thresholds are never transferred between
+method families by analogy.</li>
+<li><strong>A calibrated unit, earned.</strong> An independent study for Fisher’s exact test
+yielded a validated two-band mapping, reported here with its held-out
+confirmation bounds.</li>
+<li><strong>Named negative results.</strong> A prospective Welch study and three ANCOVA
+studies closed without usable thresholds under their frozen designs. These
+empirical failures are reported rather than converted into weaker claims.</li>
+</ul>
+<p>Deletion sensitivity is complementary to the estimand and sensitivity-analysis
+strategy required by ICH E9(R1). It identifies dependence on observed rows; it
+does not by itself address missing-data assumptions, intercurrent events, or
+alternative estimands.</p>
+<h2 data-number="2" id="related-r-packages"><span class="header-section-number">2</span> Related R packages</h2>
+<p>Every package in Table <a href="#tab:related">1</a> answers a version of “how much would
+have to change for this conclusion to flip?”, but they fall into two families.</p>
+<p><a href="https://cran.r-project.org/package=sensemakr">sensemakr</a> <span class="citation" data-cites="cinelli2020 cinelli2024sensemakr">(<a href="#ref-cinelli2020" role="doc-biblioref">Cinelli and Hazlett 2020</a>; <a href="#ref-cinelli2024sensemakr" role="doc-biblioref">Cinelli et al. 2024</a>)</span>,
+<a href="https://cran.r-project.org/package=konfound">konfound</a> <span class="citation" data-cites="rosenberg2025konfound">(<a href="#ref-rosenberg2025konfound" role="doc-biblioref">Rosenberg 2025</a>)</span> and <a href="https://cran.r-project.org/package=EValue">EValue</a>
+<span class="citation" data-cites="vanderweele2017evalue">(<a href="#ref-vanderweele2017evalue" role="doc-biblioref">VanderWeele and Ding 2017</a>)</span>
+ask the question about <em>unmeasured</em> threats — a confounder, a selection
+mechanism, or unobserved cases the analyst never had. Their answers are
+analytic bounds computed from the reported estimate and its uncertainty; none
+of them touches the rows of the analysis dataset. <a href="https://cran.r-project.org/package=boot">boot</a>
+<span class="citation" data-cites="canty2025boot">(<a href="#ref-canty2025boot" role="doc-biblioref">Canty and Ripley 2025</a>)</span> is a general resampling engine rather than a conclusion-level
+robustness framework. <a href="https://cran.r-project.org/package=fragility">fragility</a>
+<span class="citation" data-cites="lin2025fragility">(<a href="#ref-lin2025fragility" role="doc-biblioref">Lin and Chu 2025</a>)</span>, <a href="https://cran.r-project.org/package=influence.ME">influence.ME</a> <span class="citation" data-cites="nieuwenhuis2012influenceme">(<a href="#ref-nieuwenhuis2012influenceme" role="doc-biblioref">Nieuwenhuis et al. 2012</a>)</span>,
+<a href="https://cran.r-project.org/package=car">car</a> <span class="citation" data-cites="fox2019car">(<a href="#ref-fox2019car" role="doc-biblioref">Fox and Weisberg 2019</a>)</span>, <code>zaminfluence</code> (GitHub only; <span class="citation" data-cites="giordano2026zaminfluence">Giordano et al. (<a href="#ref-giordano2026zaminfluence" role="doc-biblioref">2026a</a>)</span>,
+with the associated paper <span class="citation" data-cites="broderick2023">Broderick et al. (<a href="#ref-broderick2023" role="doc-biblioref">2023</a>)</span>) and <a href="https://cran.r-project.org/package=stabilitest">stabilitest</a> instead ask about the
+<em>observed</em> sample: which specific patients, if perturbed or removed, would
+change the conclusion?</p>
+<p>Within that second family the differences are of scope and rigour rather than
+kind. <a href="https://cran.r-project.org/package=fragility">fragility</a> is restricted to flipping binary outcome labels, implementing
+the clinical fragility index of <span class="citation" data-cites="walsh2014"><span class="nocase">Walsh et al.</span> (<a href="#ref-walsh2014" role="doc-biblioref">2014</a>)</span>. <a href="https://cran.r-project.org/package=car">car</a> and <a href="https://cran.r-project.org/package=influence.ME">influence.ME</a>
+offer classical single-deletion diagnostics in the tradition of <span class="citation" data-cites="cook1977">Cook (<a href="#ref-cook1977" role="doc-biblioref">1977</a>)</span>,
+which answer a different, single-deletion question from the package’s
+multi-observation adversarial search. <code>zaminfluence</code>
+approximates the adversarial leave-<span class="math inline">\(k\)</span>-out answer efficiently via influence
+functions, but for Z-estimators in general rather than the two-sample and
+model-term designs of trial reporting.</p>
+<div class="layout-chunk" data-layout="l-body">
+<table>
+<caption><span id="tab:related">Table 1: </span>R packages addressing related sensitivity questions. Detailed endpoint and method comparisons are supplied in related-packages.md. Entries were checked against CRAN or repository documentation on 2026-08-10; fragilityindex is excluded because it has been archived on CRAN since 2020-07-08.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Package</th>
+<th style="text-align: left;">Threat</th>
+<th style="text-align: left;">Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">stabilitest</td>
+<td style="text-align: left;">Observed-row deletion</td>
+<td style="text-align: left;">Tests and model terms</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">fragility</td>
+<td style="text-align: left;">Outcome-status flips</td>
+<td style="text-align: left;">Binary outcomes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">sensemakr</td>
+<td style="text-align: left;">Omitted confounding</td>
+<td style="text-align: left;">Linear regression</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">konfound</td>
+<td style="text-align: left;">Omitted bias / cases</td>
+<td style="text-align: left;">Regression inference</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">EValue</td>
+<td style="text-align: left;">Unmeasured bias</td>
+<td style="text-align: left;">Observational effects</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">boot</td>
+<td style="text-align: left;">Sampling variation</td>
+<td style="text-align: left;">Any statistic</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">influence.ME</td>
+<td style="text-align: left;">Influential groups</td>
+<td style="text-align: left;">Mixed models</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">car</td>
+<td style="text-align: left;">Single-case influence</td>
+<td style="text-align: left;">lm / glm</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">zaminfluence</td>
+<td style="text-align: left;">Approximate deletion</td>
+<td style="text-align: left;">Z-estimators</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><a href="https://cran.r-project.org/package=stabilitest">stabilitest</a>’s distinguishing choices relative to all of these are: it
+evaluates deletion, jackknife and bootstrap sensitivity together as three
+views of one conclusion rather than offering a single diagnostic; its
+worst-case removal is an actual adversarial refit search rather than a
+residual/leverage heuristic or a linear approximation; and its composite score
+carries a categorical verdict only where an independent pre-registered
+calibration has validated it for that exact configuration. No other package in
+Table <a href="#tab:related">1</a> ships a calibration registry or a fail-closed
+labelling policy.</p>
+<h2 data-number="3" id="methods"><span class="header-section-number">3</span> Methods</h2>
+<p>Given two samples — or a model term, see the API section — and a
+significance level <span class="math inline">\(\alpha\)</span>, four analyses are performed. For two independent
+groups, <span class="math inline">\(n_1\)</span> and <span class="math inline">\(n_2\)</span> denote per-group sizes and <span class="math inline">\(N=n_1+n_2\)</span> is the total
+number of observations. Three analyses enter the composite score; the fourth
+is retained as a deliberate contrast.</p>
+<p><strong>Jackknife (leave-one-out).</strong> Each observation is deleted in turn and the
+test repeated, following the classical framework of <span class="citation" data-cites="shaotu1995">Shao and Tu (<a href="#ref-shaotu1995" role="doc-biblioref">1995</a>)</span>. Outputs are
+the conclusion stability <span class="math inline">\(S_\mathrm{jack}\)</span> (percentage of deletions preserving
+the significance decision), the set of influential observations (deletion
+flips that decision, or shifts <span class="math inline">\(p\)</span> by more than <span class="math inline">\(\delta = 0.05\)</span>), and the leave-one-out
+<span class="math inline">\(p\)</span>-value range. Because single-deletion influence shrinks as <span class="math inline">\(\sim 1/n\)</span>, high
+jackknife stability in a large sample is <em>weak</em> evidence of robustness. The
+component’s chief value is identifying specific observations for data-quality
+review; the package’s printed output says so explicitly. Conclusion stability
+does not guarantee preservation of effect direction: direction reversals must
+be inspected separately from the significance decision.</p>
+<p><strong>Worst-case removal (primary fragility analysis).</strong> A greedy algorithm
+deletes, at each step, the observation whose removal moves the <span class="math inline">\(p\)</span>-value
+furthest toward overturning the conclusion, up to
+<span class="math inline">\(k_{\max} = \lfloor 0.30\,n \rfloor\)</span> deletions. The <em>removal fragility index</em>
+<span class="math inline">\(k_\mathrm{frag}\)</span> is the step at which the conclusion first flips. If no flip
+occurs by <span class="math inline">\(k_{\max}\)</span>, the stored value <span class="math inline">\(k_{\max}+1\)</span> is a right-censoring code
+and is reported as <span class="math inline">\(&gt;k_{\max}\)</span>, not as an observed flip. This
+follows the maximum influence perturbation of <span class="citation" data-cites="broderick2023">Broderick et al. (<a href="#ref-broderick2023" role="doc-biblioref">2023</a>)</span> (see also
+<span class="citation" data-cites="giordano2026a">Giordano et al. (<a href="#ref-giordano2026a" role="doc-biblioref">2026b</a>)</span> and <span class="citation" data-cites="giordano2026b">Giordano et al. (<a href="#ref-giordano2026b" role="doc-biblioref">2026c</a>)</span>), who showed that in prominent published
+analyses removing under 1% of observations can reverse the sign of an
+estimated effect. When a flip is found, the greedy set is <em>sufficient</em> to
+overturn the conclusion, so <span class="math inline">\(k_\mathrm{frag}\)</span> is an upper bound on the size of
+the minimal overturning subset; no universal optimality claim is made. Because
+a flip from <span class="math inline">\(p = 0.047\)</span> to <span class="math inline">\(p = 0.053\)</span> is a knife-edge
+event <span class="citation" data-cites="potter2020">(<a href="#ref-potter2020" role="doc-biblioref">Potter 2020</a>)</span>, the package returns and plots the full <span class="math inline">\(p\)</span>-value
+trajectory rather than the index alone. Note the terminology: the <em>removal</em>
+fragility index counts deleted observations and so reduces <span class="math inline">\(n\)</span>, which
+distinguishes it from the Walsh fragility index <span class="citation" data-cites="walsh2014">(<a href="#ref-walsh2014" role="doc-biblioref"><span class="nocase">Walsh et al.</span> 2014</a>)</span>, which flips
+event status while holding <span class="math inline">\(n\)</span> fixed.</p>
+<p><strong>Extreme-value removal (descriptive).</strong> Cumulative deletion of observations
+most distant from the recomputed grand mean — the familiar “we removed the
+outliers and the result held” procedure. It does <em>not</em> enter the composite
+score. It is retained because the gap between this index and the worst-case
+index measures how much protection the outlier narrative actually provides.</p>
+<p><strong>Bootstrap same-decision rate.</strong> <span class="math inline">\(B\)</span> resamples are drawn with replacement
+within groups <span class="citation" data-cites="efron1993">(<a href="#ref-efron1993" role="doc-biblioref">Efron and Tibshirani 1993</a>)</span>; <span class="math inline">\(S_\mathrm{boot}\)</span> is the empirical proportion that
+preserves the observed significance decision. It is a plug-in quantity under
+the empirical distribution, not an unconditional probability that a future
+study will replicate. It mostly reflects strength of evidence at the observed
+effect size, not resistance to contamination: a marginal <span class="math inline">\(p\)</span>-value can yield
+<span class="math inline">\(S_\mathrm{boot}\)</span> near 50–60% in clean data. The API retains the historical
+field name <code>bootstrap_reproducibility</code> for compatibility.</p>
+<p><strong>Composite score.</strong>
+<span class="math inline">\(R = w_1 S_\mathrm{jack} + w_2 F + w_3 S_\mathrm{boot}\)</span>, where
+<span class="math inline">\(F = 100 \cdot \min\!\left(k_\mathrm{frag} / (k_{\max}+1),\, 1\right)\)</span>
+rescales the fragility index to the full 0–100 range. Default weights are
+<span class="math inline">\(w = (0.4, 0.4, 0.2)\)</span>: influence and fragility carry equal weight, the
+same-decision term is down-weighted because it largely restates the
+<span class="math inline">\(p\)</span>-value. The weights are a heuristic communication device, not a derived
+quantity. They are an explicit argument and should be fixed in the statistical
+analysis plan. Two results with the same score can be stable in different
+ways, so the components — especially the fragility index and the identity of
+the observations behind it — are the substance of reporting.</p>
+<h2 data-number="4" id="package-design-and-api"><span class="header-section-number">4</span> Package design and API</h2>
+<h3 data-number="4.1" id="dispatcher-and-engines"><span class="header-section-number">4.1</span> Dispatcher and engines</h3>
+<p>Two-sample analyses go through a single dispatcher; model-based and
+equivalence analyses have their own entry points sharing a common
+case-deletion engine.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class='co'># Two-sample: t.test, paired.t.test, wilcoxon, wilcoxon.paired,</span></span>
+<span><span class='co'>#             brunner_munzel, fisher, chisq, prop</span></span>
+<span><span class='fu'><a href='https://rdrr.io/pkg/stabilitest/man/robustness_analysis.html'>robustness_analysis</a></span><span class='op'>(</span><span class='va'>group1</span>, <span class='va'>group2</span>, test_type <span class='op'>=</span> <span class='st'>"t.test"</span><span class='op'>)</span></span>
+<span></span>
+<span><span class='co'># Model terms: single coefficient or a multi-df factor tested jointly</span></span>
+<span><span class='fu'><a href='https://rdrr.io/pkg/stabilitest/man/robustness_lm.html'>robustness_lm</a></span><span class='op'>(</span><span class='va'>change</span> <span class='op'>~</span> <span class='va'>arm</span> <span class='op'>+</span> <span class='va'>baseline</span>, data <span class='op'>=</span> <span class='va'>d</span>, term <span class='op'>=</span> <span class='st'>"arm"</span><span class='op'>)</span></span>
+<span><span class='fu'><a href='https://rdrr.io/pkg/stabilitest/man/robustness_glm.html'>robustness_glm</a></span><span class='op'>(</span><span class='va'>y</span> <span class='op'>~</span> <span class='va'>arm</span> <span class='op'>+</span> <span class='va'>age</span>, data <span class='op'>=</span> <span class='va'>d</span>, term <span class='op'>=</span> <span class='st'>"arm"</span>, family <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/stats/family.html'>binomial</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span></span>
+<span><span class='fu'><a href='https://rdrr.io/pkg/stabilitest/man/robustness_surv.html'>robustness_surv</a></span><span class='op'>(</span><span class='fu'>Surv</span><span class='op'>(</span><span class='va'>time</span>, <span class='va'>event</span><span class='op'>)</span> <span class='op'>~</span> <span class='va'>arm</span>, data <span class='op'>=</span> <span class='va'>d</span>, term <span class='op'>=</span> <span class='st'>"arm"</span><span class='op'>)</span></span>
+<span></span>
+<span><span class='co'># Equivalence / non-inferiority: mean, risk difference, odds ratio</span></span>
+<span><span class='fu'><a href='https://rdrr.io/pkg/stabilitest/man/robustness_tost.html'>robustness_tost</a></span><span class='op'>(</span><span class='va'>g1</span>, <span class='va'>g2</span>, type <span class='op'>=</span> <span class='st'>"equivalence"</span>, endpoint <span class='op'>=</span> <span class='st'>"mean"</span>,</span>
+<span>                delta_L <span class='op'>=</span> <span class='op'>-</span><span class='fl'>20</span>, delta_U <span class='op'>=</span> <span class='fl'>20</span><span class='op'>)</span></span></code></pre>
+</div>
+</div>
+<p>For model engines all components operate on <em>rows</em> (subjects) of the analysis
+dataset, with the conclusion defined by the <span class="math inline">\(p\)</span>-value of a pre-specified term
+— a single coefficient, or a multi-df factor term via a joint test
+(<code>drop1</code> <span class="math inline">\(F\)</span> for <code>lm</code>, likelihood-ratio for <code>glm</code> and <code>coxph</code>). Deleting whole
+subjects, with their covariates and follow-up, preserves the adjustment
+structure and handles censoring naturally. Fits that fail after deletion
+(a factor level vanishing, say) are skipped and reported rather than silently
+dropped.</p>
+<p>Arguments are deliberately uniform across engines: <code>alpha</code>, <code>n_boot</code>,
+<code>max_removal_pct</code>, <code>weights</code>, and <code>seed</code> mean the same thing everywhere, and
+<code>seed</code> defaults to <code>123</code> so that a bare call is reproducible.</p>
+<h3 data-number="4.2" id="return-objects-and-methods"><span class="header-section-number">4.2</span> Return objects and methods</h3>
+<p>Analyses return a classed list (<code>robustness_analysis</code>, <code>robustness_model</code>, or
+<code>robustness_tost</code>) containing the original test result, a
+<code>robustness_metrics</code> tibble of 17 component metrics, the per-step trajectories
+of each removal analysis, the bootstrap draws, the resolved calibration
+decision, and the analysis profile used to make that decision. <code>print()</code>
+methods render a structured summary; <code>plot()</code> returns the removal trajectories
+and the bootstrap <span class="math inline">\(p\)</span>-value distribution.</p>
+<h3 data-number="4.3" id="the-calibration-registry"><span class="header-section-number">4.3</span> The calibration registry</h3>
+<p>The mechanism that makes label suppression systematic rather than ad hoc is a
+registry shipped as <code>inst/extdata/calibration-registry.csv</code>, keyed by the
+<em>resolved</em> method rather than by the user-facing argument. A call with
+<code>test_type = "t.test"</code> resolves to <code>welch_unpaired</code> or <code>paired_t</code>; one with
+<code>test_type = "fisher"</code> resolves to <code>fisher_exact</code>. Each row carries a status,
+cutoffs where applicable, a version string, and a provenance pointer to the
+study that produced it.</p>
+<p>Label resolution is fail-closed. A categorical label is emitted only when the
+resolved method has a <code>validated_method_specific</code> row <strong>and</strong> the observed
+conclusion type matches <strong>and</strong> the weight vector matches the calibrated one
+<strong>and</strong> the design profile falls inside the study’s eligibility bounds. Any
+mismatch yields <code>NA</code> — with a printed reason — while the numeric score and
+all components are retained. There is no fallback to a “nearest” calibration.
+The historical Welch 55/70 mapping is now an inactive comparator and is never
+applied to Welch, ANCOVA, or another runtime result.</p>
+<h2 data-number="5" id="calibration-policy-and-evidence"><span class="header-section-number">5</span> Calibration policy and evidence</h2>
+<h3 data-number="5.1" id="the-welch-unit"><span class="header-section-number">5.1</span> The Welch unit</h3>
+<p>The original 55/70 mapping was based on differences between scenario-level
+average scores. A prospective replacement study tested whether those averages
+supported case-level categorical interpretation. The calibration unit was a
+significant independent-groups Welch test at <span class="math inline">\(\alpha=0.05\)</span>, with default
+weights <span class="math inline">\((0.4,0.4,0.2)\)</span>, <code>n_boot = 1000</code>, and a 30% removal cap. The six core
+design archetypes crossed per-group sizes from 25 to 200, balanced and 40/60
+allocations, and variance ratios 1, 2, and 1/2. Within each archetype the null
+used zero mean difference, the borderline stratum targeted 60% power, and the
+clear stratum targeted 95% power.</p>
+<p>All 18 training cells reached their quota of 250 completed significant
+analyses: 1,500 null, 1,500 borderline, and 1,500 clear analyses (4,500 total),
+with zero analysis failures. The frozen search considered integer three-band
+and two-band mappings. No candidate passed all safety, identification,
+ordinal-accuracy, occupancy, and ordering requirements, so the final result is
+<code>uncalibrated</code> with no cutoffs. Under the pre-specified protocol this training
+outcome was final: held-out validation remained unopened, no validation
+estimates exist, and no positive runtime eligibility profile was published.</p>
+<p>The historical 55/70 mapping was retained as a named training comparator. Its
+false-reassurance estimate was 0.458
+(Wilson upper 0.479,
+scenario-cluster upper 0.513,
+conservative upper 0.513),
+against gates of 0.05 and 0.10. Clear-effect identification was
+0.499
+(Wilson lower 0.478,
+scenario-cluster lower 0.348,
+conservative lower 0.348),
+against gates of 0.70 and 0.60. Balanced ordinal accuracy was
+0.558 (gate 0.70),
+and minimum band occupancy was
+0.227. Pooled ordering
+was preserved and no material reversal was detected, but those secondary
+conditions could not rescue the failed primary gates.</p>
+<p>The frozen no-candidate SHA-256 is represented in eight consecutive blocks.
+The first four are <code>9c45481b</code> <code>952cab7c</code> <code>b9b9086e</code> <code>37924a39</code>; the final four
+are <code>d83fe048</code> <code>4628745d</code> <code>be2e79eb</code> <code>33e8797d</code>.
+the compact supplementary artifact records this hash, source hashes, runtime,
+occupancy, and the unopened-validation flag. The active registry version is
+<code>welch-2026-2</code>: numeric scores and components remain available, while the
+categorical label is <code>NA</code>.</p>
+<p>Table <a href="#tab:simtable">2</a> retains the earlier 12-scenario experiment as a
+descriptive stress example, regenerated with the released package (12
+scenarios <span class="math inline">\(\times\)</span> 500 replications, <span class="math inline">\(B=200\)</span>). It was not used to fit or
+confirm the prospective decision.</p>
+<div class="layout-chunk" data-layout="l-body">
+<table>
+<caption><span id="tab:simtable">Table 2: </span>Descriptive historical Welch stress simulation, conditional on statistical significance; not training or confirmation evidence for the prospective calibration decision. There are 500 replications per scenario and B = 200. Columns report effect size, per-group n, injected contaminating observations, rejection rate, mean score among significant results, median worst-case and extreme-value fragility indices, and mean bootstrap same-decision rate.</caption>
+<colgroup>
+<col style="width: 5%" />
+<col style="width: 5%" />
+<col style="width: 8%" />
+<col style="width: 13%" />
+<col style="width: 8%" />
+<col style="width: 24%" />
+<col style="width: 24%" />
+<col style="width: 12%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;"><span class="math inline">\(d\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(n\)</span></th>
+<th style="text-align: right;">Cont.</th>
+<th style="text-align: right;">Rej. rate</th>
+<th style="text-align: right;">Score</th>
+<th style="text-align: right;"><span class="math inline">\(k_{\mathrm{wc}}\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(k_{\mathrm{ex}}\)</span></th>
+<th style="text-align: right;">Boot. %</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.040</td>
+<td style="text-align: right;">54.7</td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">67.1</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.064</td>
+<td style="text-align: right;">52.6</td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">66.6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.076</td>
+<td style="text-align: right;">50.0</td>
+<td style="text-align: right;">1.5</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">63.1</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.084</td>
+<td style="text-align: right;">51.3</td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">65.5</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.392</td>
+<td style="text-align: right;">61.1</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">75.3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.670</td>
+<td style="text-align: right;">64.5</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">80.2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.698</td>
+<td style="text-align: right;">63.2</td>
+<td style="text-align: right;">5.0</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">80.3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.864</td>
+<td style="text-align: right;">65.7</td>
+<td style="text-align: right;">6.0</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">84.8</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.8</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.808</td>
+<td style="text-align: right;">69.7</td>
+<td style="text-align: right;">5.0</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">83.0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.8</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.922</td>
+<td style="text-align: right;">73.3</td>
+<td style="text-align: right;">6.0</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">88.6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.8</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.976</td>
+<td style="text-align: right;">75.5</td>
+<td style="text-align: right;">12.0</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">94.1</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.8</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.000</td>
+<td style="text-align: right;">77.6</td>
+<td style="text-align: right;">14.0</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">96.3</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="layout-chunk" data-layout="l-body">
+
+</div>
+<p>Two features of Table <a href="#tab:simtable">2</a> deserve emphasis. First, under the
+null the rejection rate is at or near nominal in clean data
+(0.040 and 0.076 across the two
+sample sizes) and is higher under contamination
+(0.064 and 0.084). The Monte Carlo
+standard error at 500 replications is about 0.010, so individual
+cells should not be over-read. Among findings that reached significance,
+median worst-case fragility is one or two observations throughout the null
+rows. This is a descriptive pattern, not evidence that a particular score
+threshold safely classifies an individual result.</p>
+<p>Second, and more consequentially, the median extreme-value index is
+systematically larger than the worst-case index in the <span class="math inline">\(d=0.8\)</span> scenarios —
+26 versus 12 at <span class="math inline">\(d = 0.8\)</span>, <span class="math inline">\(n = 50\)</span>.
+Judging stability by removing apparent outliers makes a result look roughly
+twice as sturdy as an adversarial reading shows it to be. The most damaging
+observations are usually not the obvious ones.</p>
+<p>Figure <a href="#fig:simfig">1</a> shows the underlying score distributions.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="figure"><span style="display:block;" id="fig:simfig"></span>
+<img src="stabilitest_files/figure-html5/simfig-1.png" alt="Two faceted histograms of Welch robustness scores. Null and large-effect score distributions overlap, and dashed vertical lines mark the inactive historical cutoffs at 55 and 70." width="100%" />
+<p class="caption">
+Figure 1: Descriptive score distributions for significant results under the null (d = 0, left) and the study’s d = 0.8 scenario (right), n = 50 per group, uncontaminated. Dashed lines mark the inactive historical 55/70 mapping. The distributions overlap; this figure is not validating evidence for categorical bands.
+</p>
+</div>
+</div>
+<h3 data-number="5.2" id="the-fisher-unit-a-calibration-earned"><span class="header-section-number">5.2</span> The Fisher unit: a calibration earned</h3>
+<p>An independent study for Fisher’s exact test on two-arm binary outcomes
+delivered the package’s sole active categorical calibration. Its design was frozen
+before execution: truth strata defined by <em>enumerated exact power</em> rather than
+by observed effect size (null exact; clear at exact power 0.95; a borderline
+stratum at 0.60 retained as diagnostic only and excluded from threshold
+fitting), and a sealed score-only pilot gating production.</p>
+<p>The study also settled the weight question empirically. On binary data the
+jackknife stability component is constant at 100 in every cell — a single
+deletion cannot move a Fisher <span class="math inline">\(p\)</span>-value across <span class="math inline">\(\alpha\)</span> at these sample sizes
+— so it carries zero information. The frozen design therefore uses
+<em>jackknife-light</em> weights <span class="math inline">\((0, 0.5, 0.5)\)</span>, which maximise score granularity
+without changing discrimination.</p>
+<p>Training selected the cutoff <span class="math inline">\(L = 58\)</span> with false reassurance 0.0493 (Wilson
+upper 0.0607) and identification of clear effects 0.7608 (Wilson lower 0.740).
+Held-out confirmation, opened only once, gave 0.0367 and 0.7333; under the
+conservative-of-Wilson-and-cluster-bootstrap rule the reported bounds are a
+false-reassurance upper of 0.0617 and an identification lower of 0.6767, both
+inside the frozen gates. The registry row is <code>fisher-2026-1</code>, provenance
+<code>study:binary_proportion@cc3344931614</code>.</p>
+<p>The resulting mapping is two-band — score <span class="math inline">\(\leq 58\)</span> <em>Fragile</em>, <span class="math inline">\(&gt; 58\)</span>
+<em>Not fragile</em> — with <strong>no Robust tier</strong>, because a single binary comparison
+does not carry enough information to support a third band at the required
+error rates. It applies only within the study’s eligibility profile: per-arm
+<span class="math inline">\(n\)</span> in <span class="math inline">\([25, 200]\)</span>, allocation ratio in <span class="math inline">\([0.8, 1.25]\)</span>, control-arm event rate
+in <span class="math inline">\([0.08, 0.55]\)</span> with at least three events and three non-events. Outside
+that profile, or under default weights, the label is suppressed.</p>
+<h3 data-number="5.3" id="ancova-a-named-negative-result"><span class="header-section-number">5.3</span> ANCOVA: a named negative result</h3>
+<p>Covariate-adjusted analysis is an important calibration target because many
+confirmatory trials adjust for baseline. Three pre-registered studies were
+conducted; all closed without a usable label under their frozen designs.</p>
+<p><strong>ANCOVA Study 1</strong> evaluated a three-band mapping with default weights. No
+threshold met the pre-specified training requirements, so held-out data was
+not opened. Within its canonical Gaussian scenarios the composite score was
+nearly monotone in the <span class="math inline">\(p\)</span>-value (Spearman correlation between its bootstrap
+component and <span class="math inline">\(-\log_{10}p\)</span> was approximately 0.99). The result establishes
+empirical infeasibility under that design; it does not prove that every future
+ANCOVA score or scenario definition must fail.</p>
+<p><strong>ANCOVA Study 2</strong> evaluated a two-band mapping with jackknife-light weights.
+Its sealed pilot showed score-location separation (<span class="math inline">\(\Delta=24.4\)</span>, overlap
+0.034, AUC 0.892), but production training found no feasible cutoff: the best
+clear-effect identification at a false-reassurance-safe threshold was 0.554,
+below the pre-specified 0.70 requirement. This discrepancy shows why pilot
+location metrics alone are insufficient for deciding whether a categorical
+claim is feasible.</p>
+<p>The <strong>assumption-violation study</strong> then asked whether the score added
+discrimination beyond <span class="math inline">\(p\)</span> for violations represented in a frozen scenario
+suite. It completed 2,100 analyses with zero failures. The pooled difference
+<span class="math inline">\(\mathrm{AUC}_\mathrm{score}-\mathrm{AUC}_p\)</span> was 0.0053, with a
+scenario-cluster bootstrap 95% interval <span class="math inline">\([-0.111,0.129]\)</span>; the added
+discrimination was not confirmed.</p>
+<p>The ANCOVA registry rows remain <code>uncalibrated</code>, and labels stay suppressed.
+Audit identifiers, hashes, and raw decision strings are retained in the
+study-specific <code>published/</code> directories rather than in reader-facing prose.</p>
+<h2 data-number="6" id="examples"><span class="header-section-number">6</span> Examples</h2>
+<h3 data-number="6.1" id="welch-case-study"><span class="header-section-number">6.1</span> Welch case study</h3>
+<p>The package ships a synthetic phase II analgesic trial: 55 patients, change
+from baseline in pain score at week 12. Results below are loaded from a
+committed artifact generated with the package-default <code>n_boot = 1000</code> and
+<code>seed = 123</code>. Welch is numeric-only after the prospective negative result.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class='va'>res</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/stabilitest/man/robustness_analysis.html'>robustness_analysis</a></span><span class='op'>(</span><span class='va'>pain_treatment</span>, <span class='va'>pain_placebo</span>, test_type <span class='op'>=</span> <span class='st'>"t.test"</span>,</span>
+<span>                           n_boot <span class='op'>=</span> <span class='fl'>1000</span>, seed <span class='op'>=</span> <span class='fl'>123</span>, interpret <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span></span></code></pre>
+</div>
+</div>
+<p>The Welch test gives a mean difference of -11.40
+points, <span class="math inline">\(p = 0.0018\)</span>. The robustness analysis
+returns a numeric score of <strong>71.9/100</strong> with no
+categorical label, built
+from: jackknife stability 100.0% with
+0 influential observations flagged; a
+worst-case fragility index of <span class="math inline">\(k = 6\)</span>
+(10.9% of the sample), with <span class="math inline">\(p\)</span> rising to
+0.0602 after the sixth deletion; and bootstrap
+same-decision rate 88.7%.</p>
+<p>Figure <a href="#fig:casefig">2</a> shows the two diagnostic displays produced by
+<code>plot()</code>. The upper panel makes the contrast of the Methods section concrete:
+the worst-case trajectory crosses <span class="math inline">\(\alpha\)</span> well before the extreme-value
+trajectory does.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="figure"><span style="display:block;" id="fig:casefig"></span>
+<img src="stabilitest_files/figure-html5/casefig-1.png" alt="Two Welch case-study diagnostics. The upper plot compares p-value trajectories under adversarial and outlier-ranked deletion; the lower histogram shows bootstrap p-values relative to the observed p-value." width="100%" />
+<p class="caption">
+Figure 2: Diagnostic plots for the Welch case study. Top: p-value trajectories under worst-case (adversarial) and extreme-value (outlier-ranked) removal, with the dashed line at alpha = 0.05. Bottom: bootstrap p-value distribution, red line at the observed p-value.
+</p>
+</div>
+</div>
+<p>For a reader, the actionable output is not the score but the six named
+patients — led by one extreme responder — whose charts warrant source-data
+review. The observed component pattern resembles the study’s clear-effect
+scenarios more than its null scenarios, but a sensitivity diagnostic does not
+establish which data-generating truth produced an individual dataset.</p>
+<h3 data-number="6.2" id="other-engines"><span class="header-section-number">6.2</span> Other engines</h3>
+<p>Short live examples across the remaining engines. An ANCOVA term on the
+packaged illustration dataset:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class='va'>res_lm</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/stabilitest/man/robustness_lm.html'>robustness_lm</a></span><span class='op'>(</span><span class='va'>change</span> <span class='op'>~</span> <span class='va'>arm</span> <span class='op'>+</span> <span class='va'>baseline_pain</span>, data <span class='op'>=</span> <span class='va'>pain_ancova_trial</span>,</span>
+<span>                        term <span class='op'>=</span> <span class='st'>"arm"</span>, n_boot <span class='op'>=</span> <span class='fl'>300</span>, seed <span class='op'>=</span> <span class='fl'>123</span><span class='op'>)</span></span>
+<span><span class='va'>res_lm</span><span class='op'>$</span><span class='va'>robustness_metrics</span><span class='op'>[</span>, <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"worstcase_fragility_k"</span>, <span class='st'>"worstcase_fragility_pct"</span>,</span>
+<span>                              <span class='st'>"bootstrap_reproducibility"</span>, <span class='st'>"overall_robustness"</span><span class='op'>)</span><span class='op'>]</span></span></code></pre>
+</div>
+<pre><code># A tibble: 1 × 4
+  worstcase_fragility_k worstcase_fragility_pct bootstrap_reproducib…¹
+                  &lt;int&gt;                   &lt;dbl&gt;                  &lt;dbl&gt;
+1                     7                    8.75                   83.3
+# ℹ abbreviated name: ¹​bootstrap_reproducibility
+# ℹ 1 more variable: overall_robustness &lt;dbl&gt;</code></pre>
+</div>
+<p>The score is numeric-only: 67.9
+with no label, exactly as the negative result above requires. A TOST
+equivalence analysis behaves the same way:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class='va'>res_tost</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/stabilitest/man/robustness_tost.html'>robustness_tost</a></span><span class='op'>(</span><span class='va'>pain_treatment</span>, <span class='va'>pain_placebo</span>, type <span class='op'>=</span> <span class='st'>"equivalence"</span>,</span>
+<span>                            endpoint <span class='op'>=</span> <span class='st'>"mean"</span>, delta_L <span class='op'>=</span> <span class='op'>-</span><span class='fl'>20</span>, delta_U <span class='op'>=</span> <span class='fl'>20</span>,</span>
+<span>                            n_boot <span class='op'>=</span> <span class='fl'>300</span>, seed <span class='op'>=</span> <span class='fl'>123</span><span class='op'>)</span></span>
+<span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span>fragility_k <span class='op'>=</span> <span class='va'>res_tost</span><span class='op'>$</span><span class='va'>robustness_metrics</span><span class='op'>$</span><span class='va'>worstcase_fragility_k</span>,</span>
+<span>  score <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/Round.html'>round</a></span><span class='op'>(</span><span class='va'>res_tost</span><span class='op'>$</span><span class='va'>robustness_metrics</span><span class='op'>$</span><span class='va'>overall_robustness</span>, <span class='fl'>1</span><span class='op'>)</span><span class='op'>)</span></span></code></pre>
+</div>
+<pre><code>fragility_k       score 
+        4.0        65.4 </code></pre>
+</div>
+<p>A Fisher analysis inside the calibrated profile, under the calibrated weights,
+does receive a label:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class='fu'><a href='https://rdrr.io/r/base/Random.html'>set.seed</a></span><span class='op'>(</span><span class='fl'>2026</span><span class='op'>)</span></span>
+<span><span class='va'>ctrl</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/stats/Binomial.html'>rbinom</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>1</span>, <span class='fl'>0.15</span><span class='op'>)</span>; <span class='va'>trt</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/stats/Binomial.html'>rbinom</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>1</span>, <span class='fl'>0.40</span><span class='op'>)</span></span>
+<span><span class='va'>res_f</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/stabilitest/man/robustness_analysis.html'>robustness_analysis</a></span><span class='op'>(</span><span class='va'>trt</span>, <span class='va'>ctrl</span>, test_type <span class='op'>=</span> <span class='st'>"fisher"</span>, n_boot <span class='op'>=</span> <span class='fl'>1000</span>,</span>
+<span>                             seed <span class='op'>=</span> <span class='fl'>123</span>,</span>
+<span>                             weights <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span>jackknife <span class='op'>=</span> <span class='fl'>0</span>, fragility <span class='op'>=</span> <span class='fl'>0.5</span>,</span>
+<span>                                         bootstrap <span class='op'>=</span> <span class='fl'>0.5</span><span class='op'>)</span><span class='op'>)</span></span>
+<span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span>score <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/Round.html'>round</a></span><span class='op'>(</span><span class='va'>res_f</span><span class='op'>$</span><span class='va'>robustness_metrics</span><span class='op'>$</span><span class='va'>overall_robustness</span>, <span class='fl'>1</span><span class='op'>)</span>,</span>
+<span>  label <span class='op'>=</span> <span class='va'>res_f</span><span class='op'>$</span><span class='va'>robustness_interpretation</span><span class='op'>)</span></span></code></pre>
+</div>
+<pre><code>        score         label 
+       &quot;67.6&quot; &quot;Not fragile&quot; </code></pre>
+</div>
+<div class="layout-chunk" data-layout="l-body">
+
+</div>
+<p>The same data under default weights returns identical component metrics but a
+different composite (75.7)
+and a suppressed label — the registry requires the calibrated weight vector,
+not merely the calibrated method.</p>
+<h2 data-number="7" id="performance"><span class="header-section-number">7</span> Performance</h2>
+<p>Cost is dominated by the greedy search, which performs <span class="math inline">\(O(N \cdot k_{\max})\)</span>
+test evaluations. For total <span class="math inline">\(N=55\)</span>, <span class="math inline">\(k_{\max}=16\)</span> and the greedy candidate
+refits total <span class="math inline">\(\sum_{j=40}^{55}j=760\)</span>. A full default run uses approximately
+<span class="math inline">\(1+55+760+16+1000=1832\)</span> test evaluations before overhead: the original test,
+jackknife, greedy search, descriptive extreme-value path, and bootstrap.
+Closed-form tests are therefore sub-second; model engines pay for repeated
+refits.</p>
+<div class="layout-chunk" data-layout="l-body">
+<table>
+<caption><span id="tab:timingtable">Table 3: </span>Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.0 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.</caption>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 25%" />
+<col style="width: 27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Engine</th>
+<th style="text-align: right;">n = 50 per arm (s)</th>
+<th style="text-align: right;">n = 150 per arm (s)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">robustness_analysis (Welch)</td>
+<td style="text-align: right;">0.53</td>
+<td style="text-align: right;">1.43</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">robustness_lm (ANCOVA)</td>
+<td style="text-align: right;">0.98</td>
+<td style="text-align: right;">4.22</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">robustness_glm (binomial)</td>
+<td style="text-align: right;">1.62</td>
+<td style="text-align: right;">8.03</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">robustness_surv (Cox)</td>
+<td style="text-align: right;">1.64</td>
+<td style="text-align: right;">6.17</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">robustness_tost (mean equivalence)</td>
+<td style="text-align: right;">0.77</td>
+<td style="text-align: right;">1.48</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The practical implication is that interactive use is comfortable at trial
+scale, and that a large calibration study — thousands of replications —
+belongs in a batch script, which is how the studies reported here were run.</p>
+<h2 data-number="8" id="testing-and-quality-assurance"><span class="header-section-number">8</span> Testing and quality assurance</h2>
+<p>The package carries 1011 passing <code>testthat</code> assertions across
+7 test files, covering the analysis engines, edge cases (degenerate groups, zero
+variance, complete separation, failed refits), the packaged datasets, the
+calibration registry’s resolution logic, and the calibration documentation
+itself.</p>
+<p>That last one is unusual enough to describe. A source-tree documentation audit,
+run as part of the test suite,
+asserts that the README, NEWS, vignettes, manuscript, and every study SAP
+still state the policy invariants: that uncalibrated labels are suppressed,
+that the historical Welch mapping is inactive, and that each frozen acceptance
+criterion remains present in its own statistical analysis plan. The intent is
+to make it mechanically hard to quietly weaken a published calibration claim
+through documentation drift.</p>
+<p>Each calibration study additionally publishes compact decision artifacts in
+its own <code>published/</code> directory: occupancy and failure tables, power
+verification, candidate diagnostics, a registry row, manifests, and a hash
+ledger. Candidate hashes are recorded before held-out data is opened, so
+the sequencing of any decision is auditable after the fact.</p>
+<h2 data-number="9" id="discussion-and-limitations"><span class="header-section-number">9</span> Discussion and limitations</h2>
+<p>The framework separates three questions usually blurred together, and its
+sharpest practical lesson is the gap between adversarial and symmetric
+removal: in the descriptive stress simulation, adversarial deletion and
+cumulative grand-mean extreme-value deletion produced materially different
+fragility summaries. That comparison does not benchmark Cook’s distance,
+DFBETAs, <a href="https://cran.r-project.org/package=car">car</a>, or <a href="https://cran.r-project.org/package=influence.ME">influence.ME</a>.</p>
+<p>Several limitations deserve statement rather than burial.</p>
+<p><strong>The score is largely a monotone transform of the <span class="math inline">\(p\)</span>-value.</strong> In clean
+parametric settings the composite score re-expresses the evidence the
+<span class="math inline">\(p\)</span>-value already carries; the ANCOVA program measured this directly. This is
+a scope condition, not a defect, but it bounds what the score can be used for.
+Its added value lies in (i) identifying the specific observations carrying the
+conclusion, (ii) the worst-case deletion bound, and (iii) behaviour under
+contamination, where the <span class="math inline">\(p\)</span>-value alone is silent — see the null-with-
+contamination rows of Table <a href="#tab:simtable">2</a>. The assumption-violation study
+tested whether the score added discrimination beyond <span class="math inline">\(p\)</span> under its frozen
+violation suite and did not confirm such an improvement.</p>
+<p><strong>The weights are a convention.</strong> They are explicit, pre-specifiable, and
+demonstrably not load-bearing for discrimination (the Fisher weight study
+found AUC essentially unchanged across weightings), but they are not derived
+from theory. The score is a communication device; the components are the
+substance.</p>
+<p><strong>The greedy index is an upper bound.</strong> Exact minimal overturning subsets are
+combinatorially hard. The algorithm returns a sufficient overturning set when
+it finds one, not a certificate of minimality. Certified minimal sets — via
+integer-programming formulations — remain future work.</p>
+<p><strong>Binary significance framing.</strong> Inherited from the fragility concept itself
+and criticised for good reason <span class="citation" data-cites="potter2020">(<a href="#ref-potter2020" role="doc-biblioref">Potter 2020</a>)</span>; the package’s response is to
+report the trajectory alongside the index and to frame the index as an upper
+bound, wherever the index is defined rather than only in a limitations
+section.</p>
+<p><strong>Independence is assumed.</strong> Clustered and longitudinal designs are not
+supported; for those, <code>influence.ME</code> addresses the grouping-factor question.</p>
+<p><strong>Calibration coverage is deliberately narrow.</strong> Only the eligible Fisher
+exact-test configuration under jackknife-light weights carries a label.
+Welch, paired, rank, Brunner–Munzel, non-canonical binary, model-based, Cox,
+and TOST analyses return numeric output with a suppressed label pending an
+independent positive calibration. Users who want a verdict where none is
+licensed are, by design, not given one.</p>
+<h2 data-number="10" id="summary"><span class="header-section-number">10</span> Summary</h2>
+<p><a href="https://cran.r-project.org/package=stabilitest">stabilitest</a> asks how much of the data a conclusion actually rests on,
+and answers with component metrics that name the observations responsible. Its
+methodological position is that a categorical robustness verdict is a claim
+requiring validation for the specific analysis at hand, and that the honest
+response to a failed validation is silence plus a published negative result.
+The package is available from
+<a href="https://github.com/ma-brain/stabilitest">github.com/ma-brain/stabilitest</a>.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
+<h3 class="appendix" data-number="10.1" id="cran-packages-used"><span class="header-section-number">10.1</span> CRAN packages used</h3>
+<p><a href="https://cran.r-project.org/package=stabilitest">stabilitest</a>, <a href="https://cran.r-project.org/package=sensemakr">sensemakr</a>, <a href="https://cran.r-project.org/package=konfound">konfound</a>, <a href="https://cran.r-project.org/package=EValue">EValue</a>, <a href="https://cran.r-project.org/package=boot">boot</a>, <a href="https://cran.r-project.org/package=fragility">fragility</a>, <a href="https://cran.r-project.org/package=influence.ME">influence.ME</a>, <a href="https://cran.r-project.org/package=car">car</a></p>
+<h3 class="appendix" data-number="10.2" id="cran-task-views-implied-by-cited-packages"><span class="header-section-number">10.2</span> CRAN Task Views implied by cited packages</h3>
+<p><a href="https://cran.r-project.org/view=CausalInference">CausalInference</a>, <a href="https://cran.r-project.org/view=Econometrics">Econometrics</a>, <a href="https://cran.r-project.org/view=Finance">Finance</a>, <a href="https://cran.r-project.org/view=MetaAnalysis">MetaAnalysis</a>, <a href="https://cran.r-project.org/view=MixedModels">MixedModels</a>, <a href="https://cran.r-project.org/view=Optimization">Optimization</a>, <a href="https://cran.r-project.org/view=Survival">Survival</a>, <a href="https://cran.r-project.org/view=TeachingStatistics">TeachingStatistics</a>, <a href="https://cran.r-project.org/view=TimeSeries">TimeSeries</a></p>
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-ally2026stabilitest" class="csl-entry" role="listitem">
+M. Ardelean. <em><span class="nocase">stabilitest</span>: Robustness and fragility analysis of statistical test conclusions.</em> 2026. URL <a href="https://CRAN.R-project.org/package=stabilitest">https://CRAN.R-project.org/package=stabilitest</a>. R package version 0.6.0.
+</div>
+<div id="ref-broderick2023" class="csl-entry" role="listitem">
+T. Broderick, R. Giordano and R. Meager. An automatic finite-sample robustness metric: When can dropping a little data make a big difference? <em>arXiv preprint arXiv:2011.14999</em>, 2023. DOI <a href="https://doi.org/10.48550/arXiv.2011.14999">10.48550/arXiv.2011.14999</a>.
+</div>
+<div id="ref-canty2025boot" class="csl-entry" role="listitem">
+A. Canty and B. Ripley. <em><span class="nocase">boot</span>: Bootstrap functions.</em> 2025. URL <a href="https://CRAN.R-project.org/package=boot">https://CRAN.R-project.org/package=boot</a>. R package version 1.3-32.
+</div>
+<div id="ref-cinelli2024sensemakr" class="csl-entry" role="listitem">
+C. Cinelli, J. Ferwerda and C. Hazlett. <em><span class="nocase">sensemakr</span>: Sensitivity analysis tools for regression models.</em> 2024. URL <a href="https://CRAN.R-project.org/package=sensemakr">https://CRAN.R-project.org/package=sensemakr</a>. R package version 0.1.6.
+</div>
+<div id="ref-cinelli2020" class="csl-entry" role="listitem">
+C. Cinelli and C. Hazlett. Making sense of sensitivity: Extending omitted variable bias. <em>Journal of the Royal Statistical Society Series B: Statistical Methodology</em>, 82(1): 39–67, 2020. DOI <a href="https://doi.org/10.1111/rssb.12348">10.1111/rssb.12348</a>.
+</div>
+<div id="ref-cook1977" class="csl-entry" role="listitem">
+R. D. Cook. Detection of influential observation in linear regression. <em>Technometrics</em>, 19(1): 15–18, 1977. DOI <a href="https://doi.org/10.1080/00401706.1977.10489493">10.1080/00401706.1977.10489493</a>.
+</div>
+<div id="ref-efron1993" class="csl-entry" role="listitem">
+B. Efron and R. J. Tibshirani. <em>An introduction to the bootstrap.</em> Chapman &amp; Hall/CRC, 1993. DOI <a href="https://doi.org/10.1201/9780429246593">10.1201/9780429246593</a>.
+</div>
+<div id="ref-fox2019car" class="csl-entry" role="listitem">
+J. Fox and S. Weisberg. <em>An <span>R</span> companion to applied regression.</em> 3rd ed Thousand Oaks, California: Sage, 2019. URL <a href="https://www.john-fox.ca/Companion/">https://www.john-fox.ca/Companion/</a>.
+</div>
+<div id="ref-giordano2026zaminfluence" class="csl-entry" role="listitem">
+R. Giordano, T. Broderick and R. Meager. <span class="nocase">zaminfluence</span>: Tools in <span>R</span> for computing and using <span>Z</span>-estimator approximate influence functions. 2026a. URL <a href="https://github.com/rgiordan/zaminfluence">https://github.com/rgiordan/zaminfluence</a>.
+</div>
+<div id="ref-giordano2026a" class="csl-entry" role="listitem">
+R. Giordano, R. Meager and T. Broderick. An automatic finite-sample robustness metric: When can dropping a little data make a big difference? <span>P</span>art <span>I</span>. <em>Philosophical Transactions of the Royal Society A</em>, 384(2321): 2026b. DOI <a href="https://doi.org/10.1098/rsta.2025.0001">10.1098/rsta.2025.0001</a>.
+</div>
+<div id="ref-giordano2026b" class="csl-entry" role="listitem">
+R. Giordano, R. Meager and T. Broderick. An automatic finite-sample robustness metric: When can dropping a little data make a big difference? <span>P</span>art <span>II</span>. <em>Philosophical Transactions of the Royal Society A</em>, 384(2321): 2026c. DOI <a href="https://doi.org/10.1098/rsta.2024.0614">10.1098/rsta.2024.0614</a>.
+</div>
+<div id="ref-ich1998e9" class="csl-entry" role="listitem">
+International Council for Harmonisation. <span>ICH E9</span>: <span>S</span>tatistical principles for clinical trials. 1998. URL <a href="https://database.ich.org/sites/default/files/E9_Guideline.pdf">https://database.ich.org/sites/default/files/E9_Guideline.pdf</a>.
+</div>
+<div id="ref-ich2019e9r1" class="csl-entry" role="listitem">
+International Council for Harmonisation. <span>ICH E9(R1)</span>: <span>A</span>ddendum on estimands and sensitivity analysis in clinical trials. 2019. URL <a href="https://database.ich.org/sites/default/files/E9-R1_Step4_Guideline_2019_1203.pdf">https://database.ich.org/sites/default/files/E9-R1_Step4_Guideline_2019_1203.pdf</a>.
+</div>
+<div id="ref-lin2025fragility" class="csl-entry" role="listitem">
+L. Lin and H. Chu. <em><span class="nocase">fragility</span>: Assessing and visualizing fragility of clinical results with binary outcomes.</em> 2025. URL <a href="https://CRAN.R-project.org/package=fragility">https://CRAN.R-project.org/package=fragility</a>. R package version 1.6.1.
+</div>
+<div id="ref-nieuwenhuis2012influenceme" class="csl-entry" role="listitem">
+R. Nieuwenhuis, M. te Grotenhuis and B. Pelzer. <span class="nocase">influence.ME</span>: Tools for detecting influential data in mixed effects models. <em>The R Journal</em>, 4(2): 38–47, 2012. DOI <a href="https://doi.org/10.32614/RJ-2012-011">10.32614/RJ-2012-011</a>.
+</div>
+<div id="ref-pocock2015" class="csl-entry" role="listitem">
+S. J. Pocock, J. J. V. McMurray and T. J. Collier. Statistical controversies in reporting of clinical trials. <em>Journal of the American College of Cardiology</em>, 66(23): 2648–2662, 2015. DOI <a href="https://doi.org/10.1016/j.jacc.2015.10.023">10.1016/j.jacc.2015.10.023</a>.
+</div>
+<div id="ref-potter2020" class="csl-entry" role="listitem">
+G. E. Potter. Dismantling the fragility index: A demonstration of statistical reasoning. <em>Statistics in Medicine</em>, 39(26): 3720–3731, 2020. DOI <a href="https://doi.org/10.1002/sim.8689">10.1002/sim.8689</a>.
+</div>
+<div id="ref-rosenberg2025konfound" class="csl-entry" role="listitem">
+J. M. Rosenberg. <em><span class="nocase">konfound</span>: Quantify the robustness of causal inferences.</em> 2025. URL <a href="https://CRAN.R-project.org/package=konfound">https://CRAN.R-project.org/package=konfound</a>. R package version 1.0.3.
+</div>
+<div id="ref-senn2007" class="csl-entry" role="listitem">
+S. Senn. <em>Statistical issues in drug development.</em> 2nd ed John Wiley &amp; Sons, 2007. DOI <a href="https://doi.org/10.1002/9780470723586">10.1002/9780470723586</a>.
+</div>
+<div id="ref-shaotu1995" class="csl-entry" role="listitem">
+J. Shao and D. Tu. <em>The jackknife and bootstrap.</em> Springer, 1995. DOI <a href="https://doi.org/10.1007/978-1-4612-0795-5">10.1007/978-1-4612-0795-5</a>.
+</div>
+<div id="ref-vanderweele2017evalue" class="csl-entry" role="listitem">
+T. J. VanderWeele and P. Ding. Sensitivity analysis in observational research: Introducing the <span>E</span>-value. <em>Annals of Internal Medicine</em>, 167(4): 268–274, 2017. DOI <a href="https://doi.org/10.7326/M16-2607">10.7326/M16-2607</a>.
+</div>
+<div id="ref-walsh2014" class="csl-entry" role="listitem">
+<span class="nocase">M. Walsh, S. K. Srinathan, D. F. McAuley, et al.</span> The statistical significance of randomized controlled trial results is frequently fragile: A case for a fragility index. <em>Journal of Clinical Epidemiology</em>, 67(6): 622–628, 2014. DOI <a href="https://doi.org/10.1016/j.jclinepi.2013.10.019">10.1016/j.jclinepi.2013.10.019</a>.
+</div>
+</div>
+<!--radix_placeholder_article_footer-->
+<!--/radix_placeholder_article_footer-->
+</div>
+
+<div class="d-appendix">
+</div>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+<!--radix_placeholder_site_after_body-->
+<!--/radix_placeholder_site_after_body-->
+<!--radix_placeholder_appendices-->
+<div class="appendix-bottom">
+<h3 id="references">References</h3>
+<div id="references-listing"></div>
+<h3 id="reuse">Reuse</h3>
+<p>Text and figures are licensed under Creative Commons Attribution <a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. The figures that have been reused from other sources don't fall under this license and can be recognized by a note in their caption: "Figure from ...".</p>
+<h3 id="citation">Citation</h3>
+<p>For attribution, please cite this work as</p>
+<pre class="citation-appendix short">Ardelean, "Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R", The R Journal, 2026</pre>
+<p>BibTeX citation</p>
+<pre class="citation-appendix long">@article{stabilitest,
+  author = {Ardelean, Marius},
+  title = {Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R},
+  journal = {The R Journal},
+  year = {2026},
+  issn = {2073-4859},
+  pages = {1}
+}</pre>
+</div>
+<!--/radix_placeholder_appendices-->
+<!--radix_placeholder_navigation_after_body-->
+<!--/radix_placeholder_navigation_after_body-->
+
+</body>
+
+</html>

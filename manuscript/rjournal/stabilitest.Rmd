@@ -1,6 +1,6 @@
 ---
-title: "stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R"
-date: "2026-08-07"
+title: "Stabilitest: Robustness and Fragility Analysis of Statistical Test Conclusions in R"
+date: "2026-08-10"
 abstract: >
   A p-value quantifies how surprising the observed data would be under the null hypothesis, but not how easily the resulting decision could be overturned. The stabilitest package combines three sensitivity views of one pre-specified analysis: jackknife leave-one-out influence, greedy worst-case observation removal, and the bootstrap same-decision rate. Component metrics and a composite 0-100 score are returned for two-sample location and proportion tests, linear model and ANCOVA terms, GLM and Cox terms, and TOST equivalence and non-inferiority endpoints. Categorical interpretation is fail-closed: a label is emitted only where an independent pre-registered study validates thresholds for that exact configuration. A Fisher exact-test study validated a two-band mapping. A prospective Welch study completed 4,500 training analyses but found no feasible mapping, so held-out data remained unopened and Welch labels are suppressed. The article also reports negative ANCOVA calibration studies. These outcomes illustrate why numeric sensitivity diagnostics and categorical assurance claims require different evidentiary standards.
 draft: false
@@ -17,6 +17,8 @@ output:
 bibliography: RJreferences.bib
 header-includes:
   - \providecommand{\pandocbounded}[1]{#1}
+  - \titleformat{\chapter}{\normalfont\LARGE\bfseries}{}{0em}{}
+  - '\let\originaltitle\title\renewcommand{\title}[1]{\originaltitle{Stabilitest: Robustness and \linebreak Fragility Analysis of Statistical \linebreak Test Conclusions in R}}'
 
 ---
 
@@ -130,29 +132,15 @@ model-term designs of trial reporting.
 related <- data.frame(
   Package = c("stabilitest", "fragility", "sensemakr", "konfound", "EValue", "boot",
               "influence.ME", "car", "zaminfluence"),
-  `Question answered` = c(
-    "Deletion, jackknife and bootstrap sensitivity of a conclusion",
-    "Minimal outcome-status flips reversing significance",
-    "Strength an omitted confounder needs to explain away a coefficient",
-    "Bias or share of cases needed to invalidate an inference",
-    "Strength unmeasured bias needs to explain away an association",
-    "General-purpose bootstrap resampling of any statistic",
-    "Which grouping units are influential in an lme4 fit",
-    "Outliers, leverage and single-deletion influence on lm/glm",
-    "Approximate minimal removal fraction for a Z-estimator"),
-  `Endpoint scope` = c(
-    "Two-sample tests, model terms, Cox and TOST endpoints",
-    "Binary only; studies and meta-analyses",
-    "Linear regression coefficients",
-    "General regression-style inferences",
-    "Observational effect estimates",
-    "Any user-supplied statistic",
-    "Mixed models; grouping factors",
-    "Any lm/glm fit",
-    "Z-estimators (econometric applications)"),
+  Threat = c("Observed-row deletion", "Outcome-status flips", "Omitted confounding",
+             "Omitted bias / cases", "Unmeasured bias", "Sampling variation",
+             "Influential groups", "Single-case influence", "Approximate deletion"),
+  Scope = c("Tests and model terms", "Binary outcomes", "Linear regression",
+            "Regression inference", "Observational effects", "Any statistic",
+            "Mixed models", "lm / glm", "Z-estimators"),
   check.names = FALSE
 )
-knitr::kable(related, caption = "R packages addressing related sensitivity questions. Entries were checked against CRAN or repository documentation on 2026-08-10; fragilityindex is excluded because it has been archived on CRAN since 2020-07-08.", booktabs = TRUE)
+knitr::kable(related, caption = "R packages addressing related sensitivity questions. Detailed endpoint and method comparisons are supplied in related-packages.md. Entries were checked against CRAN or repository documentation on 2026-08-10; fragilityindex is excluded because it has been archived on CRAN since 2020-07-08.", booktabs = TRUE)
 ```
 
 \CRANpkg{stabilitest}'s distinguishing choices relative to all of these are: it
@@ -337,8 +325,9 @@ and minimum band occupancy was
 was preserved and no material reversal was detected, but those secondary
 conditions could not rescue the failed primary gates.
 
-The frozen no-candidate SHA-256 is
-`9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d`;
+The frozen no-candidate SHA-256 is represented in eight consecutive blocks.
+The first four are `9c45481b` `952cab7c` `b9b9086e` `37924a39`; the final four
+are `d83fe048` `4628745d` `be2e79eb` `33e8797d`.
 the compact supplementary artifact records this hash, source hashes, runtime,
 occupancy, and the unopened-validation flag. The active registry version is
 `welch-2026-2`: numeric scores and components remain available, while the
@@ -389,7 +378,7 @@ observations are usually not the obvious ones.
 
 Figure \@ref(fig:simfig) shows the underlying score distributions.
 
-```{r simfig, fig.cap="Descriptive score distributions for significant results under the null (d = 0, left) and the study's d = 0.8 scenario (right), n = 50 per group, uncontaminated. Dashed lines mark the inactive historical 55/70 mapping. The distributions overlap; this figure is not validating evidence for categorical bands.", fig.height=3.4}
+```{r simfig, fig.cap="Descriptive score distributions for significant results under the null (d = 0, left) and the study's d = 0.8 scenario (right), n = 50 per group, uncontaminated. Dashed lines mark the inactive historical 55/70 mapping. The distributions overlap; this figure is not validating evidence for categorical bands.", fig.alt="Two faceted histograms of Welch robustness scores. Null and large-effect score distributions overlap, and dashed vertical lines mark the inactive historical cutoffs at 55 and 70.", fig.height=3.4}
 s_null  <- readRDS(art("simulation", "scenario-03.rds"))
 s_clear <- readRDS(art("simulation", "scenario-11.rds"))
 dd <- rbind(
@@ -500,7 +489,7 @@ Figure \@ref(fig:casefig) shows the two diagnostic displays produced by
 the worst-case trajectory crosses $\alpha$ well before the extreme-value
 trajectory does.
 
-```{r casefig, fig.cap="Diagnostic plots for the Welch case study. Top: p-value trajectories under worst-case (adversarial) and extreme-value (outlier-ranked) removal, with the dashed line at alpha = 0.05. Bottom: bootstrap p-value distribution, red line at the observed p-value.", fig.height=5.5}
+```{r casefig, fig.cap="Diagnostic plots for the Welch case study. Top: p-value trajectories under worst-case (adversarial) and extreme-value (outlier-ranked) removal, with the dashed line at alpha = 0.05. Bottom: bootstrap p-value distribution, red line at the observed p-value.", fig.alt="Two Welch case-study diagnostics. The upper plot compares p-value trajectories under adversarial and outlier-ranked deletion; the lower histogram shows bootstrap p-values relative to the observed p-value.", fig.height=4.2}
 invisible(plot(case_study))
 ```
 
@@ -558,6 +547,8 @@ different composite (`r fmt(res_f_def$robustness_metrics$overall_robustness)`)
 and a suppressed label --- the registry requires the calibrated weight vector,
 not merely the calibrated method.
 
+\FloatBarrier
+
 # Performance
 
 Cost is dominated by the greedy search, which performs $O(N \cdot k_{\max})$
@@ -574,7 +565,7 @@ tt$seconds <- round(tt$seconds, 2)
 tt <- stats::reshape(tt, idvar = "engine", timevar = "n_per_arm",
                       direction = "wide")
 names(tt) <- c("Engine", "n = 50 per arm (s)", "n = 150 per arm (s)")
-knitr::kable(tt, row.names = FALSE, booktabs = TRUE,
+knitr::kable(tt, row.names = FALSE, booktabs = TRUE, longtable = TRUE,
   caption = "Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.0 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.")
 ```
 
@@ -590,8 +581,8 @@ variance, complete separation, failed refits), the packaged datasets, the
 calibration registry's resolution logic, and the calibration documentation
 itself.
 
-That last one is unusual enough to describe. A source-tree audit
-(`tools/check-calibration-documentation.R`, run as part of the test suite)
+That last one is unusual enough to describe. A source-tree documentation audit,
+run as part of the test suite,
 asserts that the README, NEWS, vignettes, manuscript, and every study SAP
 still state the policy invariants: that uncalibrated labels are suppressed,
 that the historical Welch mapping is inactive, and that each frozen acceptance
