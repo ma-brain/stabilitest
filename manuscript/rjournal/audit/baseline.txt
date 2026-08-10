@@ -1,0 +1,10 @@
+branch_commit=66efaf454d41a6c9caf086ccf80211f805f696cd
+package_version=0.6.0
+registry_welch_version=welch-2026-1
+registry_welch_cutoffs=55,70
+rjournal_pdf_pages=10
+rjournal_abstract_words=223
+historical_null_significant_n=132
+historical_null_moderate_or_robust_rate=0.4773
+historical_clean_null_significant_n=58
+historical_clean_null_moderate_or_robust_rate=0.4828
