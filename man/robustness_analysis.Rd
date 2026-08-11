@@ -76,7 +76,7 @@ original_mean_diff, original_ci}{Full-sample test results (effect
 field is a mean difference, Hodges–Lehmann shift, or proportion
 difference depending on \code{test_type}).}
 \item{robustness_metrics}{Component scores (jackknife conclusion
-stability, worst-case fragility, bootstrap reproducibility, overall
+stability, worst-case fragility, bootstrap same-decision rate, overall
 composite) and related diagnostics. Alias: \code{metrics} (same tibble).}
 \item{robustness_interpretation}{A calibrated categorical label. For
 Applicable significant \code{fisher_exact} results under explicit
@@ -143,7 +143,7 @@ is reported only after the complete feasible search; an unevaluable or
 prematurely terminated search raises an error.
 
 Bootstrap attempts with errors or non-finite p-values are retained as failed
-replicates but excluded from reproducibility and p-value summaries. The
+replicates but excluded from same-decision and p-value summaries. The
 returned bootstrap component records \code{n_valid} and \code{n_failed}; if no finite
 replicate remains, the analysis raises an error.
 }

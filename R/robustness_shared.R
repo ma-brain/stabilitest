@@ -307,7 +307,7 @@ print_robustness_components <- function(x, metrics, p_label = "p") {
               ifelse(is.na(metrics$p_at_fragility), "",
                      sprintf("  [%s at flip: %.4f]", p_label,
                              metrics$p_at_fragility))))
-  cat(sprintf("  Bootstrap reproducibility: %5.1f%%  (mean %s = %.4f)\n",
+  cat(sprintf("  Bootstrap same-decision:   %5.1f%%  (mean %s = %.4f)\n",
               metrics$bootstrap_reproducibility, p_label,
               metrics$bootstrap_p_mean))
   if (is.na(metrics$estimate_range_jackknife_lo) ||

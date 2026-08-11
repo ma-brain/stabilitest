@@ -6,7 +6,7 @@
 #   * NEW: worst-case (greedy, AMIP-style) removal analysis; its fragility
 #     index replaces the grand-mean fragility in the composite score
 #   * Grand-mean removal retained as descriptive "extreme-value removal"
-#   * Bootstrap metric relabeled "reproducibility probability" (Goodman 1992);
+#   * Bootstrap metric relabeled "same-decision rate" (Goodman 1992);
 #     percentile interval of bootstrap p-values (not a "CI for the p-value")
 #   * Composite score rescaled (fragility component now spans 0-100) and
 #     weights exposed as an argument (default 0.4 / 0.4 / 0.2)
@@ -208,7 +208,7 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #' prematurely terminated search raises an error.
 #'
 #' Bootstrap attempts with errors or non-finite p-values are retained as failed
-#' replicates but excluded from reproducibility and p-value summaries. The
+#' replicates but excluded from same-decision and p-value summaries. The
 #' returned bootstrap component records `n_valid` and `n_failed`; if no finite
 #' replicate remains, the analysis raises an error.
 #'
@@ -245,7 +245,7 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'     field is a mean difference, Hodges–Lehmann shift, or proportion
 #'     difference depending on `test_type`).}
 #'   \item{robustness_metrics}{Component scores (jackknife conclusion
-#'     stability, worst-case fragility, bootstrap reproducibility, overall
+#'     stability, worst-case fragility, bootstrap same-decision rate, overall
 #'     composite) and related diagnostics. Alias: `metrics` (same tibble).}
 #'   \item{robustness_interpretation}{A calibrated categorical label. For
 #'     Applicable significant `fisher_exact` results under explicit
@@ -521,11 +521,11 @@ robustness_analysis <- function(group1, group2,
   p_at_k_frag    <- p_at_fragility_from_removal(worstcase, k_frag_worst, max_k)
 
   # ============================================================================
-  # 4. BOOTSTRAP (reproducibility probability)
-  #    Resampling preserves the observed effect, so conclusion stability here
-  #    estimates the probability a replicate sample reaches the same
-  #    conclusion (~ power at the observed effect size). It reflects strength
-  #    of evidence, NOT robustness to contamination.
+  # 4. BOOTSTRAP (same-decision rate)
+  #    Resampling preserves the observed effect, so this is an empirical
+  #    plug-in rate under the observed empirical distribution. It reflects
+  #    strength of evidence, NOT robustness to contamination, and is not an
+  #    unconditional future-trial replication probability.
   # ============================================================================
   set.seed(seed)
   bootstrap <- map_dfr(seq_len(n_boot), \(i) {
@@ -755,7 +755,7 @@ generate_interpretation <- function(x) {
   }
 
   bootstrap_text <- sprintf(
-    "Bootstrap reproducibility probability: %.1f%% of %d valid resamples reached the same conclusion (%d failed; mean p = %.4f, SD = %.4f; 2.5th-97.5th percentile interval [%.4f, %.4f]). This reflects strength of evidence at the observed effect size, not robustness to contamination: marginal p-values yield low reproducibility even in clean data.",
+    "Bootstrap same-decision rate: %.1f%% of %d valid resamples reached the same conclusion (%d failed; mean p = %.4f, SD = %.4f; 2.5th-97.5th percentile interval [%.4f, %.4f]). This empirical plug-in quantity reflects strength of evidence at the observed effect size, not robustness to contamination, and is not the probability that a new trial will replicate the finding.",
     m$bootstrap_reproducibility, x$bootstrap$n_valid, x$bootstrap$n_failed,
     m$bootstrap_p_mean, m$bootstrap_p_sd,
     x$bootstrap$p_percentile_interval[1], x$bootstrap$p_percentile_interval[2])
@@ -885,7 +885,7 @@ print.robustness_analysis <- function(x, show_interpretation = TRUE, ...) {
   cat(sprintf("  Extreme-value fragility:    k = %s (descriptive)\n",
               ifelse(x$extreme$fragility_index > x$max_k,
                      paste0("> ", x$max_k), x$extreme$fragility_index)))
-  cat(sprintf("  Bootstrap reproducibility:  %5.1f%%  (%d/%d valid; mean p = %.4f, PI [%.4f, %.4f])\n\n",
+  cat(sprintf("  Bootstrap same-decision:    %5.1f%%  (%d/%d valid; mean p = %.4f, PI [%.4f, %.4f])\n\n",
               m$bootstrap_reproducibility, x$bootstrap$n_valid,
               nrow(x$bootstrap$results), m$bootstrap_p_mean,
               x$bootstrap$p_percentile_interval[1],
@@ -931,7 +931,7 @@ plot.robustness_analysis <- function(x, ...) {
     geom_vline(xintercept = x$original_p, colour = "red", linewidth = 0.8) +
     geom_vline(xintercept = x$alpha, linetype = "dashed") +
     labs(title = "Bootstrap p-value distribution",
-         subtitle = sprintf("Reproducibility = %.1f%%",
+         subtitle = sprintf("Same-decision rate = %.1f%%",
                             x$robustness_metrics$bootstrap_reproducibility),
          x = "p-value", y = "Count") +
     theme_minimal()

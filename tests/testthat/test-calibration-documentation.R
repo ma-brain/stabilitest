@@ -15,6 +15,85 @@ test_that("the active registry has no generic two_sample calibration key", {
   expect_true(any(registry$calibration_unit == "welch_unpaired"))
 })
 
+test_that("reader audit rejects an active Welch 55/70 reference range", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  source_patterns_path <- file.path(
+    root, "inst", "calibration-documentation-patterns.R"
+  )
+  patterns_path <- if (file.exists(source_patterns_path)) {
+    source_patterns_path
+  } else {
+    system.file("calibration-documentation-patterns.R", package = "stabilitest")
+  }
+
+  expect_true(
+    file.exists(patterns_path),
+    info = "documentation-audit pattern definitions are missing"
+  )
+  if (!file.exists(patterns_path)) {
+    return(invisible())
+  }
+
+  patterns <- new.env(parent = baseenv())
+  sys.source(patterns_path, envir = patterns)
+  expect_true(grepl(
+    patterns$stale_welch_reference_pattern,
+    "Welch 55/70 is an active validated reference range.",
+    ignore.case = TRUE,
+    perl = TRUE
+  ))
+  expect_false(grepl(
+    patterns$stale_welch_reference_pattern,
+    "The historical Welch 55/70 rule failed the prospective requirements.",
+    ignore.case = TRUE,
+    perl = TRUE
+  ))
+  expect_false(grepl(
+    patterns$stale_welch_reference_pattern,
+    "The historical Welch 55/70 bands are no longer active.",
+    ignore.case = TRUE,
+    perl = TRUE
+  ))
+})
+
+test_that("reader audit rejects future-trial bootstrap probability claims", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  source_patterns_path <- file.path(
+    root, "inst", "calibration-documentation-patterns.R"
+  )
+  patterns_path <- if (file.exists(source_patterns_path)) {
+    source_patterns_path
+  } else {
+    system.file("calibration-documentation-patterns.R", package = "stabilitest")
+  }
+  patterns <- new.env(parent = baseenv())
+  sys.source(patterns_path, envir = patterns)
+
+  expect_true(
+    exists("stale_bootstrap_replication_pattern", envir = patterns),
+    info = "bootstrap terminology guard is missing"
+  )
+  if (!exists("stale_bootstrap_replication_pattern", envir = patterns)) {
+    return(invisible())
+  }
+
+  expect_true(grepl(
+    patterns$stale_bootstrap_replication_pattern,
+    "The bootstrap estimates the probability a repeat trial will agree.",
+    ignore.case = TRUE,
+    perl = TRUE
+  ))
+  expect_false(grepl(
+    patterns$stale_bootstrap_replication_pattern,
+    paste(
+      "The bootstrap same-decision rate is an empirical plug-in quantity;",
+      "it is not the probability that a new trial will replicate the finding."
+    ),
+    ignore.case = TRUE,
+    perl = TRUE
+  ))
+})
+
 test_that("prospective Welch failure is published without opening validation", {
   root <- normalizePath(testthat::test_path("..", ".."))
   published <- file.path(

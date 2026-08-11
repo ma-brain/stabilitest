@@ -11,8 +11,10 @@ analyses into interpretable metrics:
   perturbation of Broderick, Giordano & Meager 2023) — what is the smallest
   set of observations whose removal flips the conclusion? (*removal fragility
   index*)
-- **Bootstrap reproducibility probability** (Goodman 1992) — would a replicate
-  sample likely reach the same conclusion?
+- **Bootstrap same-decision rate** (Goodman 1992) — how often do resamples
+  drawn from the observed data preserve the original significance decision?
+  This is an empirical plug-in quantity, not the probability that a new trial
+  will replicate the finding.
 
 A data-dependent composite score from 0–100 summarises the components. The
 numeric score and its component metrics are returned for every supported

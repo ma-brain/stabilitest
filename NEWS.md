@@ -269,7 +269,7 @@ Experimental initial release. The API may change.
 
 * Added `robustness_analysis()` for two-sample location tests (Welch and
   paired t, Wilcoxon), combining jackknife leave-one-out stability, greedy
-  worst-case removal fragility, and bootstrap reproducibility into component
+  worst-case removal fragility, and a bootstrap same-decision rate into component
   metrics and a composite 0–100 score.
 * Added `robustness_lm()` and `robustness_surv()` for the same scoring
   pipeline on linear model / ANCOVA terms and Cox proportional hazards terms.

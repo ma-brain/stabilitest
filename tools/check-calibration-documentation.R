@@ -13,6 +13,13 @@ script_path <- if (length(file_argument)) {
 }
 root <- normalizePath(file.path(dirname(script_path), ".."), mustWork = TRUE)
 
+patterns_path <- file.path(root, "inst", "calibration-documentation-patterns.R")
+if (!file.exists(patterns_path)) {
+  stop("Missing documentation-audit pattern definitions: ", patterns_path,
+       call. = FALSE)
+}
+sys.source(patterns_path, envir = environment())
+
 policy_files <- file.path(root, c(
   "README.md", "NEWS.md", "R/robustness_analysis.R",
   "R/robustness_models.R", "R/robustness_tost.R",
@@ -135,6 +142,35 @@ assert_current_welch_policy <- function(document_text, document_name) {
     "active.{0,80}Welch.{0,80}three-band|Welch.{0,80}three-band.{0,80}active",
     paste0(document_name, " still calls the Welch three-band mapping active")
   )
+  assert_not_in_document(
+    normalized,
+    stale_welch_reference_pattern,
+    paste0(document_name,
+           " still presents the Welch 55/70 mapping as a current reference range")
+  )
+}
+
+assert_current_bootstrap_language <- function(document_text, document_name) {
+  normalized <- gsub("`", "", document_text, fixed = TRUE)
+  normalized <- gsub("[[:space:]]+", " ", normalized)
+
+  assert_in_document(
+    normalized,
+    "bootstrap same-decision rate",
+    paste0(document_name, " omits the bootstrap same-decision-rate term")
+  )
+  assert_in_document(
+    normalized,
+    "not the probability that a new trial will replicate the finding",
+    paste0(document_name,
+           " omits the plug-in versus future-replication qualification")
+  )
+  assert_not_in_document(
+    normalized,
+    stale_bootstrap_replication_pattern,
+    paste0(document_name,
+           " overstates the bootstrap as a future-replication probability")
+  )
 }
 
 long_form_path <- file.path(
@@ -146,6 +182,7 @@ if (!file.exists(long_form_path)) {
   long_form_text <- paste(readLines(long_form_path, warn = FALSE),
                           collapse = "\n")
   assert_current_welch_policy(long_form_text, "long-form manuscript")
+  assert_current_bootstrap_language(long_form_text, "long-form manuscript")
 }
 
 physician_guide_path <- file.path(
@@ -156,12 +193,14 @@ if (!file.exists(physician_guide_path)) {
 } else {
   physician_guide_text <- read_docx_text(physician_guide_path)
   assert_current_welch_policy(physician_guide_text, "physician guide")
+  assert_current_bootstrap_language(physician_guide_text, "physician guide")
 }
 
 # Reader-facing documentation should explain scientific decisions, not expose
 # internal execution-stage names. Exact Gate/Track/Task identifiers remain in
 # calibration protocols, audit artifacts, implementation comments, and plans.
 reader_documentation <- c(
+  file.path(root, "DESCRIPTION"),
   file.path(root, "README.md"),
   file.path(root, "NEWS.md"),
   list.files(file.path(root, "vignettes"), pattern = "\\.Rmd$",
@@ -205,6 +244,22 @@ for (path in reader_documentation) {
       violations,
       paste0(relative_path,
              " uses opaque NA/uncalibrated label wording")
+    )
+  }
+  if (grepl(stale_welch_reference_pattern, reader_text_one_line,
+            ignore.case = TRUE, perl = TRUE)) {
+    violations <- c(
+      violations,
+      paste0(relative_path,
+             " presents the Welch 55/70 mapping as a current reference range")
+    )
+  }
+  if (grepl(stale_bootstrap_replication_pattern, reader_text_one_line,
+            ignore.case = TRUE, perl = TRUE)) {
+    violations <- c(
+      violations,
+      paste0(relative_path,
+             " overstates the bootstrap as a future-replication probability")
     )
   }
 }

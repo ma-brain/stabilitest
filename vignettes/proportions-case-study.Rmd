@@ -102,9 +102,11 @@ c(
   greedy adversarial subset whose deletion moves the p-value furthest toward
   overturning the conclusion; the rescaled component is
   `worstcase_fragility_component`.
-- **Bootstrap reproducibility** (`bootstrap_reproducibility`) estimates the
-  probability a replicate sample reaches the same conclusion at the observed
-  effect.
+- **Bootstrap same-decision rate** (`bootstrap_reproducibility`) is the
+  proportion of resamples from the observed data that preserve the original
+  significance decision. The field name is retained for API compatibility;
+  the quantity is a plug-in rate, not an unconditional future-trial
+  replication probability.
 
 ## Walsh event-flip fragility vs removal fragility
 

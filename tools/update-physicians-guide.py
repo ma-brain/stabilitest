@@ -70,6 +70,34 @@ PREFIXES = {
 POST_UPDATE_REPLACEMENTS = {
     "An early Welch simulation suggested that average scores differed between null and large-effect scenarios, but the score distributions overlapped too much to justify clinical reference ranges. The prospective Welch study, version welch-2026-2, ended at training with no_feasible_thresholds. Its frozen candidate record has hash 9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d. Because no candidate met the pre-specified requirements, the held-out validation data were not opened.":
         "An early Welch simulation suggested that average scores differed between null and large-effect scenarios, but the score distributions overlapped too much to justify clinical reference ranges. The prospective Welch study, version welch-2026-2, ended at training with no_feasible_thresholds. Because no candidate met the pre-specified requirements, the held-out validation data were not opened. The technical archive retains the exact audit identifiers.",
+    "2.3 Replaying the trial (the bootstrap)":
+        "2.3 Bootstrap same-decision rate",
+    "Finally, the computer builds thousands of simulated repetitions of the trial by resampling the observed patients, and counts how often the repetition reaches the same conclusion. The result reads like a weather forecast: “92% of simulated reruns of this trial confirm the original verdict.”":
+        "Finally, the computer repeatedly resamples the observed patients and counts how often each resample reaches the same significance decision. The result is the bootstrap same-decision rate; for example, 92% means that 92% of these observed-data resamples preserved the original decision.",
+    "A caveat here too: this replay percentage mostly restates how far the p-value sits from 0.05. A borderline result gives about 50-60% even in perfectly clean data. It answers “would a repeat trial likely agree?”, which is a different question from “is this result resting on a few patients?” - which is why it is reported separately and weighted lightly.":
+        "This rate mostly restates how far the p-value sits from 0.05. A borderline result gives about 50-60% even in perfectly clean data. It is an empirical plug-in quantity under the observed data, not the probability that a new trial will replicate the finding. That is why it is reported separately and weighted lightly.",
+    "The three stress tests are combined into a single score from 0 to 100, much as clinical practice combines several measurements into a composite index. By default, the fragility test and the leave-one-out test each contribute 40% and the replay contributes 20%; the weights are stated openly and can be fixed in advance in the trial's statistical analysis plan.":
+        "The three stress tests are combined into a single score from 0 to 100, much as clinical practice combines several measurements into a composite index. By default, the fragility test and the leave-one-out test each contribute 40% and the bootstrap same-decision rate contributes 20%; the weights are stated openly and can be fixed in advance in the trial's statistical analysis plan.",
+    "Replay: 92% of simulated reruns confirmed the conclusion.":
+        "Bootstrap same-decision rate: 92% of observed-data resamples preserved the conclusion.",
+}
+
+
+POST_UPDATE_TABLE_CELL_REPLACEMENTS = {
+    "Replay (bootstrap)":
+        "Bootstrap same-decision rate",
+    "If we could rerun the trial in similar patients, how often would it reach the same conclusion?":
+        "How often do resamples from the observed data preserve the original significance decision?",
+    "A reproducibility percentage (e.g., 92% of simulated reruns confirm)":
+        "A same-decision percentage (for example, 92% of observed-data resamples preserve the decision)",
+    "Building thousands of simulated reruns of the trial by resampling the observed patients.":
+        "Repeatedly resampling the observed patients and rerunning the analysis.",
+    "Reproducibility probability":
+        "Bootstrap same-decision rate",
+    "The share of those simulated reruns that reach the same conclusion as the original analysis.":
+        "The share of observed-data resamples that preserve the original significance decision; not a future-trial replication probability.",
+    "A 0-100 summary combining the three stress tests (default emphasis: fragility and leave-one-out 40% each, replay 20%).":
+        "A 0-100 summary combining the three stress tests (default emphasis: fragility and leave-one-out 40% each, bootstrap same-decision rate 20%).",
 }
 
 
@@ -106,7 +134,20 @@ def update(path: Path) -> None:
         paragraph = paragraph_by_text.get(old)
         if paragraph is not None:
             set_paragraph_text(paragraph, new)
-            print("Removed the technical hash from the clinician-facing text.")
+            print(f"Updated current physician-guide paragraph: {old[:72]}...")
+            changed = True
+
+    post_cell_paragraph_by_text = {}
+    for table in document.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    post_cell_paragraph_by_text[paragraph.text] = paragraph
+    for old, new in POST_UPDATE_TABLE_CELL_REPLACEMENTS.items():
+        paragraph = post_cell_paragraph_by_text.get(old)
+        if paragraph is not None:
+            set_paragraph_text(paragraph, new)
+            print(f"Updated current glossary/table cell: {old[:72]}...")
             changed = True
 
     glossary_heading = next(

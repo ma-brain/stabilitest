@@ -13,13 +13,13 @@
 
 ## 1. Major methodological issues
 
-### 1.1 Bootstrap "conclusion stability" measures reproducibility, not robustness
+### 1.1 Bootstrap "conclusion stability" is a plug-in same-decision rate, not robustness
 
-The bootstrap component resamples each group with replacement and reports the proportion of resamples reaching the same significance conclusion. Because resampling preserves the observed effect, this proportion is essentially a bootstrap estimate of the *reproducibility probability* — approximately the power of the test at the observed effect size (Goodman, 1992; Shao & Chow, 2002). It is driven primarily by how far p₀ sits from α, not by contamination or influential observations.
+The bootstrap component resamples each group with replacement and reports the proportion of resamples reaching the same significance conclusion. This *bootstrap same-decision rate* is an empirical plug-in quantity under the observed empirical distribution. It is related to power at the observed effect size (Goodman, 1992; Shao & Chow, 2002), but it is not the probability that a new trial will replicate the finding. It is driven primarily by how far p₀ sits from α, not by contamination or influential observations.
 
 Consequences: a perfectly clean dataset with p₀ = 0.04 will show bootstrap "stability" near 50–60% and be penalized in the composite score, while a heavily contaminated dataset with p₀ = 0.0001 will show stability near 100%. The metric therefore conflates *strength of evidence* with *robustness to perturbation* — two distinct concepts the framework claims to separate.
 
-**Resolution:** The metric is retained but relabeled *bootstrap reproducibility probability* and reported as a separate axis of evidence ("would a replicate sample likely reach the same conclusion?"), with the conflation documented in the interpretation guidelines. Its weight in the composite score is reduced (see 1.4) and the manuscript now explains what it does and does not measure. The "95% CI for the p-value" label is corrected to *percentile interval of the bootstrap p-value distribution* — a p-value is not a parameter, and the interval is descriptive, not inferential.
+**Resolution:** The metric is retained but relabeled *bootstrap same-decision rate* and reported as a separate plug-in axis of evidence: how often resamples from the observed data preserve the observed significance decision. It is not presented as an unconditional prediction of future-trial replication. Its weight in the composite score is reduced (see 1.4), and the manuscript explains what it does and does not measure. The "95% CI for the p-value" label is corrected to *percentile interval of the bootstrap p-value distribution* — a p-value is not a parameter, and the interval is descriptive, not inferential.
 
 ### 1.2 Grand-mean strategic removal does not probe the worst case, and is confounded with true effects
 
