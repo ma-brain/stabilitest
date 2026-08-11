@@ -2,16 +2,16 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Keep the long-form manuscript and physician's guide active while
-removing unsupported Welch 55/70 verdicts and aligning both documents with the
-prospective `welch-2026-2` fail-closed result.
+**Goal:** Keep the long-form manuscript and physician's guide active, align all
+current reader-facing documentation with the prospective Welch fail-closed
+result, and replace internal study-stage jargon with plain user language.
 
 **Architecture:** Treat the active calibration registry and committed Welch
 verdict artifact as the scientific source of truth. Add file-specific policy
-checks, revise the Markdown and DOCX sources in place, regenerate the long-form
-PDF, and render both deliverables for page-by-page QA. Preserve all useful
-numeric and component-level interpretation; suppress only unearned Welch
-categorical labels.
+checks, revise public Markdown/R Markdown/roxygen and DOCX sources in place,
+regenerate derived help and PDF artifacts, and render both document
+deliverables for page-by-page QA. Preserve useful numeric and component-level
+interpretation; suppress only unearned Welch categorical labels.
 
 **Tech Stack:** R >= 4.2, base-R ZIP/XML reading, `testthat`, Markdown, Pandoc,
 Typst, Python 3 with `python-docx`, LibreOffice-based DOCX rendering, Poppler,
@@ -39,6 +39,12 @@ Git.
 - Do not change runtime code, registry entries, calibration artifacts, or the R
   Journal submission package.
 - Do not submit or publish anything externally.
+- Remove Gate/Track/Task identifiers from reader-facing prose while retaining
+  them in calibration protocols, audit artifacts, internal implementation
+  comments, and plans.
+- Explain blank labels in plain language: the numeric score and stress-test
+  details remain available, but no categorical interpretation is printed when
+  validated cutoffs do not exist.
 
 ## Task 1: Record the isolated baseline and render the physician guide
 
@@ -262,6 +268,120 @@ violation remains.
 
 Do not commit until Task 4 restores the complete audit to green.
 
+## Task 3A: Add a reader-facing terminology guard
+
+**Files:**
+
+- Modify: `tools/check-calibration-documentation.R`
+
+**Step 1: Define the public documentation corpus**
+
+Add an explicit list containing `README.md`, `NEWS.md`, the three package
+vignettes, public roxygen source in `R/robustness_analysis.R` and
+`R/robustness_models.R`, their generated `man/` pages, the long-form manuscript,
+and `manuscript/methodological_review.md`.
+
+**Step 2: Reject internal project vocabulary in that corpus**
+
+For each public file, reject `Gate A`, `Gate B`, `Task 15`, `Track A`, and
+`Track E`. Also reject the exact opaque README sentence:
+
+```text
+Labels are `NA` for uncalibrated methods or conclusions, while scores and
+components remain available for descriptive review.
+```
+
+Do not apply this check to calibration protocols, published artifacts, plans,
+or non-roxygen implementation comments.
+
+**Step 3: Run the audit and verify it fails**
+
+Run:
+
+```sh
+Rscript tools/check-calibration-documentation.R
+```
+
+Expected: in addition to the pending physician-guide failures, the audit lists
+each reader-facing file that still contains internal workflow vocabulary.
+
+## Task 3B: Rewrite current reader-facing package documentation
+
+**Files:**
+
+- Modify: `README.md`
+- Modify: `NEWS.md`
+- Modify: `vignettes/pain-case-study.Rmd`
+- Modify: `vignettes/proportions-case-study.Rmd`
+- Modify: `vignettes/ancova-case-study.Rmd`
+- Modify: `R/robustness_analysis.R`
+- Modify: `R/robustness_models.R`
+- Regenerate: `man/robustness_analysis.Rd`
+- Regenerate: relevant model help under `man/`
+- Modify: `manuscript/methodological_review.md`
+- Modify: `manuscript/robustness_analysis_manuscript.md`
+
+**Step 1: Rewrite the README calibration overview**
+
+Lead with the user-visible behavior:
+
+> For analysis types without validated cutoffs, stabilitest reports the numeric
+> score and all stress-test details but leaves the categorical label blank.
+
+Explain that Welch training could not find cutoffs that were both safe against
+false reassurance and useful for identifying clear effects, so Welch is
+numeric-only and the held-out data were never opened. Describe Fisher's exact
+test as the sole currently validated label mapping within its documented
+profile and weights. Move exact study IDs, hashes, and machine reason strings
+to links or the calibration archive.
+
+**Step 2: Translate release notes and vignettes**
+
+Replace project-stage names with scientific descriptions. Examples:
+
+- “Gate B is active” -> “held-out validation confirmed the Fisher mapping”;
+- “Gate B closed fail-closed” -> “training found no feasible cutoff, so the
+  study stopped before held-out validation”;
+- “Track A” -> “the jackknife-light two-band ANCOVA attempt”;
+- “Track E” -> “the ANCOVA violation-detection study”;
+- “Task 15” -> “the historical Welch simulation.”
+
+Keep method versions and numeric validation results where they help readers.
+
+**Step 3: Update public function documentation**
+
+In roxygen prose, describe the same current user-visible behavior without
+workflow identifiers. Regenerate documentation with:
+
+```sh
+Rscript -e 'roxygen2::roxygenise()'
+```
+
+Expected: the relevant `.Rd` files match the updated roxygen source and contain
+no forbidden project-stage terms.
+
+**Step 4: Correct the historical methodological review**
+
+Add a prominent historical-status note. Replace its stale statement that the
+runtime still applies Welch 55/70 bands with the current numeric-only policy.
+Historical discussion of how the early thresholds were proposed may remain,
+but must not read as current guidance.
+
+**Step 5: Finish the long-form terminology pass**
+
+Replace Task/Gate/Track headings and prose with reader-facing scientific names
+without changing the already-corrected calibration outcome.
+
+**Step 6: Run the terminology audit**
+
+Run:
+
+```sh
+Rscript tools/check-calibration-documentation.R
+```
+
+Expected: only physician-guide failures remain.
+
 ## Task 4: Correct and render the physician's guide
 
 **Files:**
@@ -365,6 +485,7 @@ Iterate the DOCX updater and render until clean.
 - Verify: `manuscript/stabilitest-physicians-guide.docx`
 - Verify: `tools/check-calibration-documentation.R`
 - Verify: `tools/update-physicians-guide.py`
+- Verify: all files listed in Task 3B
 
 **Step 1: Build the long-form PDF**
 

@@ -110,6 +110,37 @@ the expected failure. After the document changes, run the targeted audit, the
 full `testthat` suite, `R CMD check --as-cran`, both document builds, and visual
 QA.
 
+## Reader-facing documentation addendum
+
+Following implementation review, extend the alignment beyond the two companion
+documents to the package's current reader-facing documentation:
+
+- `README.md`;
+- `NEWS.md`;
+- package vignettes;
+- public roxygen help and its generated `man/` pages;
+- `manuscript/methodological_review.md`, which must be clearly identified as a
+  historical review and corrected where it describes the current policy.
+
+Remove internal workflow vocabulary such as “Gate A,” “Gate B,” “Task 15,”
+“Track A,” and “Track E” from explanatory prose. Replace it with the scientific
+event it represented: protocol freeze, training selection, held-out
+confirmation, historical simulation, jackknife-light ANCOVA attempt, or
+violation-detection study. Raw hashes and machine reason codes should appear in
+reader-facing prose only when necessary for reproducibility; the README and
+vignettes should link to the detailed artifacts instead.
+
+Replace the opaque statement that labels are `NA` for uncalibrated methods with
+plain language: for analysis types without validated cutoffs, stabilitest still
+reports the numeric score and stress-test details but leaves the categorical
+label blank. Explain once that this deliberate blank output is the package's
+fail-closed behavior.
+
+Exact gate, track, task, hash, and reason identifiers remain in calibration
+protocols, published audit artifacts, implementation comments where needed,
+and planning documents. Those materials serve reproducibility rather than
+general user education.
+
 ## Scope and release
 
 This change edits documentation and documentation tests only. It does not
