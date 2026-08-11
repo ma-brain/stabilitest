@@ -101,9 +101,9 @@ the upper NI bound.}
 
 Endpoints (\code{endpoint}):
 \describe{
-\item{\code{"mean"}}{Welch or paired \strong{t} on mean difference (group1 − group2).
+\item{\code{"mean"}}{Welch or paired \strong{t} on mean difference (group1 - group2).
 Symmetric bounds \verb{[-margin, margin]}.}
-\item{\code{"prop"}}{Wald \strong{z} TOST/NI on risk difference RD = p1 − p2 for
+\item{\code{"prop"}}{Wald \strong{z} TOST/NI on risk difference RD = p1 - p2 for
 individual-level binary (0/1 or logical) outcomes. Symmetric bounds
 \verb{[-margin, margin]} on the probability scale. Not a Farrington–Manning
 score test.}

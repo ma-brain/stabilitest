@@ -10,8 +10,8 @@
 #     margin rejects at alpha (direction depends on higher_is_better).
 #
 # Endpoints (`endpoint` argument):
-#   * "mean" — Welch / paired t on mean difference (group1 − group2)
-#   * "prop" — Wald TOST/NI on risk difference RD = p1 − p2 (binary 0/1)
+#   * "mean" — Welch / paired t on mean difference (group1 - group2)
+#   * "prop" — Wald TOST/NI on risk difference RD = p1 - p2 (binary 0/1)
 #   * "or"   — Wald TOST/NI on log(OR); user margins on the OR scale
 #
 # Methods (base R; statistically honest limitations):
@@ -159,7 +159,7 @@
 }
 
 #' Internal helper returning the Welch / paired-t TOST or NI summary used by
-#' \code{robustness_tost()}. Effect is always group1 − group2 (paired: within-pair
+#' \code{robustness_tost()}. Effect is always group1 - group2 (paired: within-pair
 #' difference).
 #'
 #' @param group1,group2 Numeric vectors (equal length if `paired`).
@@ -280,7 +280,7 @@ tost_t_test <- function(group1, group2, type,
   )
 }
 
-#' Internal Wald TOST / NI on risk difference RD = p1 − p2.
+#' Internal Wald TOST / NI on risk difference RD = p1 - p2.
 #' @keywords internal
 #' @noRd
 tost_prop_test <- function(group1, group2, type,
@@ -518,9 +518,9 @@ tost_or_test <- function(group1, group2, type,
 #'
 #' Endpoints (`endpoint`):
 #' \describe{
-#'   \item{`"mean"`}{Welch or paired **t** on mean difference (group1 − group2).
+#'   \item{`"mean"`}{Welch or paired **t** on mean difference (group1 - group2).
 #'     Symmetric bounds `[-margin, margin]`.}
-#'   \item{`"prop"`}{Wald **z** TOST/NI on risk difference RD = p1 − p2 for
+#'   \item{`"prop"`}{Wald **z** TOST/NI on risk difference RD = p1 - p2 for
 #'     individual-level binary (0/1 or logical) outcomes. Symmetric bounds
 #'     `[-margin, margin]` on the probability scale. Not a Farrington–Manning
 #'     score test.}

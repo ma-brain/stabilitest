@@ -46,7 +46,7 @@ summary(pain_treatment)
 summary(pain_placebo)
 ```
 
-Treatment includes one extreme responder (−52.0); placebo includes one minimal responder (+3.0). These are intentional for influence diagnostics, not clinical claims.
+Treatment includes one extreme responder (-52.0); placebo includes one minimal responder (+3.0). These are intentional for influence diagnostics, not clinical claims.
 
 Run the Welch two-sample analysis. Bootstrap uses `n_boot = 500` here to keep vignette runtime modest; the manuscript case study used `B = 2000`. Deterministic components (jackknife, removal analyses) do not depend on `n_boot`.
 
@@ -63,7 +63,7 @@ print(res)
 
 Key deterministic takeaways that match the manuscript case study:
 
-- Primary Welch test: mean difference (treatment − placebo) about −11.4, *p* ≈ 0.0018.
+- Primary Welch test: mean difference (treatment - placebo) about -11.4, *p* ≈ 0.0018.
 - Jackknife conclusion stability 100% across all leave-one-out deletions (near-perfect LOO stability mostly reflects *n* ≈ 55, not invulnerability).
 - Worst-case fragility index **k = 6** (about 11% of the sample); *p* rises to ≈ 0.060 after the sixth greedy deletion.
 - Overall score is approximately 72.5/100 with the historical manuscript setting `B = 2000`. It remains a numeric summary; no Welch categorical label is assigned.

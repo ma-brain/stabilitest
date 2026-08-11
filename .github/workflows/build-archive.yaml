@@ -1,0 +1,102 @@
+# Build versioned package files only when DESCRIPTION's Version field changes.
+name: Build versioned package files
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - DESCRIPTION
+
+permissions: read-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect DESCRIPTION version bump
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          before_sha="${{ github.event.before }}"
+          if [[ ! "$before_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid pre-push revision: $before_sha" >&2
+            exit 1
+          fi
+
+          current_count=$(grep -c '^Version:' DESCRIPTION || true)
+          previous_description=$(git show "$before_sha:DESCRIPTION")
+          previous_count=$(printf '%s\n' "$previous_description" | grep -c '^Version:' || true)
+
+          if [[ "$current_count" -ne 1 || "$previous_count" -ne 1 ]]; then
+            echo "Expected exactly one Version field in each DESCRIPTION revision." >&2
+            exit 1
+          fi
+
+          current_version=$(sed -n 's/^Version:[[:space:]]*//p' DESCRIPTION)
+          previous_version=$(printf '%s\n' "$previous_description" |
+            sed -n 's/^Version:[[:space:]]*//p')
+
+          if [[ -z "$current_version" || -z "$previous_version" ]]; then
+            echo "DESCRIPTION Version fields must be non-empty." >&2
+            exit 1
+          fi
+
+          if [[ "$current_version" == "$previous_version" ]]; then
+            echo "DESCRIPTION changed without a version bump; package files will not be built."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Version bump detected: $previous_version -> $current_version"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "current=$current_version" >> "$GITHUB_OUTPUT"
+          echo "previous=$previous_version" >> "$GITHUB_OUTPUT"
+
+      - uses: r-lib/actions/setup-r@v2
+        if: steps.version.outputs.changed == 'true'
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-tinytex@v2
+        if: steps.version.outputs.changed == 'true'
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        if: steps.version.outputs.changed == 'true'
+
+      - name: Build and validate package files
+        id: package_files
+        if: steps.version.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          archive="stabilitest_${{ steps.version.outputs.current }}.tar.gz"
+          manual="stabilitest_${{ steps.version.outputs.current }}-manual.pdf"
+
+          R CMD build .
+          test -f "$archive"
+
+          R CMD Rd2pdf --no-preview --force --output="$manual" .
+          test -s "$manual"
+
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "manual=$manual" >> "$GITHUB_OUTPUT"
+
+      - name: Upload versioned package files
+        uses: actions/upload-artifact@v4
+        if: steps.version.outputs.changed == 'true'
+        with:
+          name: stabilitest-${{ steps.version.outputs.current }}-package-files
+          path: |
+            ${{ steps.package_files.outputs.archive }}
+            ${{ steps.package_files.outputs.manual }}
+          if-no-files-found: error
