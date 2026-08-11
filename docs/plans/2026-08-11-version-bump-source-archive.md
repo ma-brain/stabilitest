@@ -2,11 +2,11 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build and upload the R source package archive only when the `Version:` field in `DESCRIPTION` changes on `main`, and document the release and scientific safeguards in `AGENTS.md`.
+**Goal:** Build and upload the R source package archive and PDF reference manual only when the `Version:` field in `DESCRIPTION` changes on `main`, and document the release and scientific safeguards in `AGENTS.md`.
 
 **Architecture:** A path-filtered GitHub Actions workflow compares the pre-push and current `DESCRIPTION` versions before any R setup or build work. A standalone repository checker protects the trigger, version gate, read-only permissions, archive filename, and absence of release/submission side effects; the normal R CMD check workflow runs that checker.
 
-**Tech Stack:** GitHub Actions YAML, Bash, R, `yaml`, `R CMD build`, r-lib/actions, actions/upload-artifact.
+**Tech Stack:** GitHub Actions YAML, Bash, R, TinyTeX, `yaml`, `R CMD build`, `R CMD Rd2pdf`, r-lib/actions, actions/upload-artifact.
 
 ---
 
@@ -25,11 +25,13 @@ unless all of these contracts are present:
 - tag and manual triggers are absent;
 - repository permissions remain `read-all`;
 - current and pre-push `DESCRIPTION` versions are read and compared;
-- R setup, dependency setup, build, and upload are conditional on a true
-  version-change output;
+- R setup, TinyTeX setup, dependency setup, build, and upload are conditional
+  on a true version-change output;
 - `R CMD build .` runs and the exact
   `stabilitest_<new-version>.tar.gz` file is required;
-- `actions/upload-artifact@v4` uploads the archive; and
+- `R CMD Rd2pdf .` runs and the exact non-empty
+  `stabilitest_<new-version>-manual.pdf` file is required;
+- `actions/upload-artifact@v4` uploads both package files; and
 - no release, tag, CRAN, R Journal, or other submission command/action exists.
 
 The checker prints every violation and exits nonzero if any are present.
@@ -91,18 +93,20 @@ Check out with `fetch-depth: 0`. Add a Bash step with `id: version` that:
 **Step 3: Make all expensive and output-producing steps conditional**
 
 Apply `if: steps.version.outputs.changed == 'true'` to setup-r,
-setup-r-dependencies, build, and upload.
+setup-tinytex, setup-r-dependencies, build, and upload.
 
-**Step 4: Build and validate the exact archive**
+**Step 4: Build and validate the exact package files**
 
 Run `R CMD build .`, compute
-`stabilitest_${{ steps.version.outputs.current }}.tar.gz`, require it to exist,
-and expose that path from an `id: archive` step.
+`stabilitest_${{ steps.version.outputs.current }}.tar.gz`, and require it to
+exist. Run `R CMD Rd2pdf . --force` with output
+`stabilitest_${{ steps.version.outputs.current }}-manual.pdf`, require it to be
+non-empty, and expose both paths from an `id: package_files` step.
 
 **Step 5: Upload only a workflow artifact**
 
-Use `actions/upload-artifact@v4` with a versioned artifact name and the exact
-validated path. Retain `permissions: read-all`. Remove
+Use `actions/upload-artifact@v4` with a versioned artifact name and both exact
+validated paths. Retain `permissions: read-all`. Remove
 `softprops/action-gh-release` and release-note generation.
 
 **Step 6: Run the workflow checker**
@@ -132,11 +136,11 @@ directories under `stabilitest_files/`. Explain that local empty `data/`,
 
 **Step 3: Add the version-bump archive contract**
 
-State that changing `DESCRIPTION`'s `Version:` on `main` is the sole archive
-build event; unchanged-version metadata edits must not build; the output is a
-GitHub Actions artifact; and the workflow must not create tags, Releases, CRAN
-submissions, or R Journal submissions. CRAN publication is not a prerequisite
-for building the source archive.
+State that changing `DESCRIPTION`'s `Version:` on `main` is the sole source
+archive and PDF-manual build event; unchanged-version metadata edits must not
+build; both outputs are in one GitHub Actions artifact; and the workflow must
+not create tags, Releases, CRAN submissions, or R Journal submissions. CRAN
+publication is not a prerequisite for building these package files.
 
 **Step 4: Add verification commands**
 
@@ -174,10 +178,11 @@ errors, 0 warnings, and only the accepted `New submission` note.
 
 **Step 3: Rehearse the archive build locally**
 
-Run `R CMD build .` in a temporary parent directory or move the generated
-archive outside the repository immediately after the check. Require
-`stabilitest_0.6.0.tar.gz`, inspect it with `tar -tzf`, and verify its
-`DESCRIPTION` reports version 0.6.0.
+Run `R CMD build .` and `R CMD Rd2pdf .` in a temporary output workflow or move
+their outputs outside the repository immediately after the check. Require
+`stabilitest_0.6.0.tar.gz` and `stabilitest_0.6.0-manual.pdf`, inspect the
+archive with `tar -tzf`, verify its `DESCRIPTION` reports version 0.6.0, inspect
+the manual with `pdfinfo`, and visually review every manual page.
 
 **Step 4: Review and stage only intended files**
 
