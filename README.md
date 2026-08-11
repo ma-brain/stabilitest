@@ -16,61 +16,51 @@ analyses into interpretable metrics:
 
 A data-dependent composite score from 0–100 summarises the components. The
 numeric score and its component metrics are returned for every supported
-method. Categorical interpretation labels are deliberately conservative. The
-prospective Welch study found no feasible threshold mapping, so
-`welch_unpaired` is `uncalibrated` and its labels are suppressed. The current
-release assigns **Fragile** or **Not fragile** only to an applicable,
-statistically significant `fisher_exact` result under the explicit
-jackknife-light weights
-(`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`; cutoff `L = 58`,
-version `fisher-2026-1`, provenance `study:binary_proportion@cc3344931614`).
-There is no Robust tier for Fisher. Labels are `NA` for uncalibrated methods
-or conclusions, while scores and components remain available for descriptive
-review. Historical Welch 55/70 results remain descriptive evidence only and
-are not an active runtime calibration.
+method.
+
+For analysis types without validated cutoffs, stabilitest reports the numeric
+score and all stress-test details but leaves the categorical label blank. A
+blank label does not mean the analysis failed or that the score is missing. It
+means there is not enough calibration evidence to call that score **Robust**,
+**Moderately robust**, **Fragile**, or **Not fragile**. This deliberate
+fail-closed behavior avoids presenting an unvalidated reference range as a
+clinical interpretation.
+
+The current release prints a categorical label only for an applicable,
+statistically significant Fisher exact test. Under its validated profile and
+explicit weights (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`), a
+score of 58 or below is **Fragile** and a score above 58 is **Not fragile**.
+There is no Robust tier for Fisher. Default score weights and results outside
+the validated profile remain numeric-only. See the
+[`fisher_exact` calibration study](manuscript/calibration/studies/binary_proportion/)
+for the exact eligibility rules and validation results.
 
 Calibration is keyed by the resolved method (`welch_unpaired`, `paired_t`,
 `wilcoxon_rank_sum`, `wilcoxon_signed_rank`, `brunner_munzel`,
 `fisher_exact`, `chi_square_2x2`, `two_sample_prop`, `lm_ancova`,
 `lm_ancova_v2`, `glm_binomial`, `glm_poisson`, `cox_ph`, and the three TOST
 endpoints). The public `robustness_analysis()` dispatcher and its existing
-`test_type` values are unchanged. Gate B for the isolated `lm_ancova` v1 study
-closed fail-closed: the registry row remains `uncalibrated`
-(`no_feasible_thresholds`; held-out not opened; version `lm-ancova-2026-1`).
-Gate B for Track A `lm_ancova_v2` likewise closed fail-closed
-(`no_feasible_thresholds`; candidate hash `3dc2a1f840b3eb725bea629dc130f070`;
-held-out not opened; version `lm-ancova-v2-2026-1`), so model labels remain
-suppressed for both ANCOVA units. Historical Welch 55/70 is not an ANCOVA
-fallback. Gate A froze the isolated ANCOVA study for eligible significant
-canonical 1-df treatment effects with 60%/90% power-defined truth strata.
-Multi-df labels remain suppressed and score weights remain frozen. The Track A
-`lm_ancova_v2` SAP froze a two-band (Fragile / Not fragile) jackknife-light
-protocol (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`); training found
-no feasible L, so labels stay suppressed. The prospectively frozen
-`pain_ancova_trial` dataset is an illustration only and never enters training
-or held-out evidence.
+`test_type` values are unchanged.
 
-A method-specific calibration study for `fisher_exact` (binary-proportion
-Phase 1) validated a two-band Fragile / Not fragile decision at cutoff
-`L = 58` on a fresh held-out grid; published artifacts live in
-`manuscript/calibration/studies/binary_proportion/`. Gate B is active: the
-package registry emits Fragile / Not fragile for eligible significant
-canonical two-arm Fisher results under the explicit jackknife-light weights
-above (`fisher-2026-1`; `study:binary_proportion@cc3344931614`). Default
-0.4/0.4/0.2 weights and non-canonical profiles keep labels suppressed while
-retaining numeric scores and component metrics. Phase 2 targets
-`chi_square_2x2`.
+The prospective Welch study (`welch-2026-2`) completed 4,500 significant
+training analyses. It could not find cutoffs that were both safe against false
+reassurance and useful for identifying clear effects. The historical 55/70
+rule would have falsely reassured 45.8% of null results and identified only
+49.9% of clear-effect results in training. Because no candidate met the frozen
+requirements, the study stopped and the held-out validation data were not
+opened. Welch results therefore retain their numeric scores and stress-test
+details but have no categorical label. The
+[`welch_unpaired` study archive](manuscript/calibration/studies/welch_unpaired/)
+contains the protocol, exact audit identifiers, and published negative result.
 
-The prospective Welch study (`welch-2026-2`) completed all 18 training cells
-with 4,500 significant analyses and zero failures. No frozen three-band or
-two-band candidate met the pre-specified training gates. The historical 55/70
-comparator had false reassurance 0.458 (conservative upper bound 0.513), clear
-identification 0.499 (conservative lower bound 0.348), and balanced ordinal
-accuracy 0.558. Its final status is `uncalibrated`
-(`no_feasible_thresholds`; candidate hash
-`9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d`).
-Held-out validation was not opened. Numeric Welch scores and components remain
-available, but categorical Welch labels are suppressed.
+Two prospective ANCOVA calibration attempts also found no safe and useful
+categorical cutoff, and a later study did not confirm that the score detected
+assumption violations better than the p-value alone. ANCOVA results therefore
+remain numeric-only. The `pain_ancova_trial` dataset is an illustration and was
+never used as calibration evidence. See the
+[`lm_ancova` study archive](manuscript/calibration/studies/lm_ancova/) and
+[`lm_ancova_v2` study archive](manuscript/calibration/studies/lm_ancova_v2/)
+for the full protocols and audit record.
 
 ## Installation
 

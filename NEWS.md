@@ -1,24 +1,24 @@
 # stabilitest 0.6.0
 
-## Prospective Welch calibration closed fail-closed
+## Prospective Welch calibration stopped after training
 
 * Replaced the historical active Welch 55/70 mapping with the prospective
   `welch-2026-2` result. Production training completed 4,500 significant
   analyses across all 18 required cells with zero failures, but no frozen
-  three-band or two-band threshold candidate met every acceptance gate.
+  three-band or two-band threshold candidate met every pre-specified safety
+  and usefulness requirement.
 * The historical 55/70 comparator produced false reassurance 0.458
   (conservative upper bound 0.513), clear identification 0.499
   (conservative lower bound 0.348), and balanced ordinal accuracy 0.558.
-  The final status is `uncalibrated` / `no_feasible_thresholds`, candidate hash
-  `9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d`.
-  Held-out validation was not opened.
+  No categorical mapping was published, and held-out validation was not
+  opened. Exact audit identifiers remain in the published study artifacts.
 * `robustness_analysis(..., test_type = "t.test")` continues to return the
-  numeric score and all component metrics, but its Welch categorical label is
-  now `NA`. The public dispatcher and scoring calculation are unchanged.
+  numeric score and all component metrics, but now leaves its Welch categorical
+  label blank. The public dispatcher and scoring calculation are unchanged.
 
-## Gate B: active `fisher_exact` two-band calibration
+## Validated `fisher_exact` two-band calibration
 
-* Activated the published `fisher_exact` Gate B decision in the runtime
+* Activated the held-out-confirmed `fisher_exact` decision in the runtime
   registry: validated two-band Fragile / Not fragile at cutoff `L = 58`
   (version `fisher-2026-1`; provenance `study:binary_proportion@cc3344931614`).
   There is no Robust tier for Fisher. Labels emit only under the explicit
@@ -37,46 +37,40 @@
 
 ## ANCOVA negative-result program
 
-* Gate A freezes an isolated ANCOVA calibration study for eligible significant
-  canonical 1-df treatment effects with 60%/90% power-defined truth strata.
+* Added an isolated ANCOVA calibration study for eligible significant canonical
+  1-df treatment effects with 60%/90% power-defined truth strata.
   Multi-df labels remain suppressed, score weights remain frozen, and Welch
   55/70 remains a Welch comparator rather than an ANCOVA fallback. The
   prospectively frozen `pain_ancova_trial` illustration never enters training
   or held-out evidence; the manuscript case study follows calibration results.
-* Gate B for `lm_ancova` v1 closed fail-closed: status `uncalibrated`, reason
-  `no_feasible_thresholds`, held-out not opened, version `lm-ancova-2026-1`.
-  Categorical labels stay suppressed; compact decision artifacts are under
+* The first `lm_ancova` training study found no feasible thresholds and stopped
+  before held-out validation (version `lm-ancova-2026-1`). Categorical labels
+  stay suppressed; compact decision artifacts are under
   `manuscript/calibration/studies/lm_ancova/published/`. Welch 55/70 is not an
   ANCOVA fallback.
-* Gate B for Track A unit `lm_ancova_v2` was executed fail-closed after a
-  sealed pilot GO (Δ = 24.4, overlap = 0.034, AUC = 0.892) whose location
-  metrics were a false-GO relative to training: status `uncalibrated`, reason
-  `no_feasible_thresholds` (candidate hash
-  `3dc2a1f840b3eb725bea629dc130f070`), held-out not opened, version
-  `lm-ancova-v2-2026-1`. The jackknife-light two-band attempt
+* The jackknife-light two-band ANCOVA attempt followed a sealed pilot
+  (Δ = 24.4, overlap = 0.034, AUC = 0.892), but training found no feasible
+  cutoff and the held-out data were not opened (version
+  `lm-ancova-v2-2026-1`). The attempt
   (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`) found no feasible L;
-  best RI at the FR-safe L was 0.554 vs gate 0.70. Categorical labels stay
+  best RI at the false-reassurance-safe cutoff was 0.554 versus the required
+  0.70. Categorical labels stay
   suppressed. Compact decision artifacts are under
   `manuscript/calibration/studies/lm_ancova_v2/published/`. This empirical
   outcome confirms Finding 4 in
   `docs/plans/2026-08-06-lm-ancova-v3-design.md`. The v1 `lm_ancova`
-  provenance row remains the immutable historical uncalibrated record.
-* Gate A for Track A unit `lm_ancova_v2` freezes a two-band (Fragile / Not
-  fragile) jackknife-light SAP (`fragility = 0.5`, `bootstrap = 0.5`,
-  `jackknife = 0`; null+clear fitting; borderline diagnostic-only). Gate B
-  integration of that SAP is the fail-closed uncalibrated decision above; v1
-  provenance is unchanged.
-* Phase 1 Track E for `lm_ancova_v3` (pre-registered violation-detection
-  ΔAUC among significant clear ANCOVA rows) is published **not confirmed**:
+  provenance row remains the immutable historical record.
+* The pre-registered `lm_ancova_v3` violation-detection study measured ΔAUC
+  among significant clear ANCOVA rows and was **not confirmed**:
   pooled ΔAUC = 0.0053 with bootstrap 95% CI [−0.1109, 0.1289] against the
   frozen gate (ΔAUC ≥ 0.10 and CI lower bound > 0). Quotas were met
   (2,100 completed / 0 failed). Compact artifacts are under
   `manuscript/calibration/studies/lm_ancova_v3/published/` (verdict hash
-  `8fe6c66f28b5c788a637eff0cb8a3029`). Track D remains parked. No package
-  registry or runtime behavior change.
+  `8fe6c66f28b5c788a637eff0cb8a3029`). No package registry or runtime behavior
+  changed.
 * Registry taxonomy now includes `lm_ancova` and `lm_ancova_v2` provenance
-  rows (both uncalibrated after fail-closed Gate B). Task 15's broad-family
-  tables remain archived historical evidence.
+  rows for the two negative training results. The historical broad-family
+  Welch tables remain archived as descriptive evidence.
 
 ## Datasets and vignettes
 
@@ -105,7 +99,7 @@
 * Removed the generic `two_sample` identity from the active calibration
   registry. Exact units include `welch_unpaired`, `paired_t`, `fisher_exact`,
   and `lm_ancova`; the latter is the next independent calibration target.
-  Task 15's broad-family tables and manifests remain archived as historical
+  The broad-family Welch tables and manifests remain archived as historical
   evidence and are not used for runtime interpretation.
 * The 0.5.1 production freeze found all seven calibration families
   `uncalibrated` / `no_feasible_thresholds`. Accordingly, categorical

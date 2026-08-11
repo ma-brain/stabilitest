@@ -695,9 +695,10 @@ robustness_surv <- function(formula, data, term,
 #'   and finite p-values: failed full-data fits error; failed subsets are
 #'   skipped. Firth / bias-reduced logistic regression is not supported.
 #'   Numeric scores and component metrics remain available for every GLM
-#'   result, but the `glm_binomial` and `glm_poisson` units are currently
-#'   uncalibrated and their categorical labels are suppressed (`NA`). The
-#'   historical Task 15 broad-family score bands are not transferable.
+#'   result, but `glm_binomial` and `glm_poisson` do not currently have
+#'   validated categorical cutoffs. Their labels are therefore left blank
+#'   (represented as `NA` in R). The historical broad-family Welch score bands
+#'   are not transferable.
 #'
 #' @return An object of class `"robustness_model"` (a named list). Same engine
 #'   fields as [robustness_lm()], plus `family` and `link` recording the GLM

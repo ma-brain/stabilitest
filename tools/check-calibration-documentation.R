@@ -63,6 +63,152 @@ assert_match("held-out (validation )?(was )?not opened|held.out not opened",
 assert_match("Welch.{0,80}(labels are suppressed|categorical.{0,30}suppressed)|labels.{0,80}Welch.{0,30}suppressed",
              "active policy does not suppress Welch categorical labels")
 
+# Document-scoped Welch checks. The aggregate corpus checks above can pass when
+# one current document contains the fail-closed policy while another still
+# presents the retired 55/70 mapping as active.
+read_docx_text <- function(path) {
+  con <- unz(path, "word/document.xml", open = "r")
+  on.exit(close(con), add = TRUE)
+  xml <- paste(readLines(con, warn = FALSE, encoding = "UTF-8"),
+               collapse = "")
+  xml <- gsub("</w:p>", "\n", xml, fixed = TRUE)
+  xml <- gsub("<[^>]+>", "", xml, perl = TRUE)
+  xml <- gsub("&amp;", "&", xml, fixed = TRUE)
+  xml <- gsub("&lt;", "<", xml, fixed = TRUE)
+  xml <- gsub("&gt;", ">", xml, fixed = TRUE)
+  xml
+}
+
+assert_in_document <- function(document_text, pattern, description,
+                               ignore.case = TRUE) {
+  if (!grepl(pattern, document_text, ignore.case = ignore.case, perl = TRUE)) {
+    violations <<- c(violations, description)
+  }
+}
+
+assert_not_in_document <- function(document_text, pattern, description,
+                                   ignore.case = TRUE) {
+  if (grepl(pattern, document_text, ignore.case = ignore.case, perl = TRUE)) {
+    violations <<- c(violations, description)
+  }
+}
+
+assert_current_welch_policy <- function(document_text, document_name) {
+  normalized <- gsub("`", "", document_text, fixed = TRUE)
+  normalized <- gsub("[[:space:]]+", " ", normalized)
+
+  assert_in_document(
+    normalized, "welch-2026-2",
+    paste0(document_name, " omits the current Welch study version"),
+    ignore.case = FALSE
+  )
+  assert_in_document(
+    normalized, "no_feasible_thresholds",
+    paste0(document_name, " omits the Welch no-candidate result"),
+    ignore.case = FALSE
+  )
+  assert_in_document(
+    normalized, "held-out (validation )?data were not opened|held-out validation was not opened",
+    paste0(document_name, " omits that Welch held-out validation was not opened")
+  )
+  assert_in_document(
+    normalized, "Welch categorical (labels|verdicts) are suppressed",
+    paste0(document_name, " does not suppress Welch categorical labels")
+  )
+  assert_in_document(
+    normalized, "numeric scores and component metrics remain available",
+    paste0(document_name, " does not retain Welch numeric outputs")
+  )
+
+  assert_not_in_document(
+    normalized,
+    "72\\.?5.{0,40}(—|-|is|classified).{0,20}Robust",
+    paste0(document_name, " still labels the 72.5 Welch example Robust")
+  )
+  assert_not_in_document(
+    normalized,
+    "Welch.{0,120}(>\\s*70|above 70).{0,40}Robust",
+    paste0(document_name, " still presents the Welch >70 Robust rule as active")
+  )
+  assert_not_in_document(
+    normalized,
+    "active.{0,80}Welch.{0,80}three-band|Welch.{0,80}three-band.{0,80}active",
+    paste0(document_name, " still calls the Welch three-band mapping active")
+  )
+}
+
+long_form_path <- file.path(
+  root, "manuscript", "robustness_analysis_manuscript.md"
+)
+if (!file.exists(long_form_path)) {
+  violations <- c(violations, "missing active long-form manuscript")
+} else {
+  long_form_text <- paste(readLines(long_form_path, warn = FALSE),
+                          collapse = "\n")
+  assert_current_welch_policy(long_form_text, "long-form manuscript")
+}
+
+physician_guide_path <- file.path(
+  root, "manuscript", "stabilitest-physicians-guide.docx"
+)
+if (!file.exists(physician_guide_path)) {
+  violations <- c(violations, "missing active physician guide")
+} else {
+  physician_guide_text <- read_docx_text(physician_guide_path)
+  assert_current_welch_policy(physician_guide_text, "physician guide")
+}
+
+# Reader-facing documentation should explain scientific decisions, not expose
+# internal execution-stage names. Exact Gate/Track/Task identifiers remain in
+# calibration protocols, audit artifacts, implementation comments, and plans.
+reader_documentation <- c(
+  file.path(root, "README.md"),
+  file.path(root, "NEWS.md"),
+  list.files(file.path(root, "vignettes"), pattern = "\\.Rmd$",
+             full.names = TRUE),
+  list.files(file.path(root, "man"), pattern = "\\.Rd$",
+             full.names = TRUE),
+  list.files(file.path(root, "R"), pattern = "\\.R$",
+             full.names = TRUE),
+  long_form_path,
+  file.path(root, "manuscript", "methodological_review.md")
+)
+reader_documentation <- unique(reader_documentation[
+  file.exists(reader_documentation)
+])
+internal_stage_pattern <- "Gate A|Gate B|Task 15|Track A|Track E"
+opaque_label_pattern <- paste0(
+  "Labels are `NA` for uncalibrated methods or conclusions, while scores ",
+  "and components remain available for descriptive review"
+)
+
+for (path in reader_documentation) {
+  lines <- readLines(path, warn = FALSE)
+  if (identical(tools::file_ext(path), "R")) {
+    lines <- lines[grepl("^#'", lines)]
+  }
+  reader_text <- paste(lines, collapse = "\n")
+  reader_text_one_line <- gsub("[[:space:]]+", " ", reader_text)
+  relative_path <- substring(path, nchar(root) + 2L)
+
+  hits <- grep(internal_stage_pattern, lines, perl = TRUE)
+  if (length(hits)) {
+    violations <- c(
+      violations,
+      sprintf("%s uses internal study-stage vocabulary: %s",
+              relative_path,
+              paste(unique(trimws(lines[hits])), collapse = " | "))
+    )
+  }
+  if (grepl(opaque_label_pattern, reader_text_one_line, fixed = TRUE)) {
+    violations <- c(
+      violations,
+      paste0(relative_path,
+             " uses opaque NA/uncalibrated label wording")
+    )
+  }
+}
+
 # Gate A ANCOVA study policy (independent method-specific calibration).
 ancova_policy_files <- file.path(root, c(
   "README.md", "NEWS.md",

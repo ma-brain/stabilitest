@@ -69,9 +69,10 @@ Complete or quasi-complete separation is handled only via \code{converged}
 and finite p-values: failed full-data fits error; failed subsets are
 skipped. Firth / bias-reduced logistic regression is not supported.
 Numeric scores and component metrics remain available for every GLM
-result, but the \code{glm_binomial} and \code{glm_poisson} units are currently
-uncalibrated and their categorical labels are suppressed (\code{NA}). The
-historical Task 15 broad-family score bands are not transferable.
+result, but \code{glm_binomial} and \code{glm_poisson} do not currently have
+validated categorical cutoffs. Their labels are therefore left blank
+(represented as \code{NA} in R). The historical broad-family Welch score bands
+are not transferable.
 }
 \examples{
 set.seed(1)

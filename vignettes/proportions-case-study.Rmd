@@ -27,7 +27,7 @@ library(stabilitest)
 
 This vignette illustrates the two-group binary-proportion workflow
 (`robustness_analysis(test_type = "fisher")`) and what the active
-`fisher_exact` Gate B calibration licenses. Gate B emits a **two-band**
+`fisher_exact` calibration supports. Held-out validation confirmed a **two-band**
 Fragile / Not fragile label at cutoff `L = 58` (version `fisher-2026-1`).
 There is **no Robust tier** for Fisher. Labels require the explicit
 jackknife-light weights `fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`
@@ -126,10 +126,10 @@ greedy deletions move the p-value. The two answer different questions and are
 kept separate: the Walsh index is a literature comparator archived per
 replicate; only the removal-based component enters the composite score.
 
-## What Gate B licenses on this case
+## What the validated mapping does on this case
 
-Because this case study is non-significant, no band applies — even though Gate
-B is active in the registry:
+Because this case study is non-significant, no band applies — even though the
+Fisher mapping is active in the registry:
 
 ```{r label}
 res$calibration$status
@@ -140,8 +140,9 @@ res$interpretation_label
 ```
 
 This is the intended fail-closed behaviour: a non-significant conclusion is
-`bands_not_applicable`, the label stays `NA`, and numeric scores and component
-metrics remain fully available. Categorical labels are never manufactured for
+`bands_not_applicable`, the categorical label is left blank (shown as `NA` by
+R), and numeric scores and component metrics remain fully available.
+Categorical labels are never manufactured for
 conclusions the calibration was not built to interpret. When a label *is*
 emitted for an eligible significant Fisher result, the vocabulary is only
 **Fragile** or **Not fragile** (cutoff `L = 58`); there is no Robust tier.
@@ -177,9 +178,9 @@ c(
 
 ## Honest suppression under default weights
 
-The same significant data with package-default weights keeps the label
-suppressed: Gate B attaches `L = 58` only to scores computed under the
-calibrated jackknife-light design.
+The same significant data with package-default weights keeps the label blank:
+the cutoff `L = 58` applies only to scores computed under the validated
+jackknife-light design.
 
 ```{r suppression}
 default_res <- robustness_analysis(

@@ -113,14 +113,17 @@ available. The active categorical vocabulary is \code{"Fragile"} /
 \code{"Not fragile"} for an applicable significant \code{fisher_exact} result under
 the explicit jackknife-light weights
 (\code{fragility = 0.5}, \code{bootstrap = 0.5}, \code{jackknife = 0}; cutoff \code{L = 58},
-version \code{fisher-2026-1}). There is no Robust tier for Fisher. Labels are
-suppressed for uncalibrated methods and conclusions; the public dispatcher
-and its existing \code{test_type} values are unchanged. Method-specific
+version \code{fisher-2026-1}). There is no Robust tier for Fisher. For analysis
+types or conclusions without validated cutoffs, the numeric results remain
+available but the categorical label is left blank (represented as \code{NA} in
+R). The public dispatcher and its existing \code{test_type} values are unchanged.
+Method-specific
 calibration is represented by exact units such as \code{paired_t},
 \code{fisher_exact}, and \code{two_sample_prop}, not by a generic \code{two_sample}
-calibration identity. The archived Task 15 broad-family simulation is
-historical evidence only. \code{lm_ancova} and \code{lm_ancova_v2} remain uncalibrated
-after fail-closed Gate B decisions.
+calibration identity. The archived broad-family Welch simulation is
+historical evidence only. Two prospective ANCOVA training studies found no
+feasible categorical cutoff, so \code{lm_ancova} and \code{lm_ancova_v2} remain
+numeric-only.
 
 Rank-based options: \code{"wilcoxon"} (Mann–Whitney / Wilcoxon rank-sum) assumes
 exchangeable distributions under the null (equal shapes/variances for a pure

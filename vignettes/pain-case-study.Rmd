@@ -31,9 +31,9 @@ library(stabilitest)
 2. **Worst-case removal** — greedy adversarial deletion in the spirit of the maximum influence perturbation of Broderick, Giordano & Meager (2023). The resulting *removal fragility index* is the size of an identified subset whose removal flips the significance conclusion (an upper bound on the minimal such set).
 3. **Bootstrap reproducibility probability** (Goodman, 1992) — would a replicate sample drawn from the observed effect likely reach the same conclusion?
 
-A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. Categorical labels are suppressed for uncalibrated methods and conclusions. The prospective Welch study found no feasible threshold mapping, so `welch_unpaired` is numeric-only. An applicable significant `fisher_exact` result under explicit jackknife-light weights remains the sole calibrated configuration and receives a two-band Fragile / Not fragile label (see `vignette("proportions-case-study")`). The public `robustness_analysis()` dispatcher is unchanged. `lm_ancova` and `lm_ancova_v2` remain uncalibrated after fail-closed Gate B decisions, and a follow-up `lm_ancova_v3` violation-detection re-aim was not confirmed (see `vignette("ancova-case-study")`).
+A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. For analysis types without validated cutoffs, stabilitest reports the numeric score and stress-test details but leaves the categorical label blank. The prospective Welch study found no feasible threshold mapping, so `welch_unpaired` is numeric-only. An applicable significant `fisher_exact` result under explicit jackknife-light weights remains the sole calibrated configuration and receives a two-band Fragile / Not fragile label (see `vignette("proportions-case-study")`). The public `robustness_analysis()` dispatcher is unchanged. Two ANCOVA training studies found no feasible cutoff, and a follow-up violation-detection study was not confirmed (see `vignette("ancova-case-study")`).
 
-> **Status.** v0.6.0. API and calibration metadata may evolve. The historical Welch 55/70 bands are no longer active after the prospective `welch-2026-2` study found `no_feasible_thresholds`; the Fisher two-band mapping remains active for its documented configuration. The broader historical simulation is descriptive evidence only.
+> **Status.** v0.6.0. API and calibration metadata may evolve. The historical Welch 55/70 bands are no longer active because the prospective `welch-2026-2` training study found no safe and useful cutoff. The held-out data were not opened. The Fisher two-band mapping remains active for its documented configuration. The broader historical simulation is descriptive evidence only.
 
 ## Pain trial case study
 
@@ -74,7 +74,7 @@ Optional diagnostic plots (removal *p*-value trajectories and the bootstrap *p* 
 plot(res)
 ```
 
-Set `interpret = TRUE` to attach a narrative report (`res$interpretation$report`) that restates the components and, when calibration is applicable, a band-based recommendation. For an uncalibrated result, the report retains numeric information but suppresses the categorical label.
+Set `interpret = TRUE` to attach a narrative report (`res$interpretation$report`) that restates the components and, when validated cutoffs apply, a band-based recommendation. Otherwise, the report retains the numeric information and leaves the categorical label blank.
 
 ## Choosing an analysis
 
@@ -221,8 +221,9 @@ Practical reading of the components alongside the label:
 For every method-specific unit other than the calibrated Fisher row above
 (including Welch, paired t, rank tests, non-canonical binary tests, model terms,
 Cox, and TOST), and for non-significant or otherwise inapplicable
-conclusions, `interpretation_label` is `NA`. Prefer the numeric score and
-component metrics directly. Task 15's broad-family 55/70 tables are archived
+conclusions, `interpretation_label` is blank (shown as `NA` by R). Prefer the
+numeric score and component metrics directly. The historical broad-family
+Welch 55/70 tables are archived
 under `manuscript/calibration/published/` as historical evidence only.
 
 ## Brief caveats
@@ -230,7 +231,7 @@ under `manuscript/calibration/published/` as historical evidence only.
 - The greedy fragility index is an *upper bound* on the size of a minimal overturning subset; a smaller set may exist.
 - Binary significance framing inherits the usual knife-edge problem near α; always inspect the *p*-value trajectory, not only *k*_frag.
 - Adversarial removal asks “could the data support the opposite conclusion?” and should complement, not replace, assumption-based sensitivity analyses (missing data, model form).
-- Calibration is retained only for canonical two-arm `fisher_exact` under jackknife-light weights. Welch, ANCOVA, GLM, Cox, non-canonical proportion, rank, and TOST/NI engines share the scoring logic but remain uncalibrated; the prospective Welch study and the `lm_ancova` programs closed without a usable label.
-- Pre-specify weights, `max_removal_pct`, and bands in the SAP when used in confirmatory work.
+- Categorical calibration is retained only for canonical two-arm `fisher_exact` under jackknife-light weights. Welch, ANCOVA, GLM, Cox, non-canonical proportion, rank, and TOST/NI engines share the scoring logic but do not currently have validated labels.
+- Pre-specify weights and `max_removal_pct` in the SAP. Pre-specify a categorical band only when the analysis matches a validated calibration.
 
 Further methodological detail, simulation tables, and reporting templates are in the accompanying manuscript / methodological notes (development source tree and related project materials). For model-based terms see `robustness_lm()`, `robustness_glm()`, and `robustness_surv()`.

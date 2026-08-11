@@ -178,14 +178,17 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #' `"Not fragile"` for an applicable significant `fisher_exact` result under
 #' the explicit jackknife-light weights
 #' (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`; cutoff `L = 58`,
-#' version `fisher-2026-1`). There is no Robust tier for Fisher. Labels are
-#' suppressed for uncalibrated methods and conclusions; the public dispatcher
-#' and its existing `test_type` values are unchanged. Method-specific
+#' version `fisher-2026-1`). There is no Robust tier for Fisher. For analysis
+#' types or conclusions without validated cutoffs, the numeric results remain
+#' available but the categorical label is left blank (represented as `NA` in
+#' R). The public dispatcher and its existing `test_type` values are unchanged.
+#' Method-specific
 #' calibration is represented by exact units such as `paired_t`,
 #' `fisher_exact`, and `two_sample_prop`, not by a generic `two_sample`
-#' calibration identity. The archived Task 15 broad-family simulation is
-#' historical evidence only. `lm_ancova` and `lm_ancova_v2` remain uncalibrated
-#' after fail-closed Gate B decisions.
+#' calibration identity. The archived broad-family Welch simulation is
+#' historical evidence only. Two prospective ANCOVA training studies found no
+#' feasible categorical cutoff, so `lm_ancova` and `lm_ancova_v2` remain
+#' numeric-only.
 #'
 #' Rank-based options: `"wilcoxon"` (Mann–Whitney / Wilcoxon rank-sum) assumes
 #' exchangeable distributions under the null (equal shapes/variances for a pure

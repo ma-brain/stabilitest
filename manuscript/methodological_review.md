@@ -1,8 +1,13 @@
-# Methodological Review: Robustness Analysis Framework (January 2026 version)
+# Historical Methodological Review: Robustness Analysis Framework (January 2026 version)
 
 **Scope:** Critical review of the January 2026 `robustness_analysis.R` and manuscript as of 2026-01-22. Issues are ordered by severity. Each issue states the problem, why it matters, and the resolution implemented in the July 2026 revision (manuscript v2.0).
 
-**Current layout (this repository):** the revised two-sample engine lives in `R/robustness_analysis.R`; model-based extensions (ANCOVA / Cox) in `R/robustness_models.R`; the revised manuscript in `manuscript/robustness_analysis_manuscript.md`. Simulation design for Section 3 is intended as `manuscript/simulation_study.R` (or a package vignette equivalent). The Task 15 review recorded the historical score bands (> 70 robust; (55, 70] moderately robust; ≤ 55 fragile); the active registry now applies them only to an applicable significant Welch result. Other methods retain numeric scores/components with labels suppressed. Case-study bootstrap figures use `n_boot = 2000` and `seed = 14` (package default seed remains 123).
+> **Historical status.** This file records the problems found in the January
+> 2026 implementation and the first revision response. It is not current
+> calibration guidance. The active registry and current package documentation
+> govern runtime interpretation.
+
+**Current layout and policy:** the revised two-sample engine lives in `R/robustness_analysis.R`; model-based extensions (ANCOVA / Cox) live in `R/robustness_models.R`; and the current long-form manuscript is `manuscript/robustness_analysis_manuscript.md`. The historical Welch simulation proposed score bands (> 70 robust; (55, 70] moderately robust; ≤ 55 fragile), but the prospective `welch-2026-2` training study could not find cutoffs that met the frozen safety and usefulness requirements. Held-out validation was therefore not opened. Current Welch results retain numeric scores and component metrics but leave the categorical label blank. Only an eligible significant Fisher exact result under its validated profile and weights currently receives a Fragile / Not fragile label. Case-study bootstrap figures use `n_boot = 2000` and `seed = 14` (package default seed remains 123).
 
 ---
 
