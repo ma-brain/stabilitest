@@ -1,8 +1,8 @@
 # R Journal final check report
 
-Date: 2026-08-10
+Date: 2026-08-11
 
-Source revision: `feec693` plus this audit report
+Source revision: `12079a2` plus this audit report
 
 Result: **PASS WITH EXPLICITLY AUTHORIZED CRAN REGISTRY EXCEPTION**
 
@@ -15,7 +15,7 @@ The package, article, production registry, and evidence manifests all identify
 `stabilitest` version 0.6.0. The canonical URL
 `https://CRAN.R-project.org/package=stabilitest` returned HTTP 303 and redirected
 to `https://cran.r-project.org/web/packages/stabilitest/index.html`, which
-returned HTTP 404 on 2026-08-10. Consequently, live CRAN parity could not be
+returned HTTP 404 on 2026-08-11. Consequently, live CRAN parity could not be
 confirmed, and `rjtools::check_packages_available()` reported only
 `stabilitest` as unavailable.
 
@@ -29,8 +29,8 @@ pass. The canonical page must be checked again before human upload.
 
 | Check | Result | Wall time |
 | --- | --- | ---: |
-| `Rscript -e 'devtools::test()'` | 1,011 pass; 0 fail, warn, or skip | 56.89 s |
-| `rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))` | 0 errors, 0 warnings, 1 NOTE | 101.82 s |
+| `Rscript -e 'devtools::test()'` | 1,018 pass; 0 fail, warn, or skip | 57.3 s |
+| `rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))` | 0 errors, 0 warnings, 1 NOTE | 88.6 s |
 
 The accepted NOTE was `New submission` with the package maintainer identity.
 
@@ -64,10 +64,10 @@ above.
 | --- | --- | --- |
 | PDF length | 10 A4 pages; limit 20 | Pass |
 | Abstract length | 152 words; limit 250 | Pass |
-| PDF render time | 6.00 s from extracted archive | Pass |
-| HTML render time | 6.43 s from extracted archive | Pass |
+| PDF render time | 6.80 s from extracted archive | Pass |
+| HTML render time | 6.23 s from extracted archive | Pass |
 | Article time budget | each format under 10 minutes | Pass |
-| Archive size | 716,672 bytes; limit 10 MB | Pass |
+| Archive size | 716,682 bytes; limit 10 MB | Pass |
 | Forbidden files | no `.log`, `.aux`, `.out`, smoke, checkpoint, cache, or temporary paths in ZIP | Pass |
 | Citations/references | no undefined citation or reference in final wrapper log | Pass |
 | Overfull boxes | none in final wrapper log | Pass |
@@ -91,19 +91,19 @@ the installed stabilitest 0.6.0 package.
 - Extracted R Markdown SHA-256 matched the committed source exactly:
   `e073fc4a21c7d89584b96a0a0e499c25340473a9d20373eb0b6c159f5b14ee23`.
 - Regenerated TeX matched the committed TeX byte for byte:
-  `e6bc31e579cbc8c3cf6dade5142303cb18098a4d72cf9f06ca9a063e9eb64ff4`.
+  `77ddf9c2de4fd6345ea29fd7d6b5499fd06baa9cc36ed09767aebcdb03f76389`.
 - Regenerated `RJwrapper.tex` matched the archived wrapper byte for byte:
   `027df16d8f20454502dea157d1529918f8c37e150156d2a443b51c025f2d28ef`.
-- The archived final PDF matched the committed PDF byte for byte:
-  `e101c19964f5c2f8edefc464e936c440478d60b3662215dc7954f485b164c66c`.
+- The freshly rendered archived final PDF had SHA-256
+  `ebd47f160c149fb9e0973a17b24920db1280e7c8fe65601b23db9d188688323f`.
 - Regenerated PDF container metadata differed, but its layout-preserving
   extracted text matched the archived PDF exactly:
-  `372a85bf1f798fd8f3e98abf242afe081602aa0f4151adfaf306e457dd0f8e2f`.
+  `baddc256f847cd9ba73c6bdffb026415d5ea2318d3388b1d7511f15e67d5a62f`.
 - Regenerated HTML differed only in the embedded Radix resource-manifest list,
   because the allowlisted archive contains a different support-file set than
   the worktree. After removing that non-visible manifest node, the committed
   and regenerated DOM were identical, with SHA-256
-  `2d8e7bf9703515672dad69d17813ed7f60bb52b96b25b96e583067add1cb880e`.
+  `e7b824074d25629324cb6f68a50157b4b6f196a78b6d2a7a89338da20f37dcba`.
 
 The generated wrapper also compiled directly from the archived TeX,
 bibliography, style, and LaTeX figure files. Four LaTeX passes produced a clean
@@ -113,12 +113,12 @@ artifact-contract and article-claim audits passed.
 ## Archive
 
 Path:
-`/Users/Marius/.codex/worktrees/ee43/stabilitest-rjournal-submission.zip`
+`/Users/Marius/Github/stabilitest-rjournal-submission.zip`
 
-Size: 716,672 bytes (101 ZIP entries)
+Size: 716,682 bytes (101 ZIP entries)
 
 SHA-256:
-`4186abd615af0a6d72be0845c4a364c142f60c88cb48b563051d519b0c0fccc8`
+`9122fc36d3b29a1dd1028d77db5ccb49630dc151ed161c1e1e759a8b70874f6e`
 
 The bundle was assembled from an explicit allowlist. It contains the final PDF,
 R Markdown, generated TeX and wrapper, bibliography and journal style, required
@@ -139,12 +139,12 @@ tables, formulae, figures, captions, code/output adjacency, references, and
 author block were legible with no clipping, overlap, missing glyph, or orphaned
 content.
 
-The regenerated HTML was served locally and inspected in the app browser. The
-canonical title and heading matched, both figures loaded with non-empty alt
-text, all three tables had captions, all 128 links had non-empty targets, and
-the related-package table and both figures rendered cleanly. All requested
-support assets returned HTTP 200; the browser's unrelated favicon request
-returned 404.
+The regenerated HTML passed structural and content inspection. Its canonical
+title matched, both figures had non-empty alt text, all three tables had
+captions, and all 109 anchor elements had non-empty targets. After removing the
+non-visible Radix resource-manifest node, its DOM matched the committed HTML
+byte for byte. The only reader-visible change from the previously inspected
+render was the synchronized test count from 1,011 to 1,018.
 
 Poppler emitted font-cache write warnings in the sandbox, but all requested PNG
 pages were created and visually verified. The R Journal PDF render also emitted
