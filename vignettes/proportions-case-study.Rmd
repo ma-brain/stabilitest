@@ -1,6 +1,6 @@
 ---
 title: "Proportion Test Case Study: Binary Response in an Oncology Trial"
-author: "Marius Ally"
+author: "Marius Ardelean"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >

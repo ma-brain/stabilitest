@@ -1,3 +1,27 @@
+# stabilitest 0.6.1
+
+## Correctness
+
+* GLM formulas containing `.` now expand against the original user data.
+  Internal row identifiers and observation weights no longer become accidental
+  predictors or overwrite user columns with internal-looking names.
+* Model resampling rejects refits that change factor levels or contrast coding,
+  change which full-model coefficients are estimable, or reduce the joint-test
+  degrees of freedom. A different reference group or adjustment model is no
+  longer treated as the original test.
+* Model and TOST jackknife/bootstrap tables retain failed replicates as `NA`
+  rows. The new `resampling` field reports valid/failed counts for each
+  component, print methods show valid denominators, and summaries use valid
+  fits only. An entirely failed component errors instead of returning `NaN`.
+* Fisher results now keep `original_ci` unavailable for their risk-difference
+  estimate. The conditional odds ratio and exact 95% interval are exposed as
+  `original_odds_ratio` and `original_odds_ratio_ci`, and printed with their
+  correct scale.
+* Cox refits preserve the original formula environment, including locally
+  defined transformations and constants used in single and joint term tests.
+* Corrected the package citation author to Marius Ardelean, matching the
+  package metadata and article.
+
 # stabilitest 0.6.0
 
 ## Prospective Welch calibration stopped after training

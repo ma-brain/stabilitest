@@ -52,6 +52,8 @@ Alias: \code{original_mean_diff}.}
 \item{jackknife, worstcase, bootstrap, removed_rows}{Component analysis
 tibbles and the greedy-removal path (flat tibbles; nesting differs
 from \code{\link[=robustness_analysis]{robustness_analysis()}}).}
+\item{resampling}{A list with \code{jackknife} and \code{bootstrap} entries,
+each containing \code{n_valid} and \code{n_failed} replicate counts.}
 \item{term, term_info, sample_info, model, type, n, max_k, alpha,
 max_removal_pct, weights}{Model and analysis metadata.}
 }
@@ -71,6 +73,15 @@ model after its \code{na.action}. At least one further row must be removable
 while retaining the engine's minimum analysis size; otherwise the function
 raises an insufficient-sample error rather than returning an unevaluated
 fragility score.
+
+Refit factor levels and contrast coding must match the full model, and
+the estimability pattern of the full model must remain unchanged.
+Refits that fail these checks are unavailable, not alternative hypotheses.
+Jackknife and bootstrap tibbles retain unavailable fits as \code{NA} rows.
+Rates and summaries use valid fits only; \code{resampling} reports \code{n_valid}
+and \code{n_failed} for each component. An entirely failed component raises
+an error instead of returning a missing composite score.
+
 Numeric scores and component metrics remain available for every ANCOVA
 result. The \code{lm_ancova} calibration unit is currently uncalibrated, so its
 categorical label is suppressed (\code{NA}) even when the term is significant.

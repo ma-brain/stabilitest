@@ -243,7 +243,13 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'   \item{original_p, original_significant, original_statistic,
 #'     original_mean_diff, original_ci}{Full-sample test results (effect
 #'     field is a mean difference, Hodges–Lehmann shift, or proportion
-#'     difference depending on `test_type`).}
+#'     difference depending on `test_type`). `original_ci` is on that same
+#'     effect scale when available; it is `NA` for Fisher, chi-square, and
+#'     Brunner–Munzel tests.}
+#'   \item{original_odds_ratio, original_odds_ratio_ci}{For Fisher tests,
+#'     the conditional odds-ratio estimate and its exact 95% confidence
+#'     interval, with group 1 relative to group 2. Both are `NA` for other
+#'     tests. These are distinct from the proportion-difference effect.}
 #'   \item{robustness_metrics}{Component scores (jackknife conclusion
 #'     stability, worst-case fragility, bootstrap same-decision rate, overall
 #'     composite) and related diagnostics. Alias: `metrics` (same tibble).}
@@ -336,9 +342,16 @@ robustness_analysis <- function(group1, group2,
       # Effect size is always the difference in success proportions (g1 - g2)
       mean_diff <- mean(g1) - mean(g2)
       statistic <- if (!is.null(result$statistic)) unname(result$statistic) else NA_real_
-      conf.int <- if (!is.null(result$conf.int)) result$conf.int else c(NA_real_, NA_real_)
+      fisher <- identical(test_type, "fisher")
+      conf.int <- if (!fisher && !is.null(result$conf.int)) {
+        result$conf.int
+      } else {
+        c(NA_real_, NA_real_)
+      }
       return(list(p.value = result$p.value, statistic = statistic,
                   mean_diff = mean_diff, conf.int = conf.int,
+                  odds_ratio = if (fisher) unname(result$estimate) else NA_real_,
+                  odds_ratio_ci = if (fisher) result$conf.int else c(NA_real_, NA_real_),
                   stochastic_superiority = NA_real_))
     }
     result <- switch(test_type,
@@ -647,6 +660,8 @@ robustness_analysis <- function(group1, group2,
     original_statistic   = original$statistic,
     original_mean_diff   = original$mean_diff,
     original_ci          = original$conf.int,
+    original_odds_ratio  = if (is_prop) original$odds_ratio else NA_real_,
+    original_odds_ratio_ci = if (is_prop) original$odds_ratio_ci else c(NA_real_, NA_real_),
     n                    = n_total,
 
     robustness_metrics        = robustness_score,
@@ -834,6 +849,11 @@ print.robustness_analysis <- function(x, show_interpretation = TRUE, ...) {
     cat(sprintf("  Proportions: p1 = %.3f, p2 = %.3f (diff p1 - p2 = %.3f)\n",
                 x$sample_info$group1_prop, x$sample_info$group2_prop,
                 x$sample_info$prop_diff))
+    if (!is.null(x$original_odds_ratio) && !is.na(x$original_odds_ratio)) {
+      cat(sprintf("  Odds ratio (g1 vs g2): %.3f (95%% CI %.3f, %.3f)\n",
+                  x$original_odds_ratio, x$original_odds_ratio_ci[1],
+                  x$original_odds_ratio_ci[2]))
+    }
   } else {
     cat(sprintf("  n1 = %d, n2 = %d\n", x$sample_info$n1, x$sample_info$n2))
     if (!is.na(x$original_mean_diff)) {

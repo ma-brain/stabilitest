@@ -1,6 +1,6 @@
 ---
 title: "ANCOVA Case Study: Canonical Treatment Adjustment"
-author: "Marius Ally"
+author: "Marius Ardelean"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >

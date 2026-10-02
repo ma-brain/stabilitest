@@ -67,7 +67,11 @@ analysis size.
 
 Complete or quasi-complete separation is handled only via \code{converged}
 and finite p-values: failed full-data fits error; failed subsets are
-skipped. Firth / bias-reduced logistic regression is not supported.
+retained as \code{NA} jackknife/bootstrap rows and excluded from summaries,
+with failure counts in \code{resampling} as described in \code{\link[=robustness_lm]{robustness_lm()}}.
+Unavailable deletion candidates are skipped. Firth / bias-reduced
+logistic regression is not supported. Dot formulas expand against the
+original data columns, before internal bookkeeping is added.
 Numeric scores and component metrics remain available for every GLM
 result, but \code{glm_binomial} and \code{glm_poisson} do not currently have
 validated categorical cutoffs. Their labels are therefore left blank

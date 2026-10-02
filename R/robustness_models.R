@@ -48,6 +48,11 @@ resolve_model_term <- function(fit, term) {
     stop("`term` must be a non-empty string", call. = FALSE)
   }
 
+  design <- list(
+    xlevels = fit$xlevels,
+    contrasts = fit$contrasts,
+    estimable = is.finite(stats::coef(fit))
+  )
   ct <- stats::coef(summary(fit))
   if (is.null(ct) || is.null(rownames(ct))) {
     stop("Model has no coefficient table to match `term` against", call. = FALSE)
@@ -99,6 +104,7 @@ resolve_model_term <- function(fit, term) {
     }
     # Continuous covariate / 1-df term whose label equals the coef name
     return(list(
+      design = design,
       type = "single",
       term = term,
       coef_name = term,
@@ -109,6 +115,7 @@ resolve_model_term <- function(fit, term) {
 
   if (exact_coef) {
     return(list(
+      design = design,
       type = "single",
       term = term,
       coef_name = term,
@@ -126,6 +133,7 @@ resolve_model_term <- function(fit, term) {
     }
     if (length(cols) == 1L) {
       return(list(
+        design = design,
         type = "single",
         term = term,
         coef_name = cols[[1L]],
@@ -134,6 +142,7 @@ resolve_model_term <- function(fit, term) {
       ))
     }
     return(list(
+      design = design,
       type = "joint",
       term = term,
       coef_name = NA_character_,
@@ -152,10 +161,31 @@ resolve_model_term <- function(fit, term) {
   ), call. = FALSE)
 }
 
+# A coefficient name alone does not identify a hypothesis when refitting has
+# dropped factor levels, changed coding, or aliased an adjustment coefficient.
+# Preserve the estimability pattern of the entire full model, since a target
+# effect adjusted for z is not the same effect after z becomes aliased.
+model_term_design_matches <- function(fit, term_spec) {
+  design <- term_spec$design
+  coefs <- stats::coef(fit)
+  identical(fit$xlevels, design$xlevels) &&
+    identical(fit$contrasts, design$contrasts) &&
+    identical(is.finite(coefs), design$estimable) &&
+    all(is.finite(coefs[term_spec$coef_names]))
+}
+
+# The frozen joint test degrees of freedom come from the full-data drop1 test.
+# Any later refit testing fewer directions is a different hypothesis.
+model_joint_df_matches <- function(d1, term_spec) {
+  is.null(term_spec$test) ||
+    isTRUE(d1[term_spec$term, "Df"] == term_spec$ndf)
+}
+
 # Extract p (and estimate for single-coef) from a fitted lm given a resolved term.
 # Returns NULL when the term cannot be tested on this subset (e.g. a factor
 # level disappeared). Joint multi-df terms use drop1(..., test = "F").
 lm_term_test <- function(fit, term_spec) {
+  if (!model_term_design_matches(fit, term_spec)) return(NULL)
   if (identical(term_spec$type, "single")) {
     ct <- summary(fit)$coefficients
     cn <- term_spec$coef_name
@@ -173,7 +203,8 @@ lm_term_test <- function(fit, term_spec) {
     stats::drop1(fit, scope = scope, test = "F"),
     error = function(e) NULL
   )
-  if (is.null(d1) || !term_spec$term %in% rownames(d1)) return(NULL)
+  if (is.null(d1) || !term_spec$term %in% rownames(d1) ||
+      !model_joint_df_matches(d1, term_spec)) return(NULL)
   p <- d1[term_spec$term, "Pr(>F)"]
   if (is.na(p)) return(NULL)
   list(
@@ -190,6 +221,7 @@ lm_term_test <- function(fit, term_spec) {
 # Extract p (and estimate for single-coef) from a fitted glm given a resolved
 # term. Joint multi-df terms use drop1(..., test = "Chisq") (LRT).
 glm_term_test <- function(fit, term_spec) {
+  if (!model_term_design_matches(fit, term_spec)) return(NULL)
   if (identical(term_spec$type, "single")) {
     ct <- summary(fit)$coefficients
     cn <- term_spec$coef_name
@@ -208,7 +240,8 @@ glm_term_test <- function(fit, term_spec) {
     stats::drop1(fit, scope = scope, test = "Chisq"),
     error = function(e) NULL
   )
-  if (is.null(d1) || !term_spec$term %in% rownames(d1)) return(NULL)
+  if (is.null(d1) || !term_spec$term %in% rownames(d1) ||
+      !model_joint_df_matches(d1, term_spec)) return(NULL)
   p <- d1[term_spec$term, "Pr(>Chi)"]
   if (is.na(p)) return(NULL)
   list(
@@ -222,6 +255,7 @@ glm_term_test <- function(fit, term_spec) {
 # Extract p (and estimate for single-coef) from a fitted coxph given a resolved
 # term. Joint multi-df terms use drop1(..., test = "Chisq") (LRT; survival S3).
 surv_term_test <- function(fit, term_spec) {
+  if (!model_term_design_matches(fit, term_spec)) return(NULL)
   if (identical(term_spec$type, "single")) {
     ct <- summary(fit)$coefficients
     cn <- term_spec$coef_name
@@ -238,7 +272,8 @@ surv_term_test <- function(fit, term_spec) {
     stats::drop1(fit, scope = scope, test = "Chisq"),
     error = function(e) NULL
   )
-  if (is.null(d1) || !term_spec$term %in% rownames(d1)) return(NULL)
+  if (is.null(d1) || !term_spec$term %in% rownames(d1) ||
+      !model_joint_df_matches(d1, term_spec)) return(NULL)
   p <- d1[term_spec$term, "Pr(>Chi)"]
   if (is.na(p)) return(NULL)
   list(
@@ -271,8 +306,11 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
   max_k <- min(floor(n * max_removal_pct), n - min_n)
   validate_fragility_capacity(max_k)
 
-  safe_fit <- function(d) tryCatch(fit_fun(d), error = \(e) NULL,
-                                   warning = \(w) suppressWarnings(fit_fun(d)))
+  safe_fit <- function(d) {
+    fit <- tryCatch(suppressWarnings(fit_fun(d)), error = \(e) NULL)
+    if (is.null(fit) || length(fit$p) != 1L || !is.finite(fit$p)) return(NULL)
+    fit
+  }
 
   # --- jackknife --------------------------------------------------------------
   jackknife <- map_dfr(seq_len(n), \(i) {
@@ -281,9 +319,9 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
            p_value  = if (is.null(f)) NA_real_ else f$p,
            estimate = if (is.null(f)) NA_real_ else f$estimate)
   }) |>
-    filter(!is.na(p_value)) |>
     annotate_loo_results(original$p, original_significant, alpha,
                          influential_threshold = influential_threshold)
+  jackknife_info <- resampling_validity(jackknife, "jackknife")
 
   # --- worst-case greedy removal ----------------------------------------------
   keep <- seq_len(n)
@@ -323,20 +361,20 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
            p_value  = if (is.null(f)) NA_real_ else f$p,
            estimate = if (is.null(f)) NA_real_ else f$estimate)
   }) |>
-    filter(!is.na(p_value)) |>
     annotate_bootstrap_results(original_significant, alpha)
+  bootstrap_info <- bootstrap_validity(bootstrap)
 
   # --- composite ----------------------------------------------------------------
-  s_jack <- mean(jackknife$conclusion_match) * 100
-  s_boot <- mean(bootstrap$conclusion_match) * 100
+  s_jack <- mean(jackknife$conclusion_match[jackknife_info$valid]) * 100
+  s_boot <- mean(bootstrap$conclusion_match[bootstrap_info$valid]) * 100
   est_rng <- jackknife_estimate_range(jackknife$estimate)
   metrics <- build_robustness_metrics(
     s_jack = s_jack,
-    jackknife = jackknife,
+    jackknife = jackknife[jackknife_info$valid, , drop = FALSE],
     k_frag_worst = k_frag,
     p_at_k_frag = p_at_k,
     s_boot = s_boot,
-    bootstrap = bootstrap,
+    bootstrap = bootstrap[bootstrap_info$valid, , drop = FALSE],
     weights = weights,
     n_total = n,
     max_k = max_k,
@@ -352,6 +390,10 @@ robustness_engine <- function(data, fit_fun, alpha, n_boot, max_removal_pct,
     jackknife = jackknife,
     worstcase = worstcase,
     bootstrap = bootstrap,
+    resampling = list(
+      jackknife = jackknife_info[c("n_valid", "n_failed")],
+      bootstrap = bootstrap_info[c("n_valid", "n_failed")]
+    ),
     removed_rows = removed_rows,
     metrics = metrics
   )
@@ -442,6 +484,15 @@ lm_calibration_profile <- function(fit, term_spec, original_n, alpha, n_boot,
 #'   while retaining the engine's minimum analysis size; otherwise the function
 #'   raises an insufficient-sample error rather than returning an unevaluated
 #'   fragility score.
+#'
+#'   Refit factor levels and contrast coding must match the full model, and
+#'   the estimability pattern of the full model must remain unchanged.
+#'   Refits that fail these checks are unavailable, not alternative hypotheses.
+#'   Jackknife and bootstrap tibbles retain unavailable fits as `NA` rows.
+#'   Rates and summaries use valid fits only; `resampling` reports `n_valid`
+#'   and `n_failed` for each component. An entirely failed component raises
+#'   an error instead of returning a missing composite score.
+#'
 #'   Numeric scores and component metrics remain available for every ANCOVA
 #'   result. The `lm_ancova` calibration unit is currently uncalibrated, so its
 #'   categorical label is suppressed (`NA`) even when the term is significant.
@@ -465,6 +516,8 @@ lm_calibration_profile <- function(fit, term_spec, original_n, alpha, n_boot,
 #'   \item{jackknife, worstcase, bootstrap, removed_rows}{Component analysis
 #'     tibbles and the greedy-removal path (flat tibbles; nesting differs
 #'     from [robustness_analysis()]).}
+#'   \item{resampling}{A list with `jackknife` and `bootstrap` entries,
+#'     each containing `n_valid` and `n_failed` replicate counts.}
 #'   \item{term, term_info, sample_info, model, type, n, max_k, alpha,
 #'     max_removal_pct, weights}{Model and analysis metadata.}
 #' }
@@ -605,13 +658,11 @@ robustness_surv <- function(formula, data, term,
     stop("Package 'survival' is required for robustness_surv()")
   }
 
-  # coxph stores `data = <symbol>` and drop1/model.frame evaluate that symbol
-  # in the *formula* environment. Localise a copy so lookups hit this frame
-  # (or the fit_fun frame) rather than utils::data / a missing symbol.
+  # Store the actual refit data in the call for drop1/model.frame. Keeping the
+  # formula environment intact preserves caller-local functions and constants
+  # without shadowing any of their names with an internal data binding.
   fit_cox <- function(d) {
-    fml_local <- stats::as.formula(paste(deparse(formula), collapse = " "),
-                                   env = environment())
-    survival::coxph(fml_local, data = d)
+    do.call(survival::coxph, list(formula = formula, data = d))
   }
 
   fit0 <- fit_cox(data)
@@ -693,7 +744,11 @@ robustness_surv <- function(formula, data, term,
 #'
 #'   Complete or quasi-complete separation is handled only via `converged`
 #'   and finite p-values: failed full-data fits error; failed subsets are
-#'   skipped. Firth / bias-reduced logistic regression is not supported.
+#'   retained as `NA` jackknife/bootstrap rows and excluded from summaries,
+#'   with failure counts in `resampling` as described in [robustness_lm()].
+#'   Unavailable deletion candidates are skipped. Firth / bias-reduced
+#'   logistic regression is not supported. Dot formulas expand against the
+#'   original data columns, before internal bookkeeping is added.
 #'   Numeric scores and component metrics remain available for every GLM
 #'   result, but `glm_binomial` and `glm_poisson` do not currently have
 #'   validated categorical cutoffs. Their labels are therefore left blank
@@ -767,21 +822,26 @@ robustness_glm <- function(formula, data, term,
     }
   }
 
-  # Align obs_weights with engine row subsets / bootstrap replicates via a
-  # private row-id column (not referenced by typical formulas).
+  # Resolve `.` against user columns before adding resampling bookkeeping.
+  # A unique identifier also preserves user columns with internal-looking names.
   data <- as.data.frame(data)
-  data$.__row_id__ <- seq_len(nrow(data))
+  formula <- stats::formula(stats::terms(formula, data = data))
+  row_id <- utils::tail(make.unique(c(names(data), ".__row_id__")), 1L)
+  data[[row_id]] <- seq_len(nrow(data))
 
   fit_glm_once <- function(d) {
-    w <- if (is.null(obs_weights)) NULL else obs_weights[d$.__row_id__]
-    # glm() evaluates `weights` via model.frame NSE; pass the arg only when
-    # non-NULL (a bare `weights = w` with w = NULL looks up `w` in `data`).
+    w <- if (is.null(obs_weights)) NULL else obs_weights[d[[row_id]]]
     fit <- tryCatch({
       if (is.null(w)) {
         stats::glm(formula, data = d, family = family)
       } else {
-        d$.__obs_w__ <- w
-        stats::glm(formula, data = d, family = family, weights = .__obs_w__)
+        # Pass literal weights in the call: model.frame evaluates expressions
+        # in user data first, so a temporary column/symbol could shadow a
+        # legitimate predictor or fail in the formula's original environment.
+        call <- substitute(stats::glm(FORMULA, data = d, family = family,
+                                     weights = WEIGHTS),
+                           list(FORMULA = formula, WEIGHTS = w))
+        eval(call)
       }
     }, error = function(e) NULL)
     if (is.null(fit) || !isTRUE(fit$converged)) return(NULL)

@@ -189,11 +189,16 @@ annotate_bootstrap_results <- function(df, original_significant, alpha) {
 }
 
 bootstrap_validity <- function(bootstrap) {
-  valid <- is.finite(bootstrap$p_value)
+  resampling_validity(bootstrap, "bootstrap")
+}
+
+resampling_validity <- function(results, component) {
+  valid <- is.finite(results$p_value)
   n_valid <- sum(valid)
   if (n_valid == 0L) {
     stop(
-      "No valid bootstrap replicates; the resampled data are too degenerate",
+      sprintf("No valid %s replicates; the resampled data are too degenerate",
+              component),
       call. = FALSE
     )
   }
@@ -296,10 +301,15 @@ align_robustness_result_aliases <- function(out,
 
 # Shared print lines for model / TOST component summaries.
 print_robustness_components <- function(x, metrics, p_label = "p") {
+  valid_counts <- function(component) {
+    counts <- x$resampling[[component]]
+    if (is.null(counts)) return("")
+    sprintf("; %d/%d valid", counts$n_valid, counts$n_valid + counts$n_failed)
+  }
   cat("COMPONENTS:\n")
-  cat(sprintf("  Jackknife stability:       %5.1f%%  (influential: %d)\n",
+  cat(sprintf("  Jackknife stability:       %5.1f%%  (influential: %d%s)\n",
               metrics$jackknife_conclusion_stability,
-              metrics$jackknife_n_influential))
+              metrics$jackknife_n_influential, valid_counts("jackknife")))
   cat(sprintf("  Worst-case fragility:      k = %s (%.1f%% of sample)%s\n",
               ifelse(metrics$worstcase_fragility_k > x$max_k,
                      paste0("> ", x$max_k), metrics$worstcase_fragility_k),
@@ -307,9 +317,13 @@ print_robustness_components <- function(x, metrics, p_label = "p") {
               ifelse(is.na(metrics$p_at_fragility), "",
                      sprintf("  [%s at flip: %.4f]", p_label,
                              metrics$p_at_fragility))))
-  cat(sprintf("  Bootstrap same-decision:   %5.1f%%  (mean %s = %.4f)\n",
+  cat(sprintf("  Bootstrap same-decision:   %5.1f%%  (mean %s = %.4f%s)\n",
               metrics$bootstrap_reproducibility, p_label,
-              metrics$bootstrap_p_mean))
+              metrics$bootstrap_p_mean, valid_counts("bootstrap")))
+  if (!is.null(x$resampling) &&
+      any(vapply(x$resampling, function(z) z$n_failed > 0L, logical(1)))) {
+    cat("  Resampling rates and summaries use valid fits only.\n")
+  }
   if (is.na(metrics$estimate_range_jackknife_lo) ||
       is.na(metrics$estimate_range_jackknife_hi)) {
     cat("  Jackknife estimate range:  NA (joint multi-df term or all fits failed)\n")

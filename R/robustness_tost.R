@@ -569,7 +569,9 @@ tost_or_test <- function(group1, group2, type,
 #'   `robustness_interpretation` (currently always `NA`; scores and component
 #'   metrics remain available until a dedicated TOST calibration is
 #'   established), `calibration`, jackknife / worst-case /
-#'   bootstrap tibbles,
+#'   bootstrap tibbles, `resampling` valid/failed replicate counts (unavailable
+#'   fits remain as `NA` rows; summaries use valid fits only; an entirely
+#'   failed resampling component raises an error),
 #'   `n`, `max_k`, `max_removal_pct`, `alpha`, `weights`) plus
 #'   TOST/NI metadata (`tost_type`, `endpoint`, `margin` / `delta_L` /
 #'   `delta_U`, one-sided p-values, `(1 - 2 * alpha)` CI, `method`).

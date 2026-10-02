@@ -1,6 +1,6 @@
 ---
 title: "Pain Trial Case Study: Interpreting Robustness Scores"
-author: "Marius Ally"
+author: "Marius Ardelean"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
@@ -33,7 +33,7 @@ library(stabilitest)
 
 A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. For analysis types without validated cutoffs, stabilitest reports the numeric score and stress-test details but leaves the categorical label blank. The prospective Welch study found no feasible threshold mapping, so `welch_unpaired` is numeric-only. An applicable significant `fisher_exact` result under explicit jackknife-light weights remains the sole calibrated configuration and receives a two-band Fragile / Not fragile label (see `vignette("proportions-case-study")`). The public `robustness_analysis()` dispatcher is unchanged. Two ANCOVA training studies found no feasible cutoff, and a follow-up violation-detection study was not confirmed (see `vignette("ancova-case-study")`).
 
-> **Status.** v0.6.0. API and calibration metadata may evolve. The historical Welch 55/70 bands are no longer active because the prospective `welch-2026-2` training study found no safe and useful cutoff. The held-out data were not opened. The Fisher two-band mapping remains active for its documented configuration. The broader historical simulation is descriptive evidence only.
+> **Status.** v0.6.1. API and calibration metadata may evolve. The historical Welch 55/70 bands are no longer active because the prospective `welch-2026-2` training study found no safe and useful cutoff. The held-out data were not opened. The Fisher two-band mapping remains active for its documented configuration. The broader historical simulation is descriptive evidence only.
 
 ## Pain trial case study
 

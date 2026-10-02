@@ -74,7 +74,13 @@ An object of class \code{"robustness_analysis"} (a named list) with:
 \item{original_p, original_significant, original_statistic,
 original_mean_diff, original_ci}{Full-sample test results (effect
 field is a mean difference, Hodges–Lehmann shift, or proportion
-difference depending on \code{test_type}).}
+difference depending on \code{test_type}). \code{original_ci} is on that same
+effect scale when available; it is \code{NA} for Fisher, chi-square, and
+Brunner–Munzel tests.}
+\item{original_odds_ratio, original_odds_ratio_ci}{For Fisher tests,
+the conditional odds-ratio estimate and its exact 95\% confidence
+interval, with group 1 relative to group 2. Both are \code{NA} for other
+tests. These are distinct from the proportion-difference effect.}
 \item{robustness_metrics}{Component scores (jackknife conclusion
 stability, worst-case fragility, bootstrap same-decision rate, overall
 composite) and related diagnostics. Alias: \code{metrics} (same tibble).}

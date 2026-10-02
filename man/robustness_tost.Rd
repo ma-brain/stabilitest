@@ -73,7 +73,9 @@ a named list with the shared model-engine fields
 \code{robustness_interpretation} (currently always \code{NA}; scores and component
 metrics remain available until a dedicated TOST calibration is
 established), \code{calibration}, jackknife / worst-case /
-bootstrap tibbles,
+bootstrap tibbles, \code{resampling} valid/failed replicate counts (unavailable
+fits remain as \code{NA} rows; summaries use valid fits only; an entirely
+failed resampling component raises an error),
 \code{n}, \code{max_k}, \code{max_removal_pct}, \code{alpha}, \code{weights}) plus
 TOST/NI metadata (\code{tost_type}, \code{endpoint}, \code{margin} / \code{delta_L} /
 \code{delta_U}, one-sided p-values, \code{(1 - 2 * alpha)} CI, \code{method}).
