@@ -147,6 +147,12 @@ cutoffs; no rematching is done on validation. If the comparator's validation FR
 exceeds the score's by more than 0.02, the comparison is reported but the
 score is not penalised for it.
 
+If the score candidate is eligible but the comparator has no eligible grid
+point (status `no_eligible_comparator`), the baseline gate cannot be met and
+the study closes fail-closed with reason `p_comparator_unavailable`. This is
+known from training alone, so it is final at the freeze: validation stays
+unopened.
+
 If the score fails to beat the baseline, the study closes fail-closed. The
 label is **not** published as a p-value restatement.
 
@@ -177,10 +183,13 @@ gate), the 2026-2 training rows give, at the following cutoffs:
 | 65 | 0.067 | 0.112 | 0.713 | 0.615 |
 | 67 | 0.041 | 0.070 | 0.631 | 0.505 |
 
-All three would pass the bound gates; 63 is within 0.005 of the FR bound and 67
-is within 0.005 of the RI bound. The bounds are not slack at the edges, so the
-neighbourhood rule (which needs five consecutive passing cutoffs) is the
-binding constraint. The core registry and 250-rows-per-cell quota are kept at
+Re-running the frozen fitting code on those rows (cluster B = 200) shows the
+neighbourhood rule is the binding constraint: cutoffs 64-67 pass every gate,
+63 fails the FR upper bound (0.155 against 0.15), and 68 fails the RI point
+gate. Four consecutive passing cutoffs are one short of the five that
+`[U - 2, U + 2]` requires, so the 2026-2 training rows would give
+`no_feasible_thresholds`. Fresh data may differ either way. This is a
+pre-registered acceptable outcome, not a reason to change the rule. The core registry and 250-rows-per-cell quota are kept at
 2026-2 values so results stay comparable. Increasing archetypes would tighten
 the cluster bounds but changes the registry and is deferred.
 

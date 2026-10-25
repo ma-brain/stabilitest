@@ -109,8 +109,9 @@ decisions).
 5. The selected cutoff, candidate hash, and training summary are committed
    before the held-out streams are generated.
 
-Note: on the 2026-2 data, rule 2 leaves roughly {65}, so U near 65 is the
-expected outcome. That is a prediction, not a commitment.
+Note: on the 2026-2 training rows, cutoffs 64-67 pass every gate but five
+consecutive passing cutoffs are required, so rule 2 would fail closed there.
+Fresh data may differ; a fail-closed result is an acceptable outcome.
 
 ## Scenario design
 
