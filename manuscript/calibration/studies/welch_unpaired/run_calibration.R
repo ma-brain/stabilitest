@@ -50,11 +50,16 @@ parse_welch_cli <- function(args) {
   } else {
     max(1L, min(4L, as.integer(detected_cores)))
   }
+  study_version <- value("--study-version", "2026-2")
+  if (!study_version %in% c("2026-2", "2026-3")) {
+    stop("--study-version must be 2026-2 or 2026-3", call. = FALSE)
+  }
   workers <- as.integer(value("--workers", as.character(default_workers)))
   if (is.na(workers) || workers < 1L) stop("--workers must be positive", call. = FALSE)
   list(
     mode = mode,
     layer = layer,
+    study_version = study_version,
     candidate_hash = value("--candidate-hash", NULL),
     workers = workers,
     resume = !"--no-resume" %in% args
@@ -76,7 +81,8 @@ run_welch_calibration <- function(args = commandArgs(trailingOnly = TRUE)) {
     layer = options$layer,
     candidate_hash = options$candidate_hash,
     workers = options$workers,
-    resume = options$resume
+    resume = options$resume,
+    study_version = options$study_version
   )
 }
 
