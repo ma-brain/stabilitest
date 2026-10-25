@@ -10,7 +10,7 @@
 * checking CRAN incoming feasibility ... NOTE
   New submission
 
-This release advances the local 0.6.0 line to 0.6.1. The package
+This release advances the local 0.6.1 line to 0.6.5. The package
 has not yet been published on CRAN, so `R CMD check --as-cran` still reports
 the incoming-feasibility "New submission" note. No other NOTES remain after
 excluding development-only paths (`.worktrees`, `.claude`, `graphify-out`,

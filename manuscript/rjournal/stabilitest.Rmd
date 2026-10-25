@@ -607,7 +607,7 @@ tt <- stats::reshape(tt, idvar = "engine", timevar = "n_per_arm",
                       direction = "wide")
 names(tt) <- c("Engine", "n = 50 per arm (s)", "n = 150 per arm (s)")
 knitr::kable(tt, row.names = FALSE, booktabs = TRUE, longtable = TRUE,
-  caption = "Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.1 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.")
+  caption = "Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.5 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.")
 ```
 
 The practical implication is that interactive use is comfortable at trial

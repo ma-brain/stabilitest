@@ -152,3 +152,13 @@ a non-fatal microtype patch warning; the final authoritative wrapper log was
 clean after the fourth LaTeX pass.
 
 No external R Journal or CRAN submission was attempted.
+
+## Addendum (2026-10-25): relaxed-gates Welch study
+
+This report is a dated snapshot and is otherwise unchanged. After it was
+written, a second prospective Welch study (`welch-2026-3`) closed fail-closed
+with reason `p_comparator_unavailable`; held-out validation was not opened and
+`held_out_opened = FALSE` in its published verdict. The active registry row is
+now `welch-2026-3`, still `uncalibrated` with both cutoffs `NA`. The article,
+its evidence artifacts (regenerated under 0.6.1), and the artifact-contract
+audit were updated accordingly; see `artifacts/welch-calibration-2026-3/`.

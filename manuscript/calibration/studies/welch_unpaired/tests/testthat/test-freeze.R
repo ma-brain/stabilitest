@@ -92,3 +92,75 @@ testthat::test_that("compact freeze diagnostics are JSON serializable", {
     jsonlite::toJSON(compact, auto_unbox = TRUE, null = "null")
   )
 })
+
+testthat::test_that("editing visible fields of a frozen candidate breaks the hash", {
+  .load_welch_freeze_code()
+  candidate <- list(
+    status = "candidate", reason = NA_character_, mapping_type = "single_band",
+    cutoffs = c(65L, NA_integer_), metrics = list(false_reassurance = 0.05)
+  )
+  frozen <- freeze_welch_candidate(candidate, .welch_hash_context())
+  testthat::expect_identical(
+    recompute_welch_candidate_hash(frozen), frozen$candidate_hash
+  )
+
+  edits <- list(
+    cutoffs = function(x) { x$cutoffs[[1L]] <- 60L; x },
+    status = function(x) { x$status <- "no_feasible_thresholds"; x },
+    metrics = function(x) { x$metrics$false_reassurance <- 0.01; x },
+    context = function(x) { x$context$sap_hash <- "sap-b"; x },
+    held_out = function(x) { x$held_out_opened <- TRUE; x },
+    refit = function(x) { x$validation_refit <- TRUE; x }
+  )
+  for (name in names(edits)) {
+    tampered <- edits[[name]](frozen)
+    testthat::expect_true(
+      is.na(recompute_welch_candidate_hash(tampered)),
+      info = name
+    )
+    testthat::expect_false(
+      identical(recompute_welch_candidate_hash(tampered), tampered$candidate_hash),
+      info = name
+    )
+  }
+  # Editing the hash payload itself still changes the hash.
+  payload_edit <- frozen
+  payload_edit$hash_payload$candidate$cutoffs[[1L]] <- 60L
+  testthat::expect_true(is.na(recompute_welch_candidate_hash(payload_edit)))
+})
+
+testthat::test_that("published frozen candidates still verify", {
+  .load_welch_freeze_code()
+  root <- .welch_freeze_study_root()
+  published <- c(
+    file.path(root, "published", "candidate.rds"),
+    file.path(root, "published", "2026-3", "candidate.rds")
+  )
+  testthat::skip_if_not(all(file.exists(published)),
+                        "published candidates are not in this checkout")
+  for (path in published) {
+    frozen <- readRDS(path)
+    testthat::expect_identical(
+      recompute_welch_candidate_hash(frozen), frozen$candidate_hash,
+      info = path
+    )
+  }
+})
+
+testthat::test_that("validators reject a candidate whose cutoffs were edited", {
+  root <- .welch_freeze_study_root()
+  env <- new.env(parent = globalenv())
+  for (f in c("thresholds.R", "thresholds_2026_3.R", "validation.R")) {
+    sys.source(file.path(root, "R", f), envir = env)
+  }
+  frozen <- readRDS(file.path(root, "published", "2026-3", "candidate.rds"))
+  testthat::expect_identical(frozen$status, "candidate")
+  frozen$cutoffs[[1L]] <- frozen$cutoffs[[1L]] - 5L
+  validation <- data.frame()
+  testthat::expect_error(
+    env$validate_frozen_welch3_candidate(frozen, validation), "hash mismatch"
+  )
+  testthat::expect_error(
+    env$validate_frozen_welch_candidate(frozen, validation), "hash mismatch"
+  )
+})
