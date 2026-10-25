@@ -161,7 +161,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
   <!--/radix_placeholder_rmarkdown_metadata-->
   
   <script type="text/json" id="radix-resource-manifest">
-  {"type":"character","attributes":{},"value":["artifacts/case-study/manifest.json","artifacts/case-study/welch-case-study.rds","artifacts/simulation/manifest.json","artifacts/simulation/scenario-01.rds","artifacts/simulation/scenario-02.rds","artifacts/simulation/scenario-03.rds","artifacts/simulation/scenario-04.rds","artifacts/simulation/scenario-05.rds","artifacts/simulation/scenario-06.rds","artifacts/simulation/scenario-07.rds","artifacts/simulation/scenario-08.rds","artifacts/simulation/scenario-09.rds","artifacts/simulation/scenario-10.rds","artifacts/simulation/scenario-11.rds","artifacts/simulation/scenario-12.rds","artifacts/simulation/simulation-summary.csv","artifacts/simulation/simulation-summary.rds","artifacts/testing/manifest.json","artifacts/testing/test-counts.rds","artifacts/timing/manifest.json","artifacts/timing/timing.csv","artifacts/timing/timing.rds","artifacts/welch-calibration-2026-3/manifest.json","artifacts/welch-calibration-2026-3/welch-calibration-summary.csv","artifacts/welch-calibration-2026-3/welch-calibration-summary.rds","artifacts/welch-calibration/manifest.json","artifacts/welch-calibration/welch-calibration-summary.csv","artifacts/welch-calibration/welch-calibration-summary.rds","audit/baseline.txt","audit/final-check-report.md","audit/reproduction-report.md","initial_checks.log","motivation-letter/motivation-letter.md","motivation-letter.pdf","RJournal.sty","RJreferences.bib","RJwrapper.log","RJwrapper.tex","stabilitest_files/anchor-4.2.2/anchor.min.js","stabilitest_files/bowser-1.9.3/bowser.min.js","stabilitest_files/distill-2.2.21/template.v2.js","stabilitest_files/figure-html5/casefig-1.png","stabilitest_files/figure-html5/simfig-1.png","stabilitest_files/header-attrs-2.31/header-attrs.js","stabilitest_files/header-attrs-2.32/header-attrs.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.map","stabilitest_files/popper-2.6.0/popper.min.js","stabilitest_files/tippy-6.2.7/tippy-bundle.umd.min.js","stabilitest_files/tippy-6.2.7/tippy-light-border.css","stabilitest_files/tippy-6.2.7/tippy.css","stabilitest_files/tippy-6.2.7/tippy.umd.min.js","stabilitest_files/webcomponents-2.0.0/webcomponents.js","stabilitest.log","stabilitest.pdf","stabilitest.tex","tools/check-article-claims.R","tools/check-artifact-contracts.R","tools/regenerate-case-study.R","tools/regenerate-simulation.R","tools/regenerate-testcount.R","tools/regenerate-timing.R","tools/regenerate-welch-calibration-summary.R","tools/regenerate-welch3-calibration-summary.R"]}
+  {"type":"character","attributes":{},"value":["artifacts/case-study/manifest.json","artifacts/case-study/welch-case-study.rds","artifacts/fisher-p-baseline/fisher-p-baseline-grid.rds","artifacts/fisher-p-baseline/fisher-p-baseline-summary.csv","artifacts/fisher-p-baseline/fisher-p-baseline-summary.rds","artifacts/fisher-p-baseline/manifest.json","artifacts/simulation/manifest.json","artifacts/simulation/scenario-01.rds","artifacts/simulation/scenario-02.rds","artifacts/simulation/scenario-03.rds","artifacts/simulation/scenario-04.rds","artifacts/simulation/scenario-05.rds","artifacts/simulation/scenario-06.rds","artifacts/simulation/scenario-07.rds","artifacts/simulation/scenario-08.rds","artifacts/simulation/scenario-09.rds","artifacts/simulation/scenario-10.rds","artifacts/simulation/scenario-11.rds","artifacts/simulation/scenario-12.rds","artifacts/simulation/simulation-summary.csv","artifacts/simulation/simulation-summary.rds","artifacts/testing/manifest.json","artifacts/testing/test-counts.rds","artifacts/timing/manifest.json","artifacts/timing/timing.csv","artifacts/timing/timing.rds","artifacts/welch-calibration-2026-3/manifest.json","artifacts/welch-calibration-2026-3/welch-calibration-summary.csv","artifacts/welch-calibration-2026-3/welch-calibration-summary.rds","artifacts/welch-calibration/manifest.json","artifacts/welch-calibration/welch-calibration-summary.csv","artifacts/welch-calibration/welch-calibration-summary.rds","audit/baseline.txt","audit/final-check-report.md","audit/reproduction-report.md","initial_checks.log","motivation-letter/motivation-letter.md","motivation-letter.pdf","RJournal.sty","RJreferences.bib","RJwrapper.log","RJwrapper.tex","stabilitest_files/anchor-4.2.2/anchor.min.js","stabilitest_files/bowser-1.9.3/bowser.min.js","stabilitest_files/distill-2.2.21/template.v2.js","stabilitest_files/figure-html5/casefig-1.png","stabilitest_files/figure-html5/simfig-1.png","stabilitest_files/header-attrs-2.31/header-attrs.js","stabilitest_files/header-attrs-2.32/header-attrs.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.map","stabilitest_files/popper-2.6.0/popper.min.js","stabilitest_files/tippy-6.2.7/tippy-bundle.umd.min.js","stabilitest_files/tippy-6.2.7/tippy-light-border.css","stabilitest_files/tippy-6.2.7/tippy.css","stabilitest_files/tippy-6.2.7/tippy.umd.min.js","stabilitest_files/webcomponents-2.0.0/webcomponents.js","stabilitest.log","stabilitest.pdf","stabilitest.tex","tools/check-article-claims.R","tools/check-artifact-contracts.R","tools/regenerate-case-study.R","tools/regenerate-fisher-baseline-summary.R","tools/regenerate-simulation.R","tools/regenerate-testcount.R","tools/regenerate-timing.R","tools/regenerate-welch-calibration-summary.R","tools/regenerate-welch3-calibration-summary.R"]}
   </script>
   <!--radix_placeholder_navigation_in_header-->
   <!--/radix_placeholder_navigation_in_header-->
@@ -1816,7 +1816,7 @@ while numeric output is retained. Thresholds are never transferred between
 method families by analogy.</li>
 <li><strong>A calibrated unit, earned.</strong> An independent study for Fisher’s exact test
 yielded a validated two-band mapping, reported here with its held-out
-confirmation bounds.</li>
+confirmation bounds and a descriptive comparison with a <span class="math inline">\(p\)</span>-value cutoff.</li>
 <li><strong>Named negative results.</strong> Two prospective Welch studies and three ANCOVA
 studies closed without usable thresholds under their frozen designs. These
 empirical failures are reported rather than converted into weaker claims.</li>
@@ -2312,6 +2312,27 @@ conservative-of-Wilson-and-cluster-bootstrap rule the reported bounds are a
 false-reassurance upper of 0.0617 and an identification lower of 0.6767, both
 inside the frozen gates. The registry row is <code>fisher-2026-1</code>, provenance
 <code>study:binary_proportion@cc3344931614</code>.</p>
+<p>The Fisher study was calibrated before the Welch replication added a
+p-value-only baseline, so a descriptive comparison was run afterwards on the
+published rows. The comparison rule was fixed on training: the p-value cutoff on
+a coarse grid whose training false reassurance is closest to the score’s, here
+<span class="math inline">\(p \le\)</span> 0.002. In training that rule had false reassurance
+0.025 and clear-effect identification
+0.728, against
+0.049 and
+0.761 for the score. The score
+identified 3.3 percentage points
+more clear effects, with a 90% scenario-cluster interval from
+-1.2 to 8.3,
+and at higher false reassurance. In the held-out rows, read here descriptively
+and not used for any selection, the two rules gave
+0.037 / 0.733
+(score) and 0.027 / 0.700
+(<span class="math inline">\(p\)</span> rule), and the areas under the curve were nearly equal
+(0.919 and 0.920). The
+validated error rates describe the label as published. They do not show that the
+score separates clear effects from null results better than a <span class="math inline">\(p\)</span>-value cutoff
+does.</p>
 <p>The resulting mapping is two-band — score <span class="math inline">\(\leq 58\)</span> <em>Fragile</em>, <span class="math inline">\(&gt; 58\)</span>
 <em>Not fragile</em> — with <strong>no Robust tier</strong>, because a single binary comparison
 does not carry enough information to support a third band at the required

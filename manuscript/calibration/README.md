@@ -17,6 +17,14 @@ including Welch, retain numeric scores and component metrics while categorical
 labels remain suppressed until that exact method and conclusion has passed an
 independent calibration.
 
+The Fisher cutoff has also been compared descriptively with a plain p-value
+cutoff (`manuscript/rjournal/tools/regenerate-fisher-baseline-summary.R`). On
+the published rows the two behave alike: p <= 0.002 had false reassurance 0.025
+and clear identification 0.728 in training against 0.049 and 0.761 for the
+score, with nearly equal areas under the curve in the held-out rows (0.919 and
+0.920). The label's validated error rates stand; the comparison does not show
+that the score adds discrimination beyond the p-value.
+
 The files under `published/` are the immutable Task 15 broad-family
 publication freeze.  They retain the historical `two_sample` row and are
 preserved for provenance, not runtime lookup.  The inspected Task 15

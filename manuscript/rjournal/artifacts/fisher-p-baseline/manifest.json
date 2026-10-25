@@ -1,0 +1,16 @@
+{
+  "artifact_role": "fisher_p_value_baseline_descriptive_comparison",
+  "generated_at": "2026-10-25T11:05:17+0200",
+  "runtime_seconds": 3.030381202697754,
+  "package_version": "0.6.5",
+  "git_commit": "7af374194acb7517f0efd3e550dd114d8612e7e4",
+  "r_version": "R version 4.6.1 (2026-06-24)",
+  "script_path": "manuscript/rjournal/tools/regenerate-fisher-baseline-summary.R",
+  "script_sha256": "cc2991725b5761335cac269859e5c13a46e43bb232db07c4417b4b7b03a94289",
+  "seed": 2026102501,
+  "source_study_verdict_hash": "ea0740cde27a9917a95e222cd6f3c7eb9dd6656ac67ac6cfb61c4922884ece8f",
+  "welch_calibration_status": "uncalibrated",
+  "welch_label_emitted": false,
+  "matched_p_cutoff": 0.002,
+  "descriptive_only": true
+}

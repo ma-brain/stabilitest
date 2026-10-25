@@ -41,6 +41,9 @@ timing      <- readRDS(art("timing", "timing.rds"))
 test_counts <- readRDS(art("testing", "test-counts.rds"))
 welch_summary <- readRDS(art("welch-calibration", "welch-calibration-summary.rds"))
 welch3 <- readRDS(art("welch-calibration-2026-3", "welch-calibration-summary.rds"))
+fisher_p <- readRDS(art("fisher-p-baseline", "fisher-p-baseline-summary.rds"))
+fp_train <- fisher_p[fisher_p$dataset == "training", ]
+fp_held <- fisher_p[fisher_p$dataset != "training", ]
 hash_blocks <- function(h) {
   paste(substring(h, seq(1, 57, 8), seq(8, 64, 8)), collapse = " ")
 }
@@ -92,7 +95,7 @@ score. Its contributions are:
   method families by analogy.
 - **A calibrated unit, earned.** An independent study for Fisher's exact test
   yielded a validated two-band mapping, reported here with its held-out
-  confirmation bounds.
+  confirmation bounds and a descriptive comparison with a $p$-value cutoff.
 - **Named negative results.** Two prospective Welch studies and three ANCOVA
   studies closed without usable thresholds under their frozen designs. These
   empirical failures are reported rather than converted into weaker claims.
@@ -458,6 +461,28 @@ conservative-of-Wilson-and-cluster-bootstrap rule the reported bounds are a
 false-reassurance upper of 0.0617 and an identification lower of 0.6767, both
 inside the frozen gates. The registry row is `fisher-2026-1`, provenance
 `study:binary_proportion@cc3344931614`.
+
+The Fisher study was calibrated before the Welch replication added a
+p-value-only baseline, so a descriptive comparison was run afterwards on the
+published rows. The comparison rule was fixed on training: the p-value cutoff on
+a coarse grid whose training false reassurance is closest to the score's, here
+$p \le$ `r fp_train$q_matched`. In training that rule had false reassurance
+`r fmt(fp_train$p_false_reassurance, 3)` and clear-effect identification
+`r fmt(fp_train$p_clear_identification, 3)`, against
+`r fmt(fp_train$score_false_reassurance, 3)` and
+`r fmt(fp_train$score_clear_identification, 3)` for the score. The score
+identified `r fmt(100 * fp_train$gain_clear_identification, 1)` percentage points
+more clear effects, with a 90% scenario-cluster interval from
+`r fmt(100 * fp_train$gain_lower90, 1)` to `r fmt(100 * fp_train$gain_upper90, 1)`,
+and at higher false reassurance. In the held-out rows, read here descriptively
+and not used for any selection, the two rules gave
+`r fmt(fp_held$score_false_reassurance, 3)` / `r fmt(fp_held$score_clear_identification, 3)`
+(score) and `r fmt(fp_held$p_false_reassurance, 3)` / `r fmt(fp_held$p_clear_identification, 3)`
+($p$ rule), and the areas under the curve were nearly equal
+(`r fmt(fp_held$auc_score, 3)` and `r fmt(fp_held$auc_neg_log10_p, 3)`). The
+validated error rates describe the label as published. They do not show that the
+score separates clear effects from null results better than a $p$-value cutoff
+does.
 
 The resulting mapping is two-band --- score $\leq 58$ *Fragile*, $> 58$
 *Not fragile* --- with **no Robust tier**, because a single binary comparison
