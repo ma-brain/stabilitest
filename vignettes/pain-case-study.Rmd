@@ -33,7 +33,7 @@ library(stabilitest)
 
 A composite score on 0–100 summarises the components with default weights 0.4 / 0.4 / 0.2 (jackknife, worst-case fragility, bootstrap). Extreme-value (grand-mean) removal is retained as a *descriptive* companion and does **not** enter the score. Numeric scores and component metrics are retained for every supported method. For analysis types without validated cutoffs, stabilitest reports the numeric score and stress-test details but leaves the categorical label blank. The prospective Welch study found no feasible threshold mapping, so `welch_unpaired` is numeric-only. An applicable significant `fisher_exact` result under explicit jackknife-light weights remains the sole calibrated configuration and receives a two-band Fragile / Not fragile label (see `vignette("proportions-case-study")`). The public `robustness_analysis()` dispatcher is unchanged. Two ANCOVA training studies found no feasible cutoff, and a follow-up violation-detection study was not confirmed (see `vignette("ancova-case-study")`).
 
-> **Status.** v0.6.1. API and calibration metadata may evolve. The historical Welch 55/70 bands are no longer active because the prospective `welch-2026-2` training study found no safe and useful cutoff. The held-out data were not opened. The Fisher two-band mapping remains active for its documented configuration. The broader historical simulation is descriptive evidence only.
+> **Status.** v0.6.1. API and calibration metadata may evolve. The historical Welch 55/70 bands are no longer active because the prospective `welch-2026-2` training study found no safe and useful cutoff, and a second relaxed-gates study (`welch-2026-3`) also closed without a label. The held-out data were not opened in either study. The Fisher two-band mapping remains active for its documented configuration. The broader historical simulation is descriptive evidence only.
 
 ## Pain trial case study
 
@@ -188,9 +188,12 @@ function's `Value` help section before writing downstream extraction code.
 The numeric score and all component metrics remain available regardless of the
 test family, endpoint, or conclusion. The prospective Welch study completed
 4,500 training analyses but found no feasible threshold mapping under its
-frozen safety and accuracy gates. Consequently, significant `welch_unpaired`
-results retain numeric scores and components while their categorical label is
-`NA`; the historical 55/70 mapping is descriptive only.
+frozen safety and accuracy gates. A second study with deliberately relaxed
+gates (`welch-2026-3`) found a single cutoff in training, but a p-value-only
+rule did as well and the study closed without opening the held-out data.
+Consequently, significant `welch_unpaired` results retain numeric scores and
+components while their categorical label is `NA`; the historical 55/70 mapping
+is descriptive only.
 
 Separately, significant `fisher_exact` under explicit jackknife-light weights
 (`fragility = 0.5`, `bootstrap = 0.5`, `jackknife = 0`) and a canonical

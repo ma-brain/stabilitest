@@ -131,6 +131,30 @@ not opened. The registry therefore marks `welch_unpaired` uncalibrated and
 suppresses its categorical label. This is not a failed held-out confirmation:
 the pre-specified training requirements stopped the study before validation access.
 
+### 2.3.2 Relaxed-gates Welch replication (fail-closed)
+
+A second prospective study, version `welch-2026-3`, repeated the design with new
+scenario identities and random streams and a deliberately weaker claim: one
+`Stable` band, false reassurance at most 0.10 (conservative upper bound 0.15),
+clear-effect identification at least 0.60 (conservative lower bound 0.50),
+false reassurance at most 0.25 within every archetype, gates holding at the two
+neighbouring integer cutoffs on each side, and a requirement that the score beat
+a p-value-only rule fitted the same way. The relaxed gates were chosen after
+seeing the first study's training rows; the protocol was frozen before any new
+score was produced.
+
+Training again completed 4,500 significant analyses with no failures. The score
+fit a cutoff of 65 (false reassurance 0.048, conservative upper bound 0.093;
+clear-effect identification 0.703, conservative lower bound 0.603; worst
+archetype 0.164 at 25 per group). A rule labelling results with p ≤ 0.002 had
+false reassurance 0.035 and clear-effect identification 0.713 on the same rows,
+and the p-value rule had no eligible cutoff under the neighbourhood requirement
+(3 of 10 grid values met the gates). The frozen protocol closes the study in
+that case. The frozen decision has hash
+`b113e704766eb8d0740af9c5f387044b175c0d0b078d971fb867bd928c0b4f98`, the reason is
+`p_comparator_unavailable`, and the held-out validation data were not opened.
+The registry row is `welch-2026-3`, uncalibrated, with the label suppressed.
+
 The historical 55/70 bands remain a retired exploratory comparator. Their
 descriptive separation motivated the prospective study but does not license a
 Robust, Moderately Robust, or Fragile verdict for a current Welch result.
@@ -260,7 +284,7 @@ Treatment: mean change −19.80 (SD 13.80). Placebo: −8.40 (SD 11.88). Welch t
 
 ### 4.2 Robustness analysis
 
-**Overall numeric score: 72.5/100; no categorical Welch verdict is emitted**, with weights 0.4/0.4/0.2, B = 2000, and seed = 14. Under `welch-2026-2`, the score remains available for transparent component reporting but has no validated Robust, Moderately Robust, or Fragile interpretation.
+**Overall numeric score: 72.5/100; no categorical Welch verdict is emitted**, with weights 0.4/0.4/0.2, B = 2000, and seed = 14. Under `welch-2026-2` and `welch-2026-3`, the score remains available for transparent component reporting but has no validated Robust, Moderately Robust, or Fragile interpretation.
 
 *Jackknife:* 100% conclusion stability across all 55 leave-one-out tests; p-value range 0.0006–0.0034; no observation met the influence criterion. As anticipated by the simulation, this near-perfect stability mostly reflects n = 55, not invulnerability.
 
