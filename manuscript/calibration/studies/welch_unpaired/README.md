@@ -48,10 +48,18 @@ created and remains unopened. After human acknowledgement, the deterministic
 fail verdict was published without validation: Welch categorical labels are
 suppressed while numeric scores and component metrics remain available.
 
-The active package registry now records `welch-2026-2` as `uncalibrated` with
-no cutoffs and provenance pointing to `published/`. The published verdict and
-registry proposal both record `held_out_opened = FALSE` and
-`validation_refit = FALSE`.
+Study 2026-2 recorded `welch-2026-2` as `uncalibrated` with no cutoffs and
+provenance pointing to `published/`. The published verdict and registry
+proposal both record `held_out_opened = FALSE` and `validation_refit = FALSE`.
+
+Study 2026-3 (relaxed gates) is also closed. Its training fit chose a `Stable`
+cutoff of 65, but the p-value-only comparator had no eligible grid point, so
+the frozen SAP closed the study with reason `p_comparator_unavailable`
+(candidate hash
+`b113e704766eb8d0740af9c5f387044b175c0d0b078d971fb867bd928c0b4f98`) and
+validation stayed unopened. The active package registry now records
+`welch-2026-3` as `uncalibrated`, with provenance pointing to
+`published/2026-3/`.
 
 ## Study versions
 

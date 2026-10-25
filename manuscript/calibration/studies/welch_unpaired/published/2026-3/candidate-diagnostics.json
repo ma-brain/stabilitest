@@ -1,0 +1,121 @@
+{
+  "status": "candidate",
+  "reason": null,
+  "mapping_type": "single_band",
+  "cutoffs": [65, "NA"],
+  "candidate_hash": "b113e704766eb8d0740af9c5f387044b175c0d0b078d971fb867bd928c0b4f98",
+  "metrics": {
+    "mapping_type": "single_band",
+    "cutoffs": {
+      "lower": 65,
+      "upper": "NA"
+    },
+    "false_reassurance": 0.048,
+    "false_reassurance_count": 72,
+    "false_reassurance_n": 1500,
+    "false_reassurance_wilson_upper": 0.057920698559238,
+    "false_reassurance_cluster_upper": 0.09266666666666666,
+    "false_reassurance_conservative_upper": 0.09266666666666666,
+    "clear_identification": 0.7033333333333334,
+    "clear_identification_count": 1055,
+    "clear_identification_n": 1500,
+    "clear_identification_wilson_lower": 0.6835814861697224,
+    "clear_identification_cluster_lower": 0.6033666666666667,
+    "clear_identification_conservative_lower": 0.6033666666666667,
+    "band_occupancy": 0.3582222222222222,
+    "archetype_false_reassurance": {
+      "W01": 0.164,
+      "W02": 0.032,
+      "W03": 0.012,
+      "W04": 0.004,
+      "W05": 0.056,
+      "W06": 0.02
+    },
+    "archetype_clear_identification": {
+      "W01": 0.892,
+      "W02": 0.764,
+      "W03": 0.624,
+      "W04": 0.452,
+      "W05": 0.752,
+      "W06": 0.736
+    },
+    "pooled_medians": {
+      "null": 54.641479605438548,
+      "borderline": 60.627858276044421,
+      "clear": 70.322903225806456
+    },
+    "pooled_ordering_ok": true,
+    "material_reversal": false
+  },
+  "historical_55_70": {
+    "mapping_type": "three_band",
+    "cutoffs": [55, 70],
+    "false_reassurance": 0.462,
+    "false_reassurance_count": 693,
+    "false_reassurance_n": 1500,
+    "false_reassurance_wilson_upper": 0.4832230117469777,
+    "clear_identification": 0.5133333333333333,
+    "clear_identification_count": 770,
+    "clear_identification_n": 1500,
+    "clear_identification_wilson_lower": 0.4921010143531364,
+    "class_accuracy": [0.538, 0.63, 0.5133333333333333],
+    "balanced_ordinal_accuracy": 0.5604444444444444,
+    "band_occupancy": {
+      "fragile": 0.2691111111111111,
+      "moderate": 0.5028888888888889,
+      "robust": 0.228
+    },
+    "minimum_band_occupancy": 0.228,
+    "pooled_medians": [54.641479605438548, 60.627858276044421, 70.322903225806456],
+    "pooled_ordering_ok": true,
+    "material_reversal": false,
+    "false_reassurance_cluster_upper": 0.5059666666666667,
+    "clear_identification_cluster_lower": 0.348,
+    "false_reassurance_conservative_upper": 0.5059666666666667,
+    "clear_identification_conservative_lower": 0.348
+  },
+  "fit_runtime_seconds": 47.672497987747192,
+  "training_n": 4500,
+  "training_truth_counts": {
+    "borderline": 1500,
+    "clear": 1500,
+    "null": 1500
+  },
+  "context": {
+    "study_version": "prospective Welch study 2026-3",
+    "gates": {
+      "false_reassurance_point_max": 0.1,
+      "false_reassurance_upper_max": 0.15,
+      "clear_identification_point_min": 0.6,
+      "clear_identification_lower_min": 0.5,
+      "minimum_band_occupancy": 0.05,
+      "archetype_false_reassurance_max": 0.25,
+      "neighbourhood": 2,
+      "cutoff_range": [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90],
+      "p_grid": [0.04, 0.03, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002, 0.0001],
+      "baseline_min_gain": 0.02,
+      "cluster_bootstrap_B": 1000,
+      "cluster_bootstrap_seed": 202740001,
+      "baseline_bootstrap_seed": 202760001
+    },
+    "scenario_manifest_hash": "17dc47ba2758f48dd619d6f26e1f2a66947e6a621465003c437b1460ff593ff1",
+    "weights": [0.4, 0.4, 0.2],
+    "sap_hash": "ccfc3968d110f482ba2a1480076df6f1a241e0cd14e2b5f2e46d0e9106c12cba",
+    "resolved_scenarios_hash": "b88011ab39ad0fb19f35812101581773a33830b1bfc2cabee1def6e2b2965ec6",
+    "generator_hash": "9e45814197e845a86856b0c7e252d2be7813eee025bb3c0fc984bb1ef1a56019",
+    "adapter_hash": "7e05f32d3b90d753cdfc7b366d942fed910be0b1bc83aa213da050bdbe882248",
+    "thresholds_hash": "1b663f88cb5adab3bd1283af622d418f5d1724d5dab54b1c6b64b1139fbdc062",
+    "training_data_hash": "48843f185ad24d9a27ee8d0e04f176a2d7dabf21601d0f7347550a8e77077d25",
+    "package_version": "0.6.1",
+    "thresholds_2026_3_hash": "05cb727abe1500ac99f6448b90b5b65a648a3887ccb0bf066b605ebc1772bc38",
+    "scenario_config_hash": "bff0565082232936d57443761a9629ec06974822ba9bdfcad8a78f0593471318"
+  },
+  "held_out_opened": false,
+  "validation_refit": false,
+  "p_comparator": {
+    "status": "no_eligible_comparator",
+    "q": "NA",
+    "selected": null
+  },
+  "closed_at_freeze": true
+}

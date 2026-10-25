@@ -179,7 +179,7 @@ validate_calibration_registry <- function(registry) {
   cutoff_fragile = c(rep(NA_real_, 5), 58, rep(NA_real_, 13)),
   cutoff_robust = rep(NA_real_, 19),
   version = c(
-    "welch-2026-2", rep("taxonomy-2026-1", 4), "fisher-2026-1",
+    "welch-2026-3", rep("taxonomy-2026-1", 4), "fisher-2026-1",
     rep("taxonomy-2026-1", 2), "lm-ancova-2026-1", "lm-ancova-v2-2026-1",
     rep("taxonomy-2026-1", 9)
   ),

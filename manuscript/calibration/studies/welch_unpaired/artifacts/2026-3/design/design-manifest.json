@@ -1,0 +1,28 @@
+{
+  "study": "prospective Welch study 2026-3",
+  "study_version": "2026-3",
+  "calibration_unit": "welch_unpaired",
+  "generated_at_utc": "2026-10-25 06:36:12 UTC",
+  "git_head_at_generation": "8ec6fc52b28b4414c4bd957d0a7d5da33b276a3a",
+  "r_version": "R version 4.6.1 (2026-06-24)",
+  "power_method": "two-sided noncentral-t Welch-Satterthwaite approximation",
+  "verification_method": "primary Welch test decisions only",
+  "verification_draws_per_core_row": 2000,
+  "verification_master_seed": 202750001,
+  "power_tolerance": 0.03,
+  "core_rows": 36,
+  "failed_core_rows": 0,
+  "used_robustness_score": false,
+  "input_sha256": {
+    "sap": "ccfc3968d110f482ba2a1480076df6f1a241e0cd14e2b5f2e46d0e9106c12cba",
+    "scenarios": "46490b269ec12beb6bc1e96695f669f0ac8011ad17f32578f7e5e069bdbadfdd",
+    "scenarios_2026_3": "bff0565082232936d57443761a9629ec06974822ba9bdfcad8a78f0593471318",
+    "power": "41a851eeee759fa25010c3604e56b5f5351537460709c5e03b855b020b6bc6e5",
+    "generator": "9e45814197e845a86856b0c7e252d2be7813eee025bb3c0fc984bb1ef1a56019",
+    "verifier": "bbe4d26ffd61ca0d0954b934fb90c7ca5e0f88d76ddbe727708059418331ebd2"
+  },
+  "output_sha256": {
+    "resolved_scenarios": "b88011ab39ad0fb19f35812101581773a33830b1bfc2cabee1def6e2b2965ec6",
+    "power_verification": "42b5eed28b1450484fcf17ab5f8dbc22a823583177350a2bb2f05ede0f6627f9"
+  }
+}

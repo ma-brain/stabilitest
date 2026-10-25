@@ -131,6 +131,41 @@ test_that("prospective Welch failure is published without opening validation", {
   expect_true(is.na(welch$cutoff_robust))
 })
 
+test_that("Welch 2026-3 failure is published without opening validation", {
+  root <- normalizePath(testthat::test_path("..", ".."))
+  published <- file.path(
+    root, "manuscript", "calibration", "studies", "welch_unpaired", "published",
+    "2026-3"
+  )
+  skip_if_not(dir.exists(published),
+              "Welch 2026-3 published/ directory missing from package tarball")
+  verdict <- readRDS(file.path(published, "VERDICT.rds"))
+  expect_identical(verdict$status, "uncalibrated")
+  expect_identical(verdict$reason, "p_comparator_unavailable")
+  expect_identical(verdict$registry_version, "welch-2026-3")
+  expect_identical(verdict$candidate_hash,
+                   "b113e704766eb8d0740af9c5f387044b175c0d0b078d971fb867bd928c0b4f98")
+  expect_false(isTRUE(verdict$held_out_opened))
+  expect_false(isTRUE(verdict$validation_refit))
+  expect_true(all(is.na(verdict$cutoffs)))
+
+  published_row <- utils::read.csv(
+    file.path(published, "registry.csv"),
+    stringsAsFactors = FALSE, na.strings = c("", "NA")
+  )
+  published_row <- published_row[published_row$calibration_unit == "welch_unpaired", ]
+  active <- utils::read.csv(
+    system.file("extdata", "calibration-registry.csv", package = "stabilitest"),
+    stringsAsFactors = FALSE, na.strings = c("", "NA")
+  )
+  active <- active[active$calibration_unit == "welch_unpaired", ]
+  expect_identical(active$version, published_row$version)
+  expect_identical(active$source, published_row$source)
+  expect_identical(active$supported_conditions, published_row$supported_conditions)
+  expect_false(dir.exists(file.path(dirname(published), "..", "artifacts", "2026-3",
+                                    "validation")))
+})
+
 test_that("Gate A ANCOVA documentation audit passes in the source tree", {
   root <- normalizePath(testthat::test_path("..", ".."))
   audit <- file.path(root, "tools", "check-calibration-documentation.R")

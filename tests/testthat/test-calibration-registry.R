@@ -118,7 +118,7 @@ test_that("the installed registry exactly matches the active taxonomy", {
     cutoff_fragile = c(rep(NA_real_, 5), 58, rep(NA_real_, 13)),
     cutoff_robust = rep(NA_real_, 19),
     version = c(
-      "welch-2026-2", rep("taxonomy-2026-1", 4), "fisher-2026-1",
+      "welch-2026-3", rep("taxonomy-2026-1", 4), "fisher-2026-1",
       rep("taxonomy-2026-1", 2), "lm-ancova-2026-1", "lm-ancova-v2-2026-1",
       rep("taxonomy-2026-1", 9)
     ),
@@ -229,17 +229,17 @@ test_that("the Welch row records the prospective fail-closed verdict", {
   welch <- registry[registry$calibration_unit == "welch_unpaired", ]
 
   expect_identical(welch$status, "uncalibrated")
-  expect_identical(welch$version, "welch-2026-2")
+  expect_identical(welch$version, "welch-2026-3")
   expect_true(is.na(welch$cutoff_fragile))
   expect_true(is.na(welch$cutoff_robust))
   expect_identical(
     welch$source,
-    "manuscript/calibration/studies/welch_unpaired/published"
+    "manuscript/calibration/studies/welch_unpaired/published/2026-3"
   )
-  expect_match(welch$supported_conditions, "no_feasible_thresholds", fixed = TRUE)
+  expect_match(welch$supported_conditions, "p_comparator_unavailable", fixed = TRUE)
   expect_match(
     welch$supported_conditions,
-    "9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d",
+    "b113e704766eb8d0740af9c5f387044b175c0d0b078d971fb867bd928c0b4f98",
     fixed = TRUE
   )
   expect_match(welch$supported_conditions, "held-out not opened", fixed = TRUE)
