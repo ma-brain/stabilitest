@@ -40,6 +40,10 @@ sim_summary <- readRDS(art("simulation", "simulation-summary.rds"))
 timing      <- readRDS(art("timing", "timing.rds"))
 test_counts <- readRDS(art("testing", "test-counts.rds"))
 welch_summary <- readRDS(art("welch-calibration", "welch-calibration-summary.rds"))
+welch3 <- readRDS(art("welch-calibration-2026-3", "welch-calibration-summary.rds"))
+hash_blocks <- function(h) {
+  paste(substring(h, seq(1, 57, 8), seq(8, 64, 8)), collapse = " ")
+}
 
 fmt <- function(x, digits = 1) formatC(x, format = "f", digits = digits)
 cs_m <- case_study$robustness_metrics
@@ -89,7 +93,7 @@ score. Its contributions are:
 - **A calibrated unit, earned.** An independent study for Fisher's exact test
   yielded a validated two-band mapping, reported here with its held-out
   confirmation bounds.
-- **Named negative results.** A prospective Welch study and three ANCOVA
+- **Named negative results.** Two prospective Welch studies and three ANCOVA
   studies closed without usable thresholds under their frozen designs. These
   empirical failures are reported rather than converted into weaker claims.
 
@@ -329,9 +333,46 @@ The frozen no-candidate SHA-256 is represented in eight consecutive blocks.
 The first four are `9c45481b` `952cab7c` `b9b9086e` `37924a39`; the final four
 are `d83fe048` `4628745d` `be2e79eb` `33e8797d`.
 the compact supplementary artifact records this hash, source hashes, runtime,
-occupancy, and the unopened-validation flag. The active registry version is
-`welch-2026-2`: numeric scores and components remain available, while the
-categorical label is `NA`.
+occupancy, and the unopened-validation flag.
+
+### A relaxed-gates replication
+
+A reader may reasonably ask whether the failure came from gates that were too
+strict. A second prospective study (`welch-2026-3`) therefore repeated the
+design with fresh scenario identities and random streams and a deliberately
+weaker claim. It looked for one cutoff that earns a single `Stable` label,
+accepting false reassurance up to 0.10 (conservative upper bound 0.15) and
+clear-effect identification down to 0.60 (conservative lower bound 0.50). Any
+cutoff also had to satisfy those gates at its two neighbours on each side,
+false reassurance had to stay at or below 0.25 within every archetype, and the
+score had to beat a p-value-only rule fitted by the same procedure. The
+relaxed gates were chosen after seeing the first study's training rows, which
+is why the new study used new data and froze its protocol before producing any
+score.
+
+Training again completed all `r welch3$required_cells` cells
+(`r format(welch3$completed, big.mark = ",")` significant analyses, `r welch3$failures`
+failures). The score did find a cutoff: `r welch3$cutoff_stable`. At that
+cutoff false reassurance was `r fmt(welch3$false_reassurance, 3)` (conservative
+upper `r fmt(welch3$false_reassurance_conservative_upper, 3)`) and
+clear-effect identification was `r fmt(welch3$clear_identification, 3)`
+(conservative lower `r fmt(welch3$clear_identification_conservative_lower, 3)`),
+although false reassurance reached `r fmt(welch3$worst_archetype_false_reassurance, 3)`
+in the smallest archetype (`r welch3$worst_archetype`, 25 per group). The
+comparison with the p-value is what closed the study. A rule that labels
+results with $p \le$ `r welch3$p_only_q` had false reassurance
+`r fmt(welch3$p_only_false_reassurance, 3)` and clear-effect identification
+`r fmt(welch3$p_only_clear_identification, 3)` on the same rows, no worse than
+the score. The p-value rule also had no eligible cutoff under the neighbourhood
+requirement (only `r welch3$p_only_feasible_grid_points` of
+`r welch3$p_only_grid_points` grid values met the gates), and the frozen
+protocol treats that as a closed outcome. Because the unavailable comparator
+was known from training alone, held-out validation was not opened. The
+candidate hash is `r hash_blocks(welch3$candidate_hash)`. The active registry
+version is now `welch-2026-3`: numeric scores and components remain available,
+while the categorical label is `NA`. On these training rows the score offered
+no advantage over a p-value cutoff at comparable error rates, so a categorical
+label would have summarized little beyond the p-value.
 
 Table \@ref(tab:simtable) retains the earlier 12-scenario experiment as a
 descriptive stress example, regenerated with the released package (12
@@ -566,7 +607,7 @@ tt <- stats::reshape(tt, idvar = "engine", timevar = "n_per_arm",
                       direction = "wide")
 names(tt) <- c("Engine", "n = 50 per arm (s)", "n = 150 per arm (s)")
 knitr::kable(tt, row.names = FALSE, booktabs = TRUE, longtable = TRUE,
-  caption = "Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.0 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.")
+  caption = "Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.1 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.")
 ```
 
 The practical implication is that interactive use is comfortable at trial

@@ -67,7 +67,7 @@ score. Its contributions are:
   yielded a validated two-band mapping, reported here with its held-out
   confirmation bounds.
 \item
-  \textbf{Named negative results.} A prospective Welch study and three ANCOVA
+  \textbf{Named negative results.} Two prospective Welch studies and three ANCOVA
   studies closed without usable thresholds under their frozen designs. These
   empirical failures are reported rather than converted into weaker claims.
 \end{itemize}
@@ -315,9 +315,46 @@ The frozen no-candidate SHA-256 is represented in eight consecutive blocks.
 The first four are \texttt{9c45481b} \texttt{952cab7c} \texttt{b9b9086e} \texttt{37924a39}; the final four
 are \texttt{d83fe048} \texttt{4628745d} \texttt{be2e79eb} \texttt{33e8797d}.
 the compact supplementary artifact records this hash, source hashes, runtime,
-occupancy, and the unopened-validation flag. The active registry version is
-\texttt{welch-2026-2}: numeric scores and components remain available, while the
-categorical label is \texttt{NA}.
+occupancy, and the unopened-validation flag.
+
+\subsubsection{A relaxed-gates replication}\label{a-relaxed-gates-replication}
+
+A reader may reasonably ask whether the failure came from gates that were too
+strict. A second prospective study (\texttt{welch-2026-3}) therefore repeated the
+design with fresh scenario identities and random streams and a deliberately
+weaker claim. It looked for one cutoff that earns a single \texttt{Stable} label,
+accepting false reassurance up to 0.10 (conservative upper bound 0.15) and
+clear-effect identification down to 0.60 (conservative lower bound 0.50). Any
+cutoff also had to satisfy those gates at its two neighbours on each side,
+false reassurance had to stay at or below 0.25 within every archetype, and the
+score had to beat a p-value-only rule fitted by the same procedure. The
+relaxed gates were chosen after seeing the first study's training rows, which
+is why the new study used new data and froze its protocol before producing any
+score.
+
+Training again completed all 18 cells
+(4,500 significant analyses, 0
+failures). The score did find a cutoff: 65. At that
+cutoff false reassurance was 0.048 (conservative
+upper 0.093) and
+clear-effect identification was 0.703
+(conservative lower 0.603),
+although false reassurance reached 0.164
+in the smallest archetype (W01, 25 per group). The
+comparison with the p-value is what closed the study. A rule that labels
+results with \(p \le\) 0.002 had false reassurance
+0.035 and clear-effect identification
+0.713 on the same rows, no worse than
+the score. The p-value rule also had no eligible cutoff under the neighbourhood
+requirement (only 3 of
+10 grid values met the gates), and the frozen
+protocol treats that as a closed outcome. Because the unavailable comparator
+was known from training alone, held-out validation was not opened. The
+candidate hash is b113e704 766eb8d0 740af9c5 f387044b 175c0d0b 078d971f b867bd92 8c0b4f98. The active registry
+version is now \texttt{welch-2026-3}: numeric scores and components remain available,
+while the categorical label is \texttt{NA}. On these training rows the score offered
+no advantage over a p-value cutoff at comparable error rates, so a categorical
+label would have summarized little beyond the p-value.
 
 Table \ref{tab:simtable} retains the earlier 12-scenario experiment as a
 descriptive stress example, regenerated with the released package (12
@@ -553,15 +590,15 @@ Closed-form tests are therefore sub-second; model engines pay for repeated
 refits.
 
 \begin{longtable}[t]{lrr}
-\caption{\label{tab:timingtable}Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.0 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.}\\
+\caption{\label{tab:timingtable}Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.1 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.}\\
 \toprule
 Engine & n = 50 per arm (s) & n = 150 per arm (s)\\
 \midrule
-robustness\_analysis (Welch) & 0.53 & 1.43\\
-robustness\_lm (ANCOVA) & 0.98 & 4.22\\
-robustness\_glm (binomial) & 1.62 & 8.03\\
-robustness\_surv (Cox) & 1.64 & 6.17\\
-robustness\_tost (mean equivalence) & 0.77 & 1.48\\
+robustness\_analysis (Welch) & 0.46 & 1.25\\
+robustness\_lm (ANCOVA) & 0.86 & 3.64\\
+robustness\_glm (binomial) & 1.36 & 6.79\\
+robustness\_surv (Cox) & 1.31 & 4.89\\
+robustness\_tost (mean equivalence) & 0.67 & 1.23\\
 \bottomrule
 \end{longtable}
 
@@ -571,8 +608,8 @@ belongs in a batch script, which is how the studies reported here were run.
 
 \section{Testing and quality assurance}\label{testing-and-quality-assurance}
 
-The package carries 1018 passing \texttt{testthat} assertions across
-7 test files, covering the analysis engines, edge cases (degenerate groups, zero
+The package carries 1090 passing \texttt{testthat} assertions across
+9 test files, covering the analysis engines, edge cases (degenerate groups, zero
 variance, complete separation, failed refits), the packaged datasets, the
 calibration registry's resolution logic, and the calibration documentation
 itself.

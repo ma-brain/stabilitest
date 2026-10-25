@@ -83,6 +83,7 @@ provenance.
 | `regenerate-timing.R` | `artifacts/timing/` | about 25 seconds |
 | `regenerate-testcount.R` | `artifacts/testing/` | about 50 seconds |
 | `regenerate-welch-calibration-summary.R` | `artifacts/welch-calibration/` | under 1 second |
+| `regenerate-welch3-calibration-summary.R` | `artifacts/welch-calibration-2026-3/` | under 1 second |
 
 ```sh
 Rscript manuscript/rjournal/tools/regenerate-simulation.R
@@ -90,6 +91,7 @@ Rscript manuscript/rjournal/tools/regenerate-case-study.R
 Rscript manuscript/rjournal/tools/regenerate-timing.R
 Rscript manuscript/rjournal/tools/regenerate-testcount.R
 Rscript manuscript/rjournal/tools/regenerate-welch-calibration-summary.R
+Rscript manuscript/rjournal/tools/regenerate-welch3-calibration-summary.R
 ```
 
 The full calibration is intentionally outside the journal's article-render
