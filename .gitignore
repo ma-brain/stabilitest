@@ -63,6 +63,8 @@ src/*.dll
 /manuscript/calibration/studies/binary_proportion/artifacts/raw/
 /manuscript/calibration/studies/binary_proportion/artifacts/pilot/
 /manuscript/calibration/studies/binary_proportion/outputs/
+/manuscript/calibration/studies/welch_unpaired/artifacts/checkpoints/
+/manuscript/calibration/studies/welch_unpaired/artifacts/2026-3/checkpoints/
 
 # Dependencies / docs
 .Rlib/
