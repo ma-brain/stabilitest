@@ -18,21 +18,28 @@ study_root <- file.path(project_root, "manuscript", "calibration", "studies",
 verdict_path <- file.path(study_root, "published", "VERDICT.json")
 verdict_path_2026_3 <- file.path(study_root, "published", "2026-3",
                                  "VERDICT.json")
+fisher_source_path <- file.path(
+  project_root, "manuscript", "calibration", "studies", "binary_proportion",
+  "published", "output-hashes.txt"
+)
 registry_path <- file.path(project_root, "inst", "extdata",
                            "calibration-registry.csv")
 
-if (!file.exists(verdict_path) || !file.exists(verdict_path_2026_3)) {
+if (!file.exists(verdict_path) || !file.exists(verdict_path_2026_3) ||
+    !file.exists(fisher_source_path)) {
   stop("published Welch verdict is missing", call. = FALSE)
 }
 verdict_hash <- digest::digest(file = verdict_path, algo = "sha256")
 verdict_hash_2026_3 <- digest::digest(file = verdict_path_2026_3, algo = "sha256")
+fisher_source_hash <- digest::digest(file = fisher_source_path, algo = "sha256")
 registry <- utils::read.csv(registry_path, stringsAsFactors = FALSE,
                             na.strings = c("", "NA"), check.names = FALSE)
 welch <- registry[registry$calibration_unit == "welch_unpaired", , drop = FALSE]
 if (nrow(welch) != 1L) stop("active registry has no unique Welch row", call. = FALSE)
 
 required_directories <- c("simulation", "case-study", "welch-calibration",
-                          "welch-calibration-2026-3", "timing", "testing")
+                          "welch-calibration-2026-3", "fisher-p-baseline",
+                          "timing", "testing")
 required_fields <- c(
   "artifact_role", "package_version", "git_commit", "r_version",
   "script_path", "script_sha256", "seed", "runtime_seconds",
@@ -104,11 +111,12 @@ for (directory in required_directories) {
       !nzchar(paste(manifest$seed, collapse = "/"))) {
     add_violation("%s: seed is missing", directory)
   }
-  expected_verdict_hash <- if (identical(directory, "welch-calibration-2026-3")) {
-    verdict_hash_2026_3
-  } else {
+  expected_verdict_hash <- switch(
+    directory,
+    "welch-calibration-2026-3" = verdict_hash_2026_3,
+    "fisher-p-baseline" = fisher_source_hash,
     verdict_hash
-  }
+  )
   if (!identical(manifest$source_study_verdict_hash, expected_verdict_hash)) {
     add_violation("%s: source Welch verdict hash mismatch", directory)
   }

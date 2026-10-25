@@ -162,3 +162,29 @@ with reason `p_comparator_unavailable`; held-out validation was not opened and
 now `welch-2026-3`, still `uncalibrated` with both cutoffs `NA`. The article,
 its evidence artifacts (regenerated under 0.6.1), and the artifact-contract
 audit were updated accordingly; see `artifacts/welch-calibration-2026-3/`.
+
+## Addendum (2026-10-25): bundle for version 0.6.5
+
+Dated snapshot of the rebuilt submission bundle; the 2026-08-11 report above is
+otherwise unchanged. No external submission was performed.
+
+- Version: package, article, and all seven evidence manifests identify 0.6.5.
+  The canonical CRAN page still returned HTTP 404 on 2026-10-25, so live CRAN
+  parity remains the unresolved registry exception recorded above. CRAN
+  submission is not planned.
+- Package: `R CMD check --as-cran --no-manual` gave 0 errors, 0 warnings, and
+  the `New submission` NOTE; GitHub Actions on `main` were green.
+- Article: 11 A4 pages (limit 20); abstract about 138 words (limit 250).
+  `check-artifact-contracts.R` (7 directories, now including
+  `fisher-p-baseline`) and `check-article-claims.R` pass in the repository and
+  from the extracted bundle.
+- Rehearsal: the extracted bundle's R Markdown matched the committed source;
+  re-rendering PDF and HTML from it reproduced the committed TeX byte for byte
+  and the PDF's layout-preserving text exactly.
+- Bundle: `/Users/Marius/Github/stabilitest-rjournal-submission.zip`, 744,805
+  bytes, 110 entries, SHA-256
+  `ed678530b05db4ad93417f37357d380249bc005f568aa7a2e52b187381cbef34`. Built
+  from an allowlist, outside the repository, with no logs, smoke, checkpoint,
+  cache, or held-out validation output. The Fisher study contributes only its
+  `output-hashes.txt`, which the contract audit hashes; the Fisher generator
+  needs the repository checkout to re-run.

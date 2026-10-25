@@ -1,3 +1,15 @@
+# stabilitest (development version)
+
+## Fisher label compared with a p-value cutoff
+
+* A descriptive comparison on the published Fisher study rows shows the
+  validated cutoff (score > 58) behaves much like a p-value cutoff
+  (p <= 0.002: false reassurance 0.025, clear identification 0.728 in training,
+  against 0.049 and 0.761 for the score; areas under the curve 0.919 and 0.920
+  in the held-out rows). The label's validated error rates are unchanged; what
+  is not shown is that the score separates clear effects from null results
+  better than a p-value cutoff does. No behaviour changes.
+
 # stabilitest 0.6.5
 
 ## Calibration integrity
