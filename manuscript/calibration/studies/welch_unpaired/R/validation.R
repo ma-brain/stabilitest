@@ -29,10 +29,33 @@ freeze_welch_candidate <- function(candidate, context) {
   frozen
 }
 
+# TRUE when every top-level field of a frozen candidate equals the copy inside
+# its hash payload. The hash covers only the payload, so a top-level edit (for
+# example the cutoffs that validation reads) would otherwise go undetected.
+.welch_frozen_fields_consistent <- function(frozen) {
+  payload <- frozen$hash_payload
+  candidate <- payload$candidate
+  if (!is.list(candidate) || !is.list(payload)) return(FALSE)
+  same_fields <- vapply(
+    names(candidate),
+    function(name) identical(frozen[[name]], candidate[[name]]),
+    logical(1)
+  )
+  all(same_fields) &&
+    identical(frozen$context, payload$context) &&
+    identical(frozen$held_out_opened, payload$held_out_opened) &&
+    identical(frozen$validation_refit, payload$validation_refit)
+}
+
+# Returns the payload hash, or NA_character_ when the frozen object's visible
+# fields no longer match the payload that was hashed. NA never equals a stored
+# hash, so every `identical(recompute(...), frozen$candidate_hash)` check fails
+# closed on a tampered object.
 recompute_welch_candidate_hash <- function(frozen) {
   if (!is.list(frozen) || is.null(frozen$hash_payload)) {
     stop("frozen candidate has no hash payload", call. = FALSE)
   }
+  if (!.welch_frozen_fields_consistent(frozen)) return(NA_character_)
   digest::digest(frozen$hash_payload, algo = "sha256", serialize = TRUE)
 }
 
