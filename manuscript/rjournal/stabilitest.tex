@@ -590,15 +590,15 @@ Closed-form tests are therefore sub-second; model engines pay for repeated
 refits.
 
 \begin{longtable}[t]{lrr}
-\caption{\label{tab:timingtable}Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.1 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.}\\
+\caption{\label{tab:timingtable}Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.5 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.}\\
 \toprule
 Engine & n = 50 per arm (s) & n = 150 per arm (s)\\
 \midrule
-robustness\_analysis (Welch) & 0.46 & 1.25\\
-robustness\_lm (ANCOVA) & 0.86 & 3.64\\
-robustness\_glm (binomial) & 1.36 & 6.79\\
-robustness\_surv (Cox) & 1.31 & 4.89\\
-robustness\_tost (mean equivalence) & 0.67 & 1.23\\
+robustness\_analysis (Welch) & 0.44 & 1.25\\
+robustness\_lm (ANCOVA) & 0.89 & 3.63\\
+robustness\_glm (binomial) & 1.36 & 6.74\\
+robustness\_surv (Cox) & 1.32 & 4.85\\
+robustness\_tost (mean equivalence) & 0.67 & 1.28\\
 \bottomrule
 \end{longtable}
 

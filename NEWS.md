@@ -1,4 +1,15 @@
-# stabilitest (development version)
+# stabilitest 0.6.5
+
+## Calibration integrity
+
+* The Welch study tooling now detects tampering with a frozen candidate's
+  visible fields (cutoffs, status, metrics, context, held-out flags). The
+  candidate hash covers the hashed payload, and validation previously read
+  cutoffs from fields outside it; an edit there is now rejected as a hash
+  mismatch. Published 2026-2 and 2026-3 candidates still verify.
+* The vignette, long-form manuscript, methodological review, and physicians'
+  guide now describe both Welch studies. The R Journal evidence artifacts were
+  regenerated for this version.
 
 ## Welch relaxed-gates calibration also closed fail-closed
 

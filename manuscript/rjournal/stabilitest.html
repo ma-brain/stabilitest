@@ -161,7 +161,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
   <!--/radix_placeholder_rmarkdown_metadata-->
   
   <script type="text/json" id="radix-resource-manifest">
-  {"type":"character","attributes":{},"value":["artifacts/case-study/manifest.json","artifacts/case-study/welch-case-study.rds","artifacts/simulation/manifest.json","artifacts/simulation/scenario-01.rds","artifacts/simulation/scenario-02.rds","artifacts/simulation/scenario-03.rds","artifacts/simulation/scenario-04.rds","artifacts/simulation/scenario-05.rds","artifacts/simulation/scenario-06.rds","artifacts/simulation/scenario-07.rds","artifacts/simulation/scenario-08.rds","artifacts/simulation/scenario-09.rds","artifacts/simulation/scenario-10.rds","artifacts/simulation/scenario-11.rds","artifacts/simulation/scenario-12.rds","artifacts/simulation/simulation-summary.csv","artifacts/simulation/simulation-summary.rds","artifacts/testing/manifest.json","artifacts/testing/test-counts.rds","artifacts/timing/manifest.json","artifacts/timing/timing.csv","artifacts/timing/timing.rds","artifacts/welch-calibration-2026-3/manifest.json","artifacts/welch-calibration-2026-3/welch-calibration-summary.csv","artifacts/welch-calibration-2026-3/welch-calibration-summary.rds","artifacts/welch-calibration/manifest.json","artifacts/welch-calibration/welch-calibration-summary.csv","artifacts/welch-calibration/welch-calibration-summary.rds","audit/baseline.txt","audit/final-check-report.md","audit/reproduction-report.md","initial_checks.log","motivation-letter/motivation-letter.md","motivation-letter.pdf","RJournal.sty","RJreferences.bib","RJwrapper.log","RJwrapper.tex","stabilitest_files/anchor-4.2.2/anchor.min.js","stabilitest_files/bowser-1.9.3/bowser.min.js","stabilitest_files/distill-2.2.21/template.v2.js","stabilitest_files/figure-html5/casefig-1.png","stabilitest_files/figure-html5/simfig-1.png","stabilitest_files/header-attrs-2.31/header-attrs.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.map","stabilitest_files/popper-2.6.0/popper.min.js","stabilitest_files/tippy-6.2.7/tippy-bundle.umd.min.js","stabilitest_files/tippy-6.2.7/tippy-light-border.css","stabilitest_files/tippy-6.2.7/tippy.css","stabilitest_files/tippy-6.2.7/tippy.umd.min.js","stabilitest_files/webcomponents-2.0.0/webcomponents.js","stabilitest.log","stabilitest.pdf","stabilitest.tex","tools/check-article-claims.R","tools/check-artifact-contracts.R","tools/regenerate-case-study.R","tools/regenerate-simulation.R","tools/regenerate-testcount.R","tools/regenerate-timing.R","tools/regenerate-welch-calibration-summary.R","tools/regenerate-welch3-calibration-summary.R"]}
+  {"type":"character","attributes":{},"value":["artifacts/case-study/manifest.json","artifacts/case-study/welch-case-study.rds","artifacts/simulation/manifest.json","artifacts/simulation/scenario-01.rds","artifacts/simulation/scenario-02.rds","artifacts/simulation/scenario-03.rds","artifacts/simulation/scenario-04.rds","artifacts/simulation/scenario-05.rds","artifacts/simulation/scenario-06.rds","artifacts/simulation/scenario-07.rds","artifacts/simulation/scenario-08.rds","artifacts/simulation/scenario-09.rds","artifacts/simulation/scenario-10.rds","artifacts/simulation/scenario-11.rds","artifacts/simulation/scenario-12.rds","artifacts/simulation/simulation-summary.csv","artifacts/simulation/simulation-summary.rds","artifacts/testing/manifest.json","artifacts/testing/test-counts.rds","artifacts/timing/manifest.json","artifacts/timing/timing.csv","artifacts/timing/timing.rds","artifacts/welch-calibration-2026-3/manifest.json","artifacts/welch-calibration-2026-3/welch-calibration-summary.csv","artifacts/welch-calibration-2026-3/welch-calibration-summary.rds","artifacts/welch-calibration/manifest.json","artifacts/welch-calibration/welch-calibration-summary.csv","artifacts/welch-calibration/welch-calibration-summary.rds","audit/baseline.txt","audit/final-check-report.md","audit/reproduction-report.md","initial_checks.log","motivation-letter/motivation-letter.md","motivation-letter.pdf","RJournal.sty","RJreferences.bib","RJwrapper.log","RJwrapper.tex","stabilitest_files/anchor-4.2.2/anchor.min.js","stabilitest_files/bowser-1.9.3/bowser.min.js","stabilitest_files/distill-2.2.21/template.v2.js","stabilitest_files/figure-html5/casefig-1.png","stabilitest_files/figure-html5/simfig-1.png","stabilitest_files/header-attrs-2.31/header-attrs.js","stabilitest_files/header-attrs-2.32/header-attrs.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.js","stabilitest_files/jquery-3.6.0/jquery-3.6.0.min.map","stabilitest_files/popper-2.6.0/popper.min.js","stabilitest_files/tippy-6.2.7/tippy-bundle.umd.min.js","stabilitest_files/tippy-6.2.7/tippy-light-border.css","stabilitest_files/tippy-6.2.7/tippy.css","stabilitest_files/tippy-6.2.7/tippy.umd.min.js","stabilitest_files/webcomponents-2.0.0/webcomponents.js","stabilitest.log","stabilitest.pdf","stabilitest.tex","tools/check-article-claims.R","tools/check-artifact-contracts.R","tools/regenerate-case-study.R","tools/regenerate-simulation.R","tools/regenerate-testcount.R","tools/regenerate-timing.R","tools/regenerate-welch-calibration-summary.R","tools/regenerate-welch3-calibration-summary.R"]}
   </script>
   <!--radix_placeholder_navigation_in_header-->
   <!--/radix_placeholder_navigation_in_header-->
@@ -2449,7 +2449,7 @@ Closed-form tests are therefore sub-second; model engines pay for repeated
 refits.</p>
 <div class="layout-chunk" data-layout="l-body">
 <table>
-<caption><span id="tab:timingtable">Table 3: </span>Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.1 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.</caption>
+<caption><span id="tab:timingtable">Table 3: </span>Wall-clock seconds for a single analysis with 1000 bootstrap resamples, stabilitest 0.6.5 on an Apple aarch64 laptop. The Cox benchmark uses simulated survival data generated in the timing script.</caption>
 <colgroup>
 <col style="width: 47%" />
 <col style="width: 25%" />
@@ -2465,28 +2465,28 @@ refits.</p>
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">robustness_analysis (Welch)</td>
-<td style="text-align: right;">0.46</td>
+<td style="text-align: right;">0.44</td>
 <td style="text-align: right;">1.25</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">robustness_lm (ANCOVA)</td>
-<td style="text-align: right;">0.86</td>
-<td style="text-align: right;">3.64</td>
+<td style="text-align: right;">0.89</td>
+<td style="text-align: right;">3.63</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">robustness_glm (binomial)</td>
 <td style="text-align: right;">1.36</td>
-<td style="text-align: right;">6.79</td>
+<td style="text-align: right;">6.74</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">robustness_surv (Cox)</td>
-<td style="text-align: right;">1.31</td>
-<td style="text-align: right;">4.89</td>
+<td style="text-align: right;">1.32</td>
+<td style="text-align: right;">4.85</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">robustness_tost (mean equivalence)</td>
 <td style="text-align: right;">0.67</td>
-<td style="text-align: right;">1.23</td>
+<td style="text-align: right;">1.28</td>
 </tr>
 </tbody>
 </table>

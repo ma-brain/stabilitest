@@ -1,11 +1,11 @@
 "engine","n_per_arm","seconds"
-"robustness_analysis (Welch)",50,0.456629037857056
-"robustness_lm (ANCOVA)",50,0.856040000915527
-"robustness_glm (binomial)",50,1.36115503311157
-"robustness_surv (Cox)",50,1.31223392486572
-"robustness_tost (mean equivalence)",50,0.666144132614136
-"robustness_analysis (Welch)",150,1.2458770275116
-"robustness_lm (ANCOVA)",150,3.63507890701294
-"robustness_glm (binomial)",150,6.78608679771423
-"robustness_surv (Cox)",150,4.88830995559692
-"robustness_tost (mean equivalence)",150,1.23410081863403
+"robustness_analysis (Welch)",50,0.44466495513916
+"robustness_lm (ANCOVA)",50,0.886654138565063
+"robustness_glm (binomial)",50,1.35650396347046
+"robustness_surv (Cox)",50,1.31903195381165
+"robustness_tost (mean equivalence)",50,0.671523809432983
+"robustness_analysis (Welch)",150,1.25311398506165
+"robustness_lm (ANCOVA)",150,3.63230586051941
+"robustness_glm (binomial)",150,6.73719000816345
+"robustness_surv (Cox)",150,4.8467230796814
+"robustness_tost (mean equivalence)",150,1.278972864151

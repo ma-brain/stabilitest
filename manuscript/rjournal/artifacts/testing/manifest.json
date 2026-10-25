@@ -1,9 +1,9 @@
 {
   "artifact_role": "package_test_summary",
-  "generated_at": "2026-10-25T09:15:01+0200",
-  "runtime_seconds": 51.42743992805481,
-  "package_version": "0.6.1",
-  "git_commit": "754cdc6cc5e663128cbab938ad1e383739536fa4",
+  "generated_at": "2026-10-25T10:09:04+0200",
+  "runtime_seconds": 50.526984930038452,
+  "package_version": "0.6.5",
+  "git_commit": "9457a2651be2f96b2e37eb73175a3f2dcf226969",
   "r_version": "R version 4.6.1 (2026-06-24)",
   "script_path": "manuscript/rjournal/tools/regenerate-testcount.R",
   "script_sha256": "e50522763d7c27d1cac8ca261bc5cd00ad838ab643869c3a194041fc1808f6c7",
