@@ -19,17 +19,21 @@
 study_root <- .study_root()
 project_root <- normalizePath(file.path(study_root, "..", "..", "..", ".."),
                               mustWork = TRUE)
-summary_dir <- file.path(study_root, "artifacts", "summaries")
-training_dir <- file.path(study_root, "artifacts", "training")
-validation_dir <- file.path(study_root, "artifacts", "validation")
-if (dir.exists(validation_dir)) {
-  stop("candidate freeze requires an unopened validation directory",
-       call. = FALSE)
-}
 
 env <- new.env(parent = globalenv())
 sys.source(file.path(study_root, "R", "load_study.R"), envir = env)
 env$load_welch_study(project_root = project_root, envir = env)
+study_version <- env$welch_tool_study_version()
+v3 <- identical(study_version, "2026-3")
+artifact_root <- env$welch_artifact_root(study_root, study_version)
+
+summary_dir <- file.path(artifact_root, "summaries")
+training_dir <- file.path(artifact_root, "training")
+validation_dir <- file.path(artifact_root, "validation")
+if (dir.exists(validation_dir)) {
+  stop("candidate freeze requires an unopened validation directory",
+       call. = FALSE)
+}
 
 analysis_path <- file.path(summary_dir, "training-analysis.rds")
 if (!file.exists(analysis_path)) {
@@ -39,16 +43,20 @@ if (!file.exists(analysis_path)) {
 fit <- readRDS(analysis_path)
 
 input_paths <- c(
-  sap = file.path(study_root, "CALIBRATION_SAP.md"),
-  resolved_scenarios = file.path(
-    study_root, "artifacts", "design", "resolved-scenarios.csv"
+  sap = file.path(
+    study_root, if (v3) "CALIBRATION_SAP_2026-3.md" else "CALIBRATION_SAP.md"
   ),
-  scenario_manifest = file.path(
-    study_root, "artifacts", "design", "design-manifest.json"
-  ),
+  resolved_scenarios = file.path(artifact_root, "design",
+                                 "resolved-scenarios.csv"),
+  scenario_manifest = file.path(artifact_root, "design",
+                                "design-manifest.json"),
   generator = file.path(study_root, "R", "generator.R"),
   adapter = file.path(study_root, "R", "adapter.R"),
   thresholds = file.path(study_root, "R", "thresholds.R"),
+  if (v3) c(
+    thresholds_2026_3 = file.path(study_root, "R", "thresholds_2026_3.R"),
+    scenario_config = file.path(study_root, "config", "scenarios_2026_3.R")
+  ),
   training_completed = file.path(training_dir, "completed.rds"),
   training_ledger = file.path(training_dir, "screening-ledger.rds"),
   training_runner_manifest = file.path(training_dir, "manifest.json")
@@ -63,8 +71,8 @@ package_version <- unname(read.dcf(file.path(project_root, "DESCRIPTION"))[
   1L, "Version"
 ])
 context <- list(
-  study_version = "prospective Welch study 2026-2",
-  gates = env$WELCH_GATE_CONSTANTS,
+  study_version = sprintf("prospective Welch study %s", study_version),
+  gates = if (v3) env$WELCH3_GATE_CONSTANTS else env$WELCH_GATE_CONSTANTS,
   scenario_manifest_hash = input_hashes[["scenario_manifest"]],
   weights = env$WELCH_FROZEN_WEIGHTS,
   sap_hash = input_hashes[["sap"]],
@@ -80,6 +88,11 @@ context <- list(
   ),
   package_version = package_version
 )
+if (v3) {
+  # Added only for 2026-3 so the 2026-2 context (and hash) is unchanged.
+  context$thresholds_2026_3_hash <- input_hashes[["thresholds_2026_3"]]
+  context$scenario_config_hash <- input_hashes[["scenario_config"]]
+}
 frozen <- env$freeze_welch_candidate(fit, context)
 if (!identical(
   frozen$candidate_hash,
@@ -99,7 +112,8 @@ diagnostics <- list(
   mapping_type = frozen$mapping_type,
   cutoffs = frozen$cutoffs,
   candidate_hash = frozen$candidate_hash,
-  metrics = env$compact_welch_metrics(frozen$metrics),
+  metrics = if (v3) env$compact_welch3_metrics(frozen$metrics)
+    else env$compact_welch_metrics(frozen$metrics),
   historical_55_70 = env$compact_welch_metrics(frozen$historical_55_70),
   fit_runtime_seconds = frozen$fit_runtime_seconds,
   training_n = frozen$training_n,
@@ -108,6 +122,10 @@ diagnostics <- list(
   held_out_opened = FALSE,
   validation_refit = FALSE
 )
+if (v3) {
+  diagnostics$p_comparator <- env$compact_welch3_comparator(frozen$p_comparator)
+  diagnostics$closed_at_freeze <- env$welch3_closed_at_freeze(frozen)
+}
 jsonlite::write_json(
   diagnostics, file.path(summary_dir, "candidate-diagnostics.json"),
   auto_unbox = TRUE, pretty = TRUE, null = "null", digits = 15

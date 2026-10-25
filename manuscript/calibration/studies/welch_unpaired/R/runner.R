@@ -13,6 +13,21 @@
 
 .welch_safe_id <- function(x) gsub("[^A-Za-z0-9_.-]", "_", x)
 
+# Shared by the tools/ scripts: read `--study-version` (default 2026-2).
+welch_tool_study_version <- function(args = commandArgs(trailingOnly = TRUE)) {
+  index <- which(args == "--study-version")
+  if (!length(index)) return("2026-2")
+  if (index[[1L]] == length(args)) {
+    stop("--study-version requires a value", call. = FALSE)
+  }
+  version <- args[[index[[1L]] + 1L]]
+  if (!version %in% WELCH_STUDY_VERSIONS) {
+    stop(sprintf("--study-version must be one of: %s",
+                 paste(WELCH_STUDY_VERSIONS, collapse = ", ")), call. = FALSE)
+  }
+  version
+}
+
 # Scenario IDs carry the study version (`WTR3-` etc. for 2026-3), so a run can
 # never mix scenario tables across studies.
 .welch_check_scenario_version <- function(scenario_ids, study_version) {

@@ -19,9 +19,22 @@
 study_root <- .study_root()
 project_root <- normalizePath(file.path(study_root, "..", "..", "..", ".."),
                               mustWork = TRUE)
-summary_dir <- file.path(study_root, "artifacts", "summaries")
-validation_dir <- file.path(study_root, "artifacts", "validation")
-published_dir <- file.path(study_root, "published")
+
+env <- new.env(parent = globalenv())
+sys.source(file.path(study_root, "R", "load_study.R"), envir = env)
+env$load_welch_study(project_root = project_root, envir = env)
+study_version <- env$welch_tool_study_version()
+v3 <- identical(study_version, "2026-3")
+artifact_root <- env$welch_artifact_root(study_root, study_version)
+
+summary_dir <- file.path(artifact_root, "summaries")
+validation_dir <- file.path(artifact_root, "validation")
+# 2026-2 keeps its original `published/`; 2026-3 publishes beside it.
+published_dir <- if (v3) {
+  file.path(study_root, "published", "2026-3")
+} else {
+  file.path(study_root, "published")
+}
 
 if (dir.exists(validation_dir)) {
   stop("fail publication requires validation to remain unopened", call. = FALSE)
@@ -30,10 +43,6 @@ if (dir.exists(published_dir) && length(list.files(published_dir, all.files = TR
                                                    no.. = TRUE))) {
   stop("published Welch decision already exists", call. = FALSE)
 }
-
-env <- new.env(parent = globalenv())
-sys.source(file.path(study_root, "R", "load_study.R"), envir = env)
-env$load_welch_study(project_root = project_root, envir = env)
 
 candidate_path <- file.path(summary_dir, "candidate.rds")
 candidate_hash_path <- file.path(summary_dir, "candidate-hash.txt")
@@ -47,9 +56,21 @@ if (!identical(candidate$candidate_hash, recorded_hash) ||
     !identical(candidate$candidate_hash, fresh_hash)) {
   stop("frozen candidate hash mismatch", call. = FALSE)
 }
-if (!identical(candidate$status, "no_feasible_thresholds")) {
-  stop("fail-only publication requires no_feasible_thresholds", call. = FALSE)
+closed <- if (v3) {
+  env$welch3_closed_at_freeze(candidate)
+} else {
+  identical(candidate$status, "no_feasible_thresholds")
 }
+if (!closed) {
+  stop(if (v3) {
+    "fail-only publication requires a decision closed at the freeze"
+  } else {
+    "fail-only publication requires no_feasible_thresholds"
+  }, call. = FALSE)
+}
+fail_reason <- if (v3) env$welch3_closed_reason(candidate) else
+  "no_feasible_thresholds"
+registry_version <- sprintf("welch-%s", study_version)
 if (isTRUE(candidate$held_out_opened) || isTRUE(candidate$validation_refit)) {
   stop("frozen no-candidate decision records held-out access", call. = FALSE)
 }
@@ -65,20 +86,23 @@ if (sum(welch) != 1L) stop("active registry has no unique Welch row", call. = FA
 registry$status[welch] <- "uncalibrated"
 registry$cutoff_fragile[welch] <- NA_real_
 registry$cutoff_robust[welch] <- NA_real_
-registry$version[welch] <- "welch-2026-2"
-registry$source[welch] <-
+registry$version[welch] <- registry_version
+registry$source[welch] <- if (v3) {
+  "manuscript/calibration/studies/welch_unpaired/published/2026-3"
+} else {
   "manuscript/calibration/studies/welch_unpaired/published"
+}
 registry$supported_conditions[welch] <- paste0(
-  "no_feasible_thresholds; candidate_hash:", candidate$candidate_hash,
+  fail_reason, "; candidate_hash:", candidate$candidate_hash,
   "; held-out not opened; categorical bands suppressed; ",
   "numeric scores and component metrics only"
 )
 
 verdict <- list(
   status = "uncalibrated",
-  reason = "no_feasible_thresholds",
-  study_version = "prospective Welch study 2026-2",
-  registry_version = "welch-2026-2",
+  reason = fail_reason,
+  study_version = sprintf("prospective Welch study %s", study_version),
+  registry_version = registry_version,
   mapping_type = "none",
   cutoffs = c(NA_real_, NA_real_),
   candidate_hash = candidate$candidate_hash,

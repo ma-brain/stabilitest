@@ -394,3 +394,44 @@ validate_frozen_welch3_candidate <- function(frozen, validation,
     candidate_hash = frozen$candidate_hash
   )
 }
+
+#' JSON-friendly metrics for diagnostics: `compact_welch_metrics()` plus named
+#' vectors (cutoffs, per-archetype rates, medians) kept as named lists.
+compact_welch3_metrics <- function(metrics) {
+  if (is.null(metrics)) return(NULL)
+  compact <- compact_welch_metrics(metrics)
+  for (name in names(compact)) {
+    value <- compact[[name]]
+    if (is.atomic(value) && !is.null(names(value))) {
+      compact[[name]] <- as.list(value)
+    }
+  }
+  compact
+}
+
+#' Compact p-value comparator summary for diagnostics (no grid).
+compact_welch3_comparator <- function(comparator) {
+  if (is.null(comparator)) return(NULL)
+  list(
+    status = comparator$status,
+    q = comparator$q,
+    selected = if (is.null(comparator$selected)) NULL
+      else as.list(comparator$selected)
+  )
+}
+
+#' TRUE when a frozen 2026-3 decision is final without opening validation:
+#' no feasible cutoff, or a candidate whose p-value comparator is unavailable.
+welch3_closed_at_freeze <- function(candidate) {
+  identical(candidate$status, "no_feasible_thresholds") ||
+    (identical(candidate$status, "candidate") &&
+       !identical(candidate$p_comparator$status, "comparator"))
+}
+
+welch3_closed_reason <- function(candidate) {
+  if (identical(candidate$status, "no_feasible_thresholds")) {
+    "no_feasible_thresholds"
+  } else {
+    "p_comparator_unavailable"
+  }
+}

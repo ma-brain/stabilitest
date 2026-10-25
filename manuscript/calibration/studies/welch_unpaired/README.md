@@ -52,3 +52,24 @@ The active package registry now records `welch-2026-2` as `uncalibrated` with
 no cutoffs and provenance pointing to `published/`. The published verdict and
 registry proposal both record `held_out_opened = FALSE` and
 `validation_refit = FALSE`.
+
+## Study versions
+
+Study 2026-2 (`CALIBRATION_SAP.md`) keeps its original `artifacts/` and
+`published/` locations and is closed. Study 2026-3 (relaxed gates,
+`CALIBRATION_SAP_2026-3.md`) writes to `artifacts/2026-3/` and
+`published/2026-3/`. The runner and each `tools/` script take
+`--study-version 2026-2|2026-3` (default `2026-2`):
+
+```sh
+Rscript tools/verify_power_gate.R --study-version 2026-3
+Rscript run_calibration.R --mode production --layer training --study-version 2026-3
+Rscript tools/fit_training_candidate.R --study-version 2026-3
+Rscript tools/freeze_candidate.R --study-version 2026-3
+# only if the frozen decision is closed at the freeze:
+Rscript tools/publish_fail_decision.R --study-version 2026-3
+```
+
+Scenario IDs carry the version (`WTR3-`, `WVA3-`, `WST3-`), and a run stops if
+IDs and `--study-version` disagree. Slow end-to-end tool tests run with
+`WELCH_TOOL_TESTS=1`.
