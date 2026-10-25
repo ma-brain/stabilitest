@@ -1,3 +1,16 @@
+# stabilitest (development version)
+
+## Welch relaxed-gates calibration also closed fail-closed
+
+* The `welch_unpaired` registry row now records the `welch-2026-3` study
+  (version `welch-2026-3`, reason `p_comparator_unavailable`). A single
+  `Stable` cutoff of 65 met the relaxed training gates (false reassurance
+  0.048, clear identification 0.703), but the pre-registered p-value-only
+  baseline had no eligible comparator, and a p-value cutoff of 0.002 did as
+  well on the same rows. Held-out validation was not opened.
+* Welch results keep their numeric score and component metrics. No categorical
+  label is emitted; behaviour is unchanged from 0.6.1.
+
 # stabilitest 0.6.1
 
 ## Correctness

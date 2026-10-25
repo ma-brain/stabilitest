@@ -54,6 +54,11 @@ opened. Welch results therefore retain their numeric scores and stress-test
 details but have no categorical label. The
 [`welch_unpaired` study archive](manuscript/calibration/studies/welch_unpaired/)
 contains the protocol, exact audit identifiers, and published negative result.
+A second, relaxed-gates study (`welch-2026-3`) also closed without a label: its
+training cutoff of 65 could not be shown to add information beyond the p-value
+(reason `p_comparator_unavailable`, candidate hash
+`b113e704766eb8d0740af9c5f387044b175c0d0b078d971fb867bd928c0b4f98`), and
+held-out validation again was not opened.
 
 Two prospective ANCOVA calibration attempts also found no safe and useful
 categorical cutoff, and a later study did not confirm that the score detected

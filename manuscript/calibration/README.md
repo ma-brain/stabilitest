@@ -38,6 +38,19 @@ candidate hash
 Held-out validation was not opened. Compact fail-closed evidence and the
 registry proposal are under `studies/welch_unpaired/published/`.
 
+A second, relaxed-gates study (`welch-2026-3`, protocol
+`studies/welch_unpaired/CALIBRATION_SAP_2026-3.md`) fitted a single `Stable`
+cutoff of 65 on 4,500 new significant training analyses (false reassurance
+0.048, clear identification 0.703). The pre-registered p-value-only baseline
+could not be fitted to an eligible comparator, so the study closed at the
+freeze with reason `p_comparator_unavailable` (candidate hash
+`b113e704766eb8d0740af9c5f387044b175c0d0b078d971fb867bd928c0b4f98`). On
+the same rows a p-value cutoff of 0.002 gave false reassurance 0.035 and
+clear identification 0.713, so the score added no detectable information
+beyond the p-value. Held-out validation was not opened. The active
+`welch_unpaired` registry row is `uncalibrated` (version `welch-2026-3`);
+evidence is under `studies/welch_unpaired/published/2026-3/`.
+
 ## Independent ANCOVA study (Gate A / Gate B)
 
 `studies/lm_ancova/` owns a separate method-specific calibration for eligible

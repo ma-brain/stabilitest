@@ -60,6 +60,17 @@ assert_match("welch-2026-2",
 assert_match("no_feasible_thresholds",
              "active policy omits the Welch no-candidate verdict",
              ignore.case = FALSE)
+assert_match("welch-2026-3",
+             "active policy omits the relaxed-gates Welch study version",
+             ignore.case = FALSE)
+assert_match("p_comparator_unavailable",
+             "active policy omits the Welch 2026-3 fail-closed reason",
+             ignore.case = FALSE)
+assert_match(
+  "b113e704766eb8d0740af9c5f387044b175c0d0b078d971fb867bd928c0b4f98",
+  "active policy omits the Welch 2026-3 candidate hash",
+  ignore.case = FALSE
+)
 assert_match(
   "9c45481b952cab7cb9b9086e37924a39d83fe0484628745dbe2e79eb33e8797d",
   "active policy omits the frozen Welch candidate hash",
