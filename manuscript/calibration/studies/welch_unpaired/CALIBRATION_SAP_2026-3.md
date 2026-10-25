@@ -2,9 +2,11 @@
 
 **Study version:** prospective Welch study 2026-3 (`welch-2026-3`)  
 **Calibration unit:** `welch_unpaired`  
-**Status:** DRAFT. Not frozen. It becomes binding only when this file, the
-2026-3 scenario config, and the 2026-3 threshold constants are committed
-together, before any 2026-3 score is produced.  
+**Status:** FROZEN as of the commit that introduces this status line, on
+2026-10-25. It is binding together with `config/scenarios_2026_3.R` and
+`R/thresholds_2026_3.R` as merged in `a961efd`, and it precedes any 2026-3
+score. After this commit no score-dependent change to a gate, truth
+definition, scenario, weight, seed, or candidate rule is permitted.  
 **Design document:** `docs/plans/2026-10-25-welch-relaxed-gates-design.md`  
 **Predecessor:** `CALIBRATION_SAP.md` (study 2026-2). That plan and its
 artifacts are frozen and must not be edited. This plan amends it by
