@@ -39,8 +39,10 @@ project_root <- .project_root(study_root)
 env <- new.env(parent = globalenv())
 sys.source(file.path(study_root, "R", "load_study.R"), envir = env)
 env$load_welch_study(project_root = project_root, envir = env)
+study_version <- env$welch_tool_study_version(args)
+v3 <- identical(study_version, "2026-3")
 
-resolved <- env$welch_scenarios()
+resolved <- if (v3) env$welch_scenarios_2026_3() else env$welch_scenarios()
 for (i in seq_len(nrow(resolved))) {
   if (is.na(resolved$delta[[i]])) {
     resolved$delta[[i]] <- env$solve_welch_delta(
@@ -54,7 +56,8 @@ for (i in seq_len(nrow(resolved))) {
   }
 }
 
-design_dir <- file.path(study_root, "artifacts", "design")
+design_dir <- file.path(env$welch_artifact_root(study_root, study_version),
+                        "design")
 dir.create(design_dir, recursive = TRUE, showWarnings = FALSE)
 resolved_path <- file.path(design_dir, "resolved-scenarios.csv")
 power_path <- file.path(design_dir, "power-verification.csv")
@@ -64,7 +67,7 @@ utils::write.csv(resolved, resolved_path, row.names = FALSE, na = "")
 core <- resolved[
   resolved$design_layer %in% c("training", "validation"), , drop = FALSE
 ]
-verification_master_seed <- 202650001L
+verification_master_seed <- if (v3) 202750001L else 202650001L
 rows <- vector("list", nrow(core))
 for (i in seq_len(nrow(core))) {
   scenario <- core[i, , drop = FALSE]
@@ -124,14 +127,19 @@ power <- do.call(rbind, rows)
 utils::write.csv(power, power_path, row.names = FALSE)
 
 input_files <- c(
-  sap = file.path(study_root, "CALIBRATION_SAP.md"),
+  sap = file.path(
+    study_root, if (v3) "CALIBRATION_SAP_2026-3.md" else "CALIBRATION_SAP.md"
+  ),
   scenarios = file.path(study_root, "config", "scenarios.R"),
+  if (v3) c(scenarios_2026_3 = file.path(study_root, "config",
+                                         "scenarios_2026_3.R")),
   power = file.path(study_root, "R", "power.R"),
   generator = file.path(study_root, "R", "generator.R"),
   verifier = file.path(study_root, "tools", "verify_power_gate.R")
 )
 manifest <- list(
-  study = "prospective Welch study 2026-2",
+  study = sprintf("prospective Welch study %s", study_version),
+  study_version = study_version,
   calibration_unit = "welch_unpaired",
   generated_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
   git_head_at_generation = system2(

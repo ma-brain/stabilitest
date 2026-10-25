@@ -66,5 +66,7 @@ load_welch_study <- function(project_root = NULL, envir = parent.frame()) {
     sys.source(study_file, envir = envir)
   }
   sys.source(file.path(study_root, "config", "scenarios.R"), envir = envir)
+  scenarios_2026_3 <- file.path(study_root, "config", "scenarios_2026_3.R")
+  if (file.exists(scenarios_2026_3)) sys.source(scenarios_2026_3, envir = envir)
   invisible(list(project_root = project_root, study_root = study_root))
 }

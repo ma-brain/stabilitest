@@ -17,18 +17,22 @@
 study_root <- .study_root()
 project_root <- normalizePath(file.path(study_root, "..", "..", "..", ".."),
                               mustWork = TRUE)
-validation_dir <- file.path(study_root, "artifacts", "validation")
+
+env <- new.env(parent = globalenv())
+sys.source(file.path(study_root, "R", "load_study.R"), envir = env)
+env$load_welch_study(project_root = project_root, envir = env)
+study_version <- env$welch_tool_study_version()
+v3 <- identical(study_version, "2026-3")
+artifact_root <- env$welch_artifact_root(study_root, study_version)
+
+validation_dir <- file.path(artifact_root, "validation")
 if (dir.exists(validation_dir)) {
   stop("training fitter refuses to run after validation output exists",
        call. = FALSE)
 }
 
-env <- new.env(parent = globalenv())
-sys.source(file.path(study_root, "R", "load_study.R"), envir = env)
-env$load_welch_study(project_root = project_root, envir = env)
-
-training_dir <- file.path(study_root, "artifacts", "training")
-summary_dir <- file.path(study_root, "artifacts", "summaries")
+training_dir <- file.path(artifact_root, "training")
+summary_dir <- file.path(artifact_root, "summaries")
 required <- file.path(
   training_dir,
   c("completed.rds", "failures.rds", "screening-ledger.rds", "occupancy.csv",
@@ -49,6 +53,7 @@ runner_manifest <- jsonlite::read_json(
   file.path(training_dir, "manifest.json"), simplifyVector = TRUE
 )
 
+env$.welch_check_scenario_version(completed$scenario_id, study_version)
 if (anyDuplicated(completed[c("scenario_id", "replicate_id")])) {
   stop("training completed scores contain duplicate replicate IDs", call. = FALSE)
 }
@@ -82,11 +87,19 @@ message(sprintf(
   nrow(completed), nrow(occupancy)
 ))
 started <- Sys.time()
-fit <- env$fit_welch_candidate(
-  completed,
-  cluster_B = env$WELCH_GATE_CONSTANTS$cluster_bootstrap_B,
-  cluster_seed = env$WELCH_GATE_CONSTANTS$cluster_bootstrap_seed
-)
+fit <- if (v3) {
+  env$fit_welch3_candidate(
+    completed,
+    cluster_B = env$WELCH3_GATE_CONSTANTS$cluster_bootstrap_B,
+    cluster_seed = env$WELCH3_GATE_CONSTANTS$cluster_bootstrap_seed
+  )
+} else {
+  env$fit_welch_candidate(
+    completed,
+    cluster_B = env$WELCH_GATE_CONSTANTS$cluster_bootstrap_B,
+    cluster_seed = env$WELCH_GATE_CONSTANTS$cluster_bootstrap_seed
+  )
+}
 fit$fit_runtime_seconds <- unname(as.numeric(difftime(Sys.time(), started,
                                                        units = "secs")))
 fit$training_n <- nrow(completed)

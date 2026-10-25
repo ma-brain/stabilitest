@@ -13,6 +13,33 @@
 
 .welch_safe_id <- function(x) gsub("[^A-Za-z0-9_.-]", "_", x)
 
+# Shared by the tools/ scripts: read `--study-version` (default 2026-2).
+welch_tool_study_version <- function(args = commandArgs(trailingOnly = TRUE)) {
+  index <- which(args == "--study-version")
+  if (!length(index)) return("2026-2")
+  if (index[[1L]] == length(args)) {
+    stop("--study-version requires a value", call. = FALSE)
+  }
+  version <- args[[index[[1L]] + 1L]]
+  if (!version %in% WELCH_STUDY_VERSIONS) {
+    stop(sprintf("--study-version must be one of: %s",
+                 paste(WELCH_STUDY_VERSIONS, collapse = ", ")), call. = FALSE)
+  }
+  version
+}
+
+# Scenario IDs carry the study version (`WTR3-` etc. for 2026-3), so a run can
+# never mix scenario tables across studies.
+.welch_check_scenario_version <- function(scenario_ids, study_version) {
+  is_v3 <- grepl("^W(TR|VA|ST)3-", scenario_ids)
+  ok <- if (identical(study_version, "2026-3")) all(is_v3) else !any(is_v3)
+  if (!ok) {
+    stop(sprintf("scenario IDs do not belong to Welch study %s", study_version),
+         call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
 select_welch_scenarios <- function(scenarios, layer = c("training", "validation")) {
   layer <- match.arg(layer)
   selected <- scenarios[scenarios$design_layer == layer, , drop = FALSE]
@@ -22,24 +49,46 @@ select_welch_scenarios <- function(scenarios, layer = c("training", "validation"
   selected[order(selected$scenario_id), , drop = FALSE]
 }
 
-welch_layer_output_dir <- function(study_root, mode, layer) {
-  if (identical(mode, "smoke")) {
-    return(file.path(study_root, "outputs", "smoke", layer))
+WELCH_STUDY_VERSIONS <- c("2026-2", "2026-3")
+
+# Study 2026-2 keeps its original `artifacts/` root; later studies write to
+# `artifacts/<version>/` so frozen 2026-2 evidence is never overwritten.
+welch_artifact_root <- function(study_root, study_version = "2026-2") {
+  study_version <- match.arg(study_version, WELCH_STUDY_VERSIONS)
+  if (identical(study_version, "2026-2")) {
+    return(file.path(study_root, "artifacts"))
   }
-  file.path(study_root, "artifacts", layer)
+  file.path(study_root, "artifacts", study_version)
 }
 
-welch_layer_checkpoint_dir <- function(study_root, mode, layer) {
+.welch_smoke_root <- function(study_root, study_version = "2026-2") {
+  study_version <- match.arg(study_version, WELCH_STUDY_VERSIONS)
+  root <- file.path(study_root, "outputs", "smoke")
+  if (identical(study_version, "2026-2")) root else file.path(root, study_version)
+}
+
+welch_layer_output_dir <- function(study_root, mode, layer,
+                                   study_version = "2026-2") {
   if (identical(mode, "smoke")) {
-    return(file.path(study_root, "outputs", "smoke", layer, "checkpoints"))
+    return(file.path(.welch_smoke_root(study_root, study_version), layer))
   }
-  file.path(study_root, "artifacts", "checkpoints", layer)
+  file.path(welch_artifact_root(study_root, study_version), layer)
+}
+
+welch_layer_checkpoint_dir <- function(study_root, mode, layer,
+                                       study_version = "2026-2") {
+  if (identical(mode, "smoke")) {
+    return(file.path(.welch_smoke_root(study_root, study_version), layer,
+                     "checkpoints"))
+  }
+  file.path(welch_artifact_root(study_root, study_version), "checkpoints", layer)
 }
 
 validate_welch_run_authority <- function(mode = c("smoke", "production"),
                                          layer = c("training", "validation"),
                                          candidate_hash = NULL,
-                                         study_root) {
+                                         study_root,
+                                         study_version = "2026-2") {
   mode <- match.arg(mode)
   layer <- match.arg(layer)
   if (identical(layer, "validation")) {
@@ -50,7 +99,8 @@ validate_welch_run_authority <- function(mode = c("smoke", "production"),
     }
     if (identical(mode, "production")) {
       hash_path <- file.path(
-        study_root, "artifacts", "summaries", "candidate-hash.txt"
+        welch_artifact_root(study_root, study_version),
+        "summaries", "candidate-hash.txt"
       )
       if (!file.exists(hash_path)) {
         stop("frozen candidate hash file is missing", call. = FALSE)
@@ -67,14 +117,17 @@ validate_welch_run_authority <- function(mode = c("smoke", "production"),
 
 read_welch_results <- function(study_root,
                                layer = c("training", "validation"),
-                               authority = c("training", "validation")) {
+                               authority = c("training", "validation"),
+                               study_version = "2026-2") {
   layer <- match.arg(layer)
   authority <- match.arg(authority)
   if (identical(authority, "training") && identical(layer, "validation")) {
     stop("training authority cannot read validation score files",
          call. = FALSE)
   }
-  path <- file.path(study_root, "artifacts", layer, "completed.rds")
+  path <- file.path(
+    welch_artifact_root(study_root, study_version), layer, "completed.rds"
+  )
   if (!file.exists(path)) {
     stop(sprintf("Welch %s completed score file is missing", layer),
          call. = FALSE)
@@ -351,19 +404,25 @@ run_welch_layer <- function(study_root,
                             workers = 1L,
                             resume = TRUE,
                             scenarios = NULL,
-                            adapter = welch_adapter()) {
+                            adapter = welch_adapter(),
+                            study_version = "2026-2") {
   mode <- match.arg(mode)
   layer <- match.arg(layer)
-  validate_welch_run_authority(mode, layer, candidate_hash, study_root)
+  study_version <- match.arg(study_version, WELCH_STUDY_VERSIONS)
+  validate_welch_run_authority(mode, layer, candidate_hash, study_root,
+                               study_version = study_version)
   if (is.null(scenarios)) {
     scenarios <- utils::read.csv(
-      file.path(study_root, "artifacts", "design", "resolved-scenarios.csv"),
+      file.path(welch_artifact_root(study_root, study_version),
+                "design", "resolved-scenarios.csv"),
       stringsAsFactors = FALSE
     )
   }
   selected <- select_welch_scenarios(scenarios, layer)
-  output_dir <- welch_layer_output_dir(study_root, mode, layer)
-  checkpoint_dir <- welch_layer_checkpoint_dir(study_root, mode, layer)
+  .welch_check_scenario_version(selected$scenario_id, study_version)
+  output_dir <- welch_layer_output_dir(study_root, mode, layer, study_version)
+  checkpoint_dir <- welch_layer_checkpoint_dir(study_root, mode, layer,
+                                               study_version)
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   started <- Sys.time()
 
@@ -402,7 +461,8 @@ run_welch_layer <- function(study_root,
     occupancy = file.path(output_dir, "occupancy.csv")
   )
   manifest <- list(
-    study = "prospective Welch study 2026-2",
+    study = sprintf("prospective Welch study %s", study_version),
+    study_version = study_version,
     mode = mode,
     layer = layer,
     candidate_hash = candidate_hash,
