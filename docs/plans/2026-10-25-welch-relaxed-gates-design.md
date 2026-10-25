@@ -2,8 +2,9 @@
 
 **Date:** 2026-10-25
 
-**Status:** Draft, awaiting human approval. Nothing in this document authorizes
-generating data, opening held-out data, or changing the runtime registry.
+**Status:** Open decisions resolved 2026-10-25; awaiting approval to start the
+SAP amendment. Nothing in this document authorizes generating data, opening
+held-out data, or changing the runtime registry.
 
 **Supersedes:** nothing. `welch-2026-2` stays closed and fail-closed
 (`no_feasible_thresholds`, held-out never opened). This is a new study with a
@@ -92,8 +93,8 @@ Fit the best p-only cutoff on training with the same selection rule and
 evaluate it once on held-out. If the score's held-out FR/RI does not exceed the
 p-only rule's by at least 0.02 in RI at matched FR, the active label is
 documented as a p-value threshold restatement or the study closes fail-closed.
-Which of those two is decided and frozen in the SAP before any data exist (see
-Open decisions).
+If the score fails this comparison the study closes fail-closed (see Resolved
+decisions).
 
 ## Cutoff selection rule (frozen before training)
 
@@ -182,13 +183,14 @@ documentation of the FR bound.
   could be tight; the scenario count should be checked in a pre-registered
   power calculation (SAP step 1).
 
-## Open decisions for the human
+## Resolved decisions (2026-10-25)
 
-1. Label wording for the single band (`Stable`, `Moderately stable`, other).
-2. Gate numbers: confirm FR <= 10% / upper <= 15% and RI >= 60% / lower >= 50%,
-   or choose others. They must be fixed before step 2.
-3. If the score fails the p-only baseline: publish the label as a p-value
-   restatement, or close fail-closed? Recommended: close fail-closed.
-4. Whether to apply the same neighbourhood-robustness rule to the Fisher
-   cutoff as a documented amendment (separate decision, not part of this
-   study).
+1. **Label wording:** `Stable`.
+2. **Gate numbers:** as drafted in the gates table (FR <= 10% / upper <= 15%;
+   RI >= 60% / lower >= 50%).
+3. **p-only baseline failure:** the study closes fail-closed; Welch stays
+   numeric-only. The label is not published as a p-value restatement.
+4. **Per-archetype guard:** FR at most 25% in every core archetype, added in
+   the SAP amendment.
+5. **Fisher:** unchanged. The neighbourhood-robustness rule is not applied to
+   the validated Fisher cutoff (L = 58).
