@@ -970,3 +970,40 @@ test_that("Welch remains numeric-only with the proportion profile field", {
   expect_true(is.na(res$interpretation_label))
   expect_true(is.finite(res$robustness_metrics$overall_robustness))
 })
+
+test_that("each removal step names the unit it removed", {
+  set.seed(21)
+  g1 <- rnorm(30, 6, 2)
+  g2 <- rnorm(30, 4, 2)
+  dat <- .canonical_prop_data(n1 = 40, n2 = 40, p1 = 0.55, p2 = 0.25)
+  cases <- list(
+    list(g1, g2, "t.test", \(a, b) stats::t.test(a, b)$p.value),
+    list(g1, g2, "paired.t.test", \(a, b) stats::t.test(a, b, paired = TRUE)$p.value),
+    list(dat$g1, dat$g2, "fisher", \(a, b) {
+      stats::fisher.test(matrix(c(sum(a), length(a) - sum(a), sum(b), length(b) - sum(b)), 2))$p.value
+    })
+  )
+  for (case in cases) {
+    res <- robustness_analysis(case[[1]], case[[2]], test_type = case[[3]],
+                               n_boot = 10, seed = 1)
+    paired <- case[[3]] == "paired.t.test"
+    for (path in list(res$worstcase$results, res$extreme$results)) {
+      expect_true(all(c("removed_unit", "removed_label") %in% names(path)), info = case[[3]])
+      expect_true(is.na(path$removed_unit[1]) && is.na(path$removed_label[1]), info = case[[3]])
+      steps <- path[-1, ]
+      expect_false(anyDuplicated(steps$removed_label) > 0L, info = case[[3]])
+      expect_true(all(grepl(if (paired) "^pair-[0-9]+$" else "^G[12]-[0-9]+$", steps$removed_label)), info = case[[3]])
+
+      # Removing the named units from the original data reproduces each step
+      for (k in seq_len(nrow(steps))) {
+        gone <- steps$removed_label[seq_len(k)]
+        keep1 <- !paste0(if (paired) "pair-" else "G1-", seq_along(case[[1]])) %in% gone
+        keep2 <- !paste0(if (paired) "pair-" else "G2-", seq_along(case[[2]])) %in% gone
+        p <- case[[4]](case[[1]][keep1], case[[2]][keep2])
+        expect_equal(p, steps$p_value[k], tolerance = 1e-10, info = paste(case[[3]], k))
+      }
+    }
+    # Labels are the jackknife's
+    expect_true(all(stats::na.omit(res$worstcase$results$removed_label) %in% res$jackknife$results$label))
+  }
+})

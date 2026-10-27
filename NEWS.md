@@ -1,3 +1,13 @@
+# stabilitest 0.6.6
+
+## Removal steps name the removed unit
+
+* In `robustness_analysis()`, the worst-case and extreme-value removal paths
+  (`worstcase$results`, `extreme$results`) now record which unit each step
+  removed: `removed_unit` (position in `group1` or `group2`, or the pair) and
+  `removed_label` (`"G1-i"`, `"G2-i"` or `"pair-i"`, matching the jackknife).
+  Model results already carried `removed_rows`. No numbers change.
+
 # stabilitest 0.6.5
 
 ## Calibration integrity
