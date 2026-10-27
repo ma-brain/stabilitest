@@ -266,7 +266,11 @@ brunner_munzel_test <- function(x, y, alpha = 0.05) {
 #'     difference). Alias: `original_estimate`.}
 #'   \item{jackknife, worstcase, extreme, bootstrap}{Component analysis
 #'     results (nested lists with tibbles plus summary scalars). The bootstrap
-#'     list includes `n_valid` and `n_failed` replicate counts.}
+#'     list includes `n_valid` and `n_failed` replicate counts. In the
+#'     `worstcase` and `extreme` results, each removal step names the unit it
+#'     removed: `removed_unit` (its position in `group1` or `group2`, or the
+#'     pair) and `removed_label` (`"G1-i"`, `"G2-i"` or `"pair-i"`, as in the
+#'     jackknife); both are `NA` on the `k_removed = 0` row.}
 #'   \item{sample_info, weights, alpha, max_removal_pct, max_k, n}{Analysis
 #'     metadata (`n` is total sample size / pairs as appropriate).}
 #'   \item{interpretation}{Optional text blocks when `interpret = TRUE`;
@@ -446,26 +450,42 @@ robustness_analysis <- function(group1, group2,
   #    is not a worst-case bound (see manuscript/methodological_review.md, issue 1.2).
   # ============================================================================
   run_removal <- function(order_fun) {
-    # order_fun returns, for the CURRENT data, index of next unit to drop
+    # order_fun returns, for the CURRENT data, index of next unit to drop.
+    # id1/id2 keep each remaining value's position in the original input, so
+    # every step can report which unit it removed (same unit and label as the
+    # jackknife: "G1-i", "G2-i" or "pair-i").
     g1 <- group1; g2 <- group2
-    pairs_left <- seq_along(group1)          # bookkeeping for paired case
+    id1 <- seq_along(group1); id2 <- seq_along(group2)
     out <- tibble(k_removed = 0L, p_value = original$p.value,
                   statistic = original$statistic,
-                  significant = original_significant)
+                  significant = original_significant,
+                  removed_unit = NA_integer_, removed_label = NA_character_)
     for (k in seq_len(max_k)) {
       sel <- order_fun(g1, g2)
       if (is.null(sel)) break
       if (paired) {
+        unit <- id1[sel$idx]
+        label <- paste0("pair-", unit)
         g1 <- g1[-sel$idx]; g2 <- g2[-sel$idx]
+        id1 <- id1[-sel$idx]; id2 <- id2[-sel$idx]
         if (length(g1) < 4) break
       } else {
-        if (sel$group == 1) g1 <- g1[-sel$idx] else g2 <- g2[-sel$idx]
+        if (sel$group == 1) {
+          unit <- id1[sel$idx]
+          label <- paste0("G1-", unit)
+          g1 <- g1[-sel$idx]; id1 <- id1[-sel$idx]
+        } else {
+          unit <- id2[sel$idx]
+          label <- paste0("G2-", unit)
+          g2 <- g2[-sel$idx]; id2 <- id2[-sel$idx]
+        }
         if (length(g1) < 4 || length(g2) < 4) break
       }
       test <- perform_test(g1, g2)
       out <- bind_rows(out, tibble(k_removed = k, p_value = test$p.value,
                                    statistic = test$statistic,
-                                   significant = test$p.value < alpha))
+                                   significant = test$p.value < alpha,
+                                   removed_unit = unit, removed_label = label))
     }
     annotate_removal_results(out, original_significant)
   }

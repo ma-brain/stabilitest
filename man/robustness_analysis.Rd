@@ -97,7 +97,11 @@ applicability, status, cutoffs, version, and provenance.}
 difference). Alias: \code{original_estimate}.}
 \item{jackknife, worstcase, extreme, bootstrap}{Component analysis
 results (nested lists with tibbles plus summary scalars). The bootstrap
-list includes \code{n_valid} and \code{n_failed} replicate counts.}
+list includes \code{n_valid} and \code{n_failed} replicate counts. In the
+\code{worstcase} and \code{extreme} results, each removal step names the unit it
+removed: \code{removed_unit} (its position in \code{group1} or \code{group2}, or the
+pair) and \code{removed_label} (\code{"G1-i"}, \code{"G2-i"} or \code{"pair-i"}, as in the
+jackknife); both are \code{NA} on the \code{k_removed = 0} row.}
 \item{sample_info, weights, alpha, max_removal_pct, max_k, n}{Analysis
 metadata (\code{n} is total sample size / pairs as appropriate).}
 \item{interpretation}{Optional text blocks when \code{interpret = TRUE};
