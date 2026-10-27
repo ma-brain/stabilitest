@@ -1,4 +1,4 @@
-# stabilitest (development version)
+# stabilitest 0.6.6
 
 ## Removal steps name the removed unit
 
